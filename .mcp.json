@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "angular-cli": {
+      "command": "npx",
+      "args": ["-y", "@angular/cli", "mcp"]
+    },
+    "primeng": {
+      "command": "npx",
+      "args": ["-y", "@primeng/mcp"]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=jzdfxbbnhkzdetrpmqdx"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_e2fe4b6ad8eb7471ed77b3c5444c345bf02d46f1"
+      }
+    }
+  }
+}
