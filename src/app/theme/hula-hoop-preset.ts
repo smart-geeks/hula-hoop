@@ -95,6 +95,46 @@ const HulaHoopPreset = definePreset(Aura, {
       },
     },
   },
+  components: {
+    button: {
+      colorScheme: {
+        light: {
+          root: {
+            help: {
+              background: '{morado.500}',
+              hoverBackground: '{morado.600}',
+              activeBackground: '{morado.700}',
+              borderColor: '{morado.500}',
+              hoverBorderColor: '{morado.600}',
+              activeBorderColor: '{morado.700}',
+              color: '#ffffff',
+              hoverColor: '#ffffff',
+              activeColor: '#ffffff',
+              focusRing: {
+                color: '{morado.500}',
+                shadow: 'none',
+              },
+            },
+          },
+          outlined: {
+            help: {
+              hoverBackground: '{morado.50}',
+              activeBackground: '{morado.100}',
+              borderColor: '{morado.200}',
+              color: '{morado.500}',
+            },
+          },
+          text: {
+            help: {
+              hoverBackground: '{morado.50}',
+              activeBackground: '{morado.100}',
+              color: '{morado.500}',
+            },
+          },
+        },
+      },
+    },
+  },
 });
 
 export default HulaHoopPreset;
