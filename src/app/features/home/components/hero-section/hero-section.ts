@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
+import { gsap } from 'gsap';
+import { SplitText } from 'gsap/SplitText';
+
+gsap.registerPlugin(SplitText);
 
 @Component({
   selector: 'app-hero-section',
@@ -23,36 +33,92 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       ></div>
 
       <!-- Heading -->
-      <h1 class="font-display text-5xl font-bold leading-tight mt-10 mb-6">
+      <h1
+        #heading
+        class="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mt-10 mb-6 invisible"
+      >
         Where Fun <br />
         <span class="text-morado">Bounces</span> to Life!
       </h1>
 
       <!-- Subtitle -->
-      <p class="text-gray-500 text-lg mb-8 max-w-xs mx-auto">
+      <p #subtitle class="text-gray-500 text-lg md:text-xl mb-8 max-w-sm mx-auto opacity-0">
         Colorful pixel playgrounds for the coolest kids on the block.
       </p>
-
-      <!-- Image card -->
-      <div
-        class="relative mx-auto max-w-sm rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl"
-      >
-        <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlyewIFrVwZVoPgqzhc7BDGcSQLnV8ox8z1-ziyLE3_mjZfr2Eudg8A3EuN58y7rGJBFOEXn38RKPq43p4UDlJiU-m8QSeYRgUpxZ_ToIw9S78QMHPczxia38QSDyq8S2L_SSuZjWvQ_QO3EmI3goYeeEVnns8CwACEMW3pNAtFqnUJPcKO5isT7d_5g29dz8gokzbOtWiJ0i5x__BQzMtVVBAbZ8t3mzKLXVoT1RFwLvYEdKjgykbXVzAOlVBOQA1GbViySktxp8"
-          alt="Colorful playground interior with vibrant play structures"
-          class="w-full h-80 object-cover"
-        />
-        <div
-          class="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur px-4 py-3 rounded-2xl flex justify-between items-center"
-        >
-          <div>
-            <p class="text-sm font-bold">Today's Open Play</p>
-            <p class="text-xs text-morado font-bold">9:00 AM - 6:00 PM</p>
-          </div>
-          <span class="pi pi-arrow-right text-rojo-brillante" aria-hidden="true"></span>
-        </div>
-      </div>
     </section>
   `,
 })
-export class HeroSection {}
+export class HeroSection {
+  private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
+  private readonly subtitle = viewChild.required<ElementRef<HTMLParagraphElement>>('subtitle');
+
+  constructor() {
+    afterNextRender(() => {
+      this.animateHero();
+    });
+  }
+
+  private animateHero(): void {
+    const headingEl = this.heading().nativeElement;
+    const subtitleEl = this.subtitle().nativeElement;
+
+    const split = SplitText.create(headingEl, { type: 'chars,words' });
+
+    // Make the container visible now that chars are wrapped
+    gsap.set(headingEl, { visibility: 'visible' });
+
+    // Entrance: each char comes from a RANDOM direction and rotation
+    gsap.fromTo(
+      split.chars,
+      {
+        opacity: 0,
+        y: () => gsap.utils.random(-120, 120),
+        x: () => gsap.utils.random(-40, 40),
+        rotation: () => gsap.utils.random(-90, 90),
+        scale: () => gsap.utils.random(0.2, 0.6),
+      },
+      {
+        opacity: 1,
+        y: 0,
+        x: 0,
+        rotation: 0,
+        scale: 1,
+        duration: 0.8,
+        stagger: { amount: 0.6, from: 'random' },
+        ease: 'back.out(1.4)',
+        onComplete: () => this.addContinuousMotion(split.chars),
+      },
+    );
+
+    // Subtitle fade in after heading
+    gsap.to(subtitleEl, {
+      opacity: 1,
+      y: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      delay: 1.2,
+    });
+  }
+
+  private addContinuousMotion(chars: Element[]): void {
+    // After entrance, each char gets its own subtle infinite floating motion
+    chars.forEach((char) => {
+      // Each char gets unique random values for its wobble
+      const yAmount = gsap.utils.random(2, 6);
+      const xAmount = gsap.utils.random(1, 3);
+      const rotAmount = gsap.utils.random(1, 4);
+      const duration = gsap.utils.random(2, 4);
+
+      gsap.to(char, {
+        y: `random(-${yAmount}, ${yAmount})`,
+        x: `random(-${xAmount}, ${xAmount})`,
+        rotation: `random(-${rotAmount}, ${rotAmount})`,
+        duration,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        delay: gsap.utils.random(0, 1.5),
+      });
+    });
+  }
+}
