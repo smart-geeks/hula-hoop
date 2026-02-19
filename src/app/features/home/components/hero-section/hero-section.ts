@@ -86,7 +86,7 @@ export class HeroSection {
         duration: 0.8,
         stagger: { amount: 0.6, from: 'random' },
         ease: 'back.out(1.4)',
-        onComplete: () => this.addContinuousMotion(split.chars),
+        onComplete: () => this.spinSingleChar(split.chars),
       },
     );
 
@@ -100,25 +100,25 @@ export class HeroSection {
     });
   }
 
-  private addContinuousMotion(chars: Element[]): void {
-    // After entrance, each char gets its own subtle infinite floating motion
-    chars.forEach((char) => {
-      // Each char gets unique random values for its wobble
-      const yAmount = gsap.utils.random(2, 6);
-      const xAmount = gsap.utils.random(1, 3);
-      const rotAmount = gsap.utils.random(1, 4);
-      const duration = gsap.utils.random(2, 4);
+  private spinSingleChar(chars: Element[]): void {
+    // Find the "i" in "Life!" — parent word contains "Life"
+    const iChar = chars.find((c) => {
+      const parent = c.parentElement;
+      return c.textContent === 'i' && parent?.textContent?.includes('Life');
+    });
 
-      gsap.to(char, {
-        y: `random(-${yAmount}, ${yAmount})`,
-        x: `random(-${xAmount}, ${xAmount})`,
-        rotation: `random(-${rotAmount}, ${rotAmount})`,
-        duration,
-        ease: 'sine.inOut',
-        repeat: -1,
-        yoyo: true,
-        delay: gsap.utils.random(0, 1.5),
-      });
+    if (!iChar) return;
+
+    // Set transform origin to center and make it inline-block for rotation
+    gsap.set(iChar, { display: 'inline-block', transformOrigin: '50% 50%' });
+
+    // Periodic 360° spin every ~4 seconds
+    gsap.to(iChar, {
+      rotation: 360,
+      duration: 0.8,
+      ease: 'power2.inOut',
+      repeat: -1,
+      repeatDelay: 4,
     });
   }
 }
