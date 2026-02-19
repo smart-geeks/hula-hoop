@@ -4,3 +4,16 @@
 @import "tailwindcss";
 @plugin "tailwindcss-primeui";
 @layer theme, base, primeng;
+
+/* Hula Hoop custom color palette for Tailwind utilities */
+@theme {
+  --color-lima: #8CE9AF;
+  --color-rosa-pastel: #EDB2E4;
+  --color-azul-cielo: #85E8E3;
+  --color-morado: #686ABB;
+  --color-rojo-brillante: #E30D1C;
+  --color-naranja: #FC7632;
+  --color-marron: #B28B7E;
+  --color-amarillo-merengue: #F6F090;
+  --color-neutro: #F3ECE5;
+}
