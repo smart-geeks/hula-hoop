@@ -5,7 +5,7 @@
 @plugin "tailwindcss-primeui";
 @layer theme, base, primeng;
 
-/* Hula Hoop custom color palette for Tailwind utilities */
+/* Hula Hoop custom color palette and fonts for Tailwind utilities */
 @theme {
   --color-lima: #8CE9AF;
   --color-rosa-pastel: #EDB2E4;
@@ -16,4 +16,40 @@
   --color-marron: #B28B7E;
   --color-amarillo-merengue: #F6F090;
   --color-neutro: #F3ECE5;
+
+  --font-display: "Fredoka", sans-serif;
+  --font-body: "Nunito", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+/* Grid background pattern */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(237, 178, 228, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(237, 178, 228, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Floating animation */
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+.pixel-float {
+  animation: floating 4s ease-in-out infinite;
+}
+
+/* Bounce scale animation */
+@keyframes bounce-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.pixel-bounce {
+  animation: bounce-scale 2s ease-in-out infinite;
 }
