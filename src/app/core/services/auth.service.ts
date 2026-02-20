@@ -21,6 +21,10 @@ export class AuthService {
   readonly isLoggedIn = computed(() => this.currentUser() !== null);
   readonly isAdmin = computed(() => this.userProfile()?.role === 'admin');
 
+  /** Tracks the user ID for which we already have a profile loaded */
+  private loadedProfileUserId: string | null = null;
+  private profileFetchInProgress = false;
+
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
       this.initAuthListener();
@@ -32,10 +36,7 @@ export class AuthService {
     if (!client) throw new Error('Supabase client not available');
 
     const response = await client.auth.signInWithPassword({ email, password });
-    if (response.data.user) {
-      this.currentUser.set(response.data.user);
-      await this.fetchProfile(response.data.user.id);
-    }
+    // Don't manually set user/profile here — onAuthStateChange handles it
     return response;
   }
 
@@ -53,10 +54,7 @@ export class AuthService {
         },
       },
     });
-    if (response.data.user) {
-      this.currentUser.set(response.data.user);
-      await this.fetchProfile(response.data.user.id);
-    }
+    // Don't manually set user/profile here — onAuthStateChange handles it
     return response;
   }
 
@@ -67,6 +65,7 @@ export class AuthService {
     await client.auth.signOut();
     this.currentUser.set(null);
     this.userProfile.set(null);
+    this.loadedProfileUserId = null;
   }
 
   async resetPassword(email: string): Promise<{ error: unknown }> {
@@ -77,41 +76,67 @@ export class AuthService {
     return { error };
   }
 
-  private async initAuthListener(): Promise<void> {
+  private initAuthListener(): void {
     const client = this.supabase.client;
     if (!client) return;
 
-    const {
-      data: { session },
-    } = await client.auth.getSession();
-    if (session?.user) {
-      this.currentUser.set(session.user);
-      await this.fetchProfile(session.user.id);
-    }
-
-    client.auth.onAuthStateChange((_event, session) => {
+    // onAuthStateChange fires INITIAL_SESSION on setup — no need for a separate getSession() call.
+    // This avoids a duplicate token refresh that can trigger 429 rate-limits.
+    client.auth.onAuthStateChange((event, session) => {
       const user = session?.user ?? null;
-      this.currentUser.set(user);
-      if (user) {
-        this.fetchProfile(user.id);
-      } else {
+
+      if (!user) {
+        // Signed out or session expired
+        this.currentUser.set(null);
         this.userProfile.set(null);
+        this.loadedProfileUserId = null;
+        return;
+      }
+
+      this.currentUser.set(user);
+
+      // Only fetch profile on events that establish or change the session.
+      // Skip TOKEN_REFRESHED if we already have the profile for this user.
+      const needsProfileFetch =
+        event === 'SIGNED_IN' ||
+        event === 'INITIAL_SESSION' ||
+        (event === 'TOKEN_REFRESHED' && this.loadedProfileUserId !== user.id);
+
+      if (needsProfileFetch) {
+        this.fetchProfile(user.id);
       }
     });
   }
 
   private async fetchProfile(userId: string): Promise<void> {
+    // Prevent concurrent fetches for the same user
+    if (this.profileFetchInProgress) return;
+
     const client = this.supabase.client;
     if (!client) return;
 
-    const { data } = await client
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    this.profileFetchInProgress = true;
 
-    if (data) {
-      this.userProfile.set(data as UserProfile);
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch profile:', error.message);
+        return;
+      }
+
+      if (data) {
+        this.userProfile.set(data as UserProfile);
+        this.loadedProfileUserId = userId;
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
+    } finally {
+      this.profileFetchInProgress = false;
     }
   }
 }
