@@ -6,10 +6,6 @@ import { HeroSection } from '../../components/hero-section/hero-section';
   imports: [HeroSection],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-h-screen grid-bg' },
-  template: `
-    <main class="pt-24">
-      <app-hero-section />
-    </main>
-  `,
+  templateUrl: './home-page.html',
 })
 export class HomePage {}

@@ -1,0 +1,151 @@
+<header class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+  <nav
+    class="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 max-w-7xl"
+    aria-label="Main navigation"
+  >
+    <!-- Logo -->
+    <a routerLink="/" class="flex items-center gap-2 shrink-0" aria-label="Hula Hoop home">
+      <span
+        class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amarillo-merengue"
+        aria-hidden="true"
+      >
+        <span class="text-lg">&#x1F642;</span>
+      </span>
+      <span class="font-display text-2xl font-bold leading-none">
+        <span class="text-rojo-brillante">Hula</span>
+        <span class="text-morado ml-0.5">Hoop</span>
+      </span>
+    </a>
+
+    <!-- Desktop nav -->
+    <div class="hidden lg:flex items-center gap-1">
+      @if (isLoggedIn()) {
+        <a
+          routerLink="/account"
+          class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante"
+        >
+          Account
+        </a>
+
+        @if (isAdmin()) {
+          <a
+            routerLink="/admin"
+            class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante"
+          >
+            Admin
+          </a>
+        }
+      }
+    </div>
+
+    <!-- Desktop actions -->
+    <div class="hidden lg:flex items-center gap-3">
+      @if (isLoggedIn()) {
+        <p-button
+          label="Log out"
+          icon="pi pi-sign-out"
+          severity="secondary"
+          [text]="true"
+          size="small"
+          (click)="onLogout()"
+        />
+      } @else {
+        <p-button
+          label="Log in"
+          severity="help"
+          [rounded]="true"
+          (click)="onLogin()"
+        />
+      }
+
+      <p-button
+        label="Book Party"
+        [rounded]="true"
+        (click)="onBookParty()"
+      />
+    </div>
+
+    <!-- Mobile actions -->
+    <div class="flex lg:hidden items-center gap-2">
+      <p-button
+        label="Book Party"
+        [rounded]="true"
+        size="small"
+        (click)="onBookParty()"
+      />
+      <p-button
+        icon="pi pi-bars"
+        severity="secondary"
+        [text]="true"
+        [rounded]="true"
+        (click)="drawerVisible.set(true)"
+        aria-label="Open menu"
+        [attr.aria-expanded]="drawerVisible()"
+        aria-controls="mobile-menu-drawer"
+      />
+    </div>
+  </nav>
+</header>
+
+<!-- Mobile drawer -->
+<p-drawer
+  [(visible)]="drawerVisible"
+  position="right"
+  [blockScroll]="true"
+  styleClass="!w-72"
+  id="mobile-menu-drawer"
+  ariaCloseLabel="Close menu"
+>
+  <ng-template #header>
+    <span class="font-display text-xl font-bold">
+      <span class="text-rojo-brillante">Hula</span>
+      <span class="text-morado ml-0.5">Hoop</span>
+    </span>
+  </ng-template>
+
+  <div class="flex flex-col gap-1 py-2">
+    @if (isLoggedIn()) {
+      <a
+        routerLink="/account"
+        class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
+        (click)="drawerVisible.set(false)"
+      >
+        <i class="pi pi-user" aria-hidden="true"></i>
+        Account
+      </a>
+
+      @if (isAdmin()) {
+        <a
+          routerLink="/admin"
+          class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
+          (click)="drawerVisible.set(false)"
+        >
+          <i class="pi pi-shield" aria-hidden="true"></i>
+          Admin
+        </a>
+      }
+    }
+  </div>
+
+  <ng-template #footer>
+    @if (isLoggedIn()) {
+      <p-button
+        label="Log out"
+        icon="pi pi-sign-out"
+        severity="danger"
+        [text]="true"
+        styleClass="w-full"
+        (click)="onLogout(); drawerVisible.set(false)"
+      />
+    } @else {
+      <p-button
+        label="Log in"
+        severity="help"
+        styleClass="w-full"
+        (click)="onLogin(); drawerVisible.set(false)"
+      />
+    }
+  </ng-template>
+</p-drawer>
+
+<app-auth-dialog />
