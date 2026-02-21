@@ -1,8 +1,9 @@
 import { computed, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { AuthResponse, User } from '@supabase/supabase-js';
+import type { AuthResponse, AuthError, User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import type { UserProfile } from '../interfaces/user-profile';
+import { environment } from '../../../environments/environment';
 
 export interface RegisterData {
   fullName: string;
@@ -20,6 +21,7 @@ export class AuthService {
   readonly userProfile = signal<UserProfile | null>(null);
   readonly isLoggedIn = computed(() => this.currentUser() !== null);
   readonly isAdmin = computed(() => this.userProfile()?.role === 'admin');
+  readonly isPasswordRecovery = signal(false);
 
   /** Tracks the user ID for which we already have a profile loaded */
   private loadedProfileUserId: string | null = null;
@@ -72,7 +74,24 @@ export class AuthService {
     const client = this.supabase.client;
     if (!client) throw new Error('Supabase client not available');
 
-    const { error } = await client.auth.resetPasswordForEmail(email);
+    const siteUrl = environment.production
+      ? window.location.origin
+      : 'http://localhost:4200';
+
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/auth/update-password`,
+    });
+    return { error };
+  }
+
+  async updatePassword(newPassword: string): Promise<{ error: AuthError | null }> {
+    const client = this.supabase.client;
+    if (!client) throw new Error('Supabase client not available');
+
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (!error) {
+      this.isPasswordRecovery.set(false);
+    }
     return { error };
   }
 
@@ -84,6 +103,10 @@ export class AuthService {
     // This avoids a duplicate token refresh that can trigger 429 rate-limits.
     client.auth.onAuthStateChange((event, session) => {
       const user = session?.user ?? null;
+
+      if (event === 'PASSWORD_RECOVERY') {
+        this.isPasswordRecovery.set(true);
+      }
 
       if (!user) {
         // Signed out or session expired

@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { HeroSection } from '../../components/hero-section/hero-section';
+import { HomeFooter } from '../../components/home-footer/home-footer';
 
 @Component({
   selector: 'app-home-page',
-  imports: [HeroSection],
+  imports: [HeroSection, HomeFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block min-h-screen grid-bg' },
+  host: { class: 'flex min-h-screen flex-col grid-bg' },
   templateUrl: './home-page.html',
 })
 export class HomePage {}
