@@ -1,0 +1,56 @@
+<section class="bg-amarillo-merengue/40 py-16 md:py-24">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <div class="grid items-center gap-12 lg:grid-cols-2">
+      <!-- Text content -->
+      <div class="text-center lg:text-left">
+        <span
+          class="font-body text-sm font-bold tracking-widest text-morado uppercase"
+        >
+          Celebraciones
+        </span>
+        <h2
+          class="font-display mt-2 text-4xl font-bold text-rojo-brillante md:text-5xl"
+        >
+          Fiestas Privadas
+          <i class="pi pi-sparkles ml-2 text-naranja"></i>
+        </h2>
+        <p class="font-body mt-4 text-lg leading-relaxed text-neutral-700">
+          Celebra cumpleaños y eventos inolvidables en
+          <strong class="text-morado">Hula Hoop</strong>. Nos encargamos de
+          todo para que tú solo disfrutes.
+        </p>
+
+        <!-- Inclusions chips -->
+        <p class="font-body mt-8 mb-3 text-sm font-bold tracking-wide text-morado uppercase">
+          Todos nuestros paquetes incluyen:
+        </p>
+        <div class="flex flex-wrap justify-center gap-3 lg:justify-start">
+          @for (item of inclusions; track item.label) {
+            <p-chip [label]="item.label" [icon]="item.icon" />
+          }
+        </div>
+
+        <!-- CTA -->
+        <div class="mt-10">
+          <p-button
+            label="Reservar Fiesta"
+            icon="pi pi-calendar"
+            severity="danger"
+            size="large"
+            [rounded]="true"
+            (onClick)="onReservar()"
+          />
+        </div>
+      </div>
+
+      <!-- Decorative placeholder image -->
+      <div class="flex items-center justify-center">
+        <div
+          class="flex h-72 w-72 items-center justify-center rounded-3xl bg-rosa-pastel/30 shadow-lg md:h-80 md:w-80"
+        >
+          <i class="pi pi-gift text-8xl text-rosa-pastel"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

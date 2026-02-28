@@ -1,0 +1,54 @@
+<section class="bg-neutro/50 py-16 md:py-24">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+      <h2 class="font-display text-4xl font-bold text-morado md:text-5xl">
+        Nuestros Horarios
+        <i class="pi pi-clock ml-2 text-azul-cielo"></i>
+      </h2>
+      <p class="font-body mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-neutral-700">
+        Estos son los horarios disponibles para fiestas privadas y juego abierto al público.
+      </p>
+    </div>
+
+    <!-- Schedule cards -->
+    <div class="mt-12 grid gap-6 md:grid-cols-2">
+      <!-- Weekday card -->
+      <div class="rounded-2xl border-2 border-azul-cielo/30 bg-azul-cielo/10 p-6 text-center shadow-sm">
+        <div class="font-display text-2xl font-bold text-morado">
+          {{ weekdaySchedule.label }}
+        </div>
+        <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
+          {{ weekdaySchedule.days }}
+        </div>
+        <div class="mt-4">
+          @for (session of weekdaySchedule.sessions; track session) {
+            <div
+              class="font-body inline-block rounded-full bg-white px-4 py-2 text-lg font-bold text-morado shadow-sm"
+            >
+              {{ session }}
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Weekend card -->
+      <div class="rounded-2xl border-2 border-naranja/30 bg-naranja/10 p-6 text-center shadow-sm">
+        <div class="font-display text-2xl font-bold text-naranja">
+          {{ weekendSchedule.label }}
+        </div>
+        <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
+          {{ weekendSchedule.days }}
+        </div>
+        <div class="mt-4 flex flex-col items-center gap-2">
+          @for (session of weekendSchedule.sessions; track session) {
+            <div
+              class="font-body rounded-full bg-white px-4 py-2 text-lg font-bold text-naranja shadow-sm"
+            >
+              {{ session }}
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
