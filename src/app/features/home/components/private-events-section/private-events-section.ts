@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 
 @Component({
   selector: 'app-private-events-section',
-  imports: [ButtonModule, ChipModule],
+  imports: [ButtonModule, ChipModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './private-events-section.html',
 })
@@ -19,8 +20,4 @@ export class PrivateEventsSection {
     { label: '3 Horas de Evento', icon: 'pi pi-clock' },
     { label: 'Asistentes Playground', icon: 'pi pi-users' },
   ];
-
-  onReservar(): void {
-    console.log('Reservar Fiesta clicked');
-  }
 }

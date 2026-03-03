@@ -1,0 +1,110 @@
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="text-2xl md:text-3xl font-bold font-display mb-6">Mis Reservas</h1>
+
+  @if (loading()) {
+    <div class="flex justify-center py-12">
+      <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+    </div>
+  } @else if (!hasReservations()) {
+    <div class="text-center py-12">
+      <i class="pi pi-calendar text-5xl text-neutro-300 mb-4"></i>
+      <h2 class="text-xl font-semibold text-neutro-600 mb-2">No tienes reservas</h2>
+      <p class="text-neutro-500 mb-6">Haz tu primera reserva y aparecerá aquí.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a routerLink="/reservar/fiesta-privada">
+          <p-button label="Reservar Fiesta Privada" icon="pi pi-star" />
+        </a>
+        <a routerLink="/reservar/play-day">
+          <p-button label="Reservar Play Day" icon="pi pi-users" [outlined]="true" />
+        </a>
+      </div>
+    </div>
+  } @else {
+    <p-tabs [(value)]="activeTab">
+      <p-tablist>
+        <p-tab value="0">
+          Fiestas Privadas
+          @if (privateReservations().length > 0) {
+            <span class="ml-1.5 text-xs bg-neutro-200 rounded-full px-1.5 py-0.5">
+              {{ privateReservations().length }}
+            </span>
+          }
+        </p-tab>
+        <p-tab value="1">
+          Play Day
+          @if (playdateReservations().length > 0) {
+            <span class="ml-1.5 text-xs bg-neutro-200 rounded-full px-1.5 py-0.5">
+              {{ playdateReservations().length }}
+            </span>
+          }
+        </p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Fiestas Privadas -->
+        <p-tabpanel value="0">
+          @if (privateReservations().length === 0) {
+            <p class="text-neutro-500 py-8 text-center">No tienes reservas de fiestas privadas.</p>
+          } @else {
+            <div class="flex flex-col gap-4 pt-4">
+              @for (res of privateReservations(); track res.id) {
+                <a [routerLink]="['/reserva', res.access_token]"
+                   class="block p-4 rounded-xl border border-neutro-200 hover:border-neutro-400 transition-colors">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <i class="pi pi-star text-rojo-brillante"></i>
+                        <span class="font-semibold">Fiesta Privada</span>
+                        <p-tag [value]="getStatusConfig(res.status).label"
+                               [severity]="$any(getStatusConfig(res.status).severity)" />
+                      </div>
+                      <p class="text-sm text-neutro-600">
+                        {{ formatDate(res.reservation_date) }} · {{ res.guest_count }} invitados
+                      </p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-lg font-bold text-rojo-brillante">{{ res.total_cents | currencyMxn }}</p>
+                      <p class="text-xs text-neutro-500">#{{ res.id.slice(0, 8) }}</p>
+                    </div>
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        </p-tabpanel>
+
+        <!-- Play Day -->
+        <p-tabpanel value="1">
+          @if (playdateReservations().length === 0) {
+            <p class="text-neutro-500 py-8 text-center">No tienes reservas de Play Day.</p>
+          } @else {
+            <div class="flex flex-col gap-4 pt-4">
+              @for (res of playdateReservations(); track res.id) {
+                <a [routerLink]="['/reserva', res.access_token]"
+                   class="block p-4 rounded-xl border border-neutro-200 hover:border-neutro-400 transition-colors">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <i class="pi pi-users text-azul-cielo"></i>
+                        <span class="font-semibold">Play Day</span>
+                        <p-tag [value]="getStatusConfig(res.status).label"
+                               [severity]="$any(getStatusConfig(res.status).severity)" />
+                      </div>
+                      <p class="text-sm text-neutro-600">
+                        {{ formatDate(res.reservation_date) }} · {{ res.kids_count }} niño(s), {{ res.adults_count + res.extra_adults_count }} adulto(s)
+                      </p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-lg font-bold text-rojo-brillante">{{ res.total_cents | currencyMxn }}</p>
+                      <p class="text-xs text-neutro-500">#{{ res.id.slice(0, 8) }}</p>
+                    </div>
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  }
+</div>

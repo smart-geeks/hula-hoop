@@ -1,0 +1,130 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold font-display">Paquetes</h1>
+  <p-button label="Nuevo paquete" icon="pi pi-plus" (onClick)="openNew()" />
+</div>
+
+<p-table [value]="packages()" [loading]="loading()" [rowHover]="true"
+         responsiveLayout="stack" breakpoint="768px" styleClass="p-datatable-sm">
+  <ng-template #header>
+    <tr>
+      <th>Nombre</th>
+      <th>Invitados</th>
+      <th>Precio</th>
+      <th>Inclusiones</th>
+      <th>Estado</th>
+      <th>Orden</th>
+      <th style="width: 8rem">Acciones</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-pkg>
+    <tr>
+      <td>
+        <span class="font-semibold">{{ pkg.name }}</span>
+        @if (pkg.description) {
+          <br><span class="text-sm text-neutro-500">{{ pkg.description }}</span>
+        }
+      </td>
+      <td>{{ pkg.min_guests }} – {{ pkg.max_guests }}</td>
+      <td>{{ pkg.price_cents | currencyMxn }}</td>
+      <td>
+        <div class="flex flex-wrap gap-1">
+          @for (inc of pkg.inclusions; track inc) {
+            <p-tag [value]="inc" severity="info" />
+          }
+        </div>
+      </td>
+      <td>
+        <p-tag [value]="pkg.is_active ? 'Activo' : 'Inactivo'"
+               [severity]="pkg.is_active ? 'success' : 'warn'" />
+      </td>
+      <td>{{ pkg.sort_order }}</td>
+      <td>
+        <div class="flex gap-1">
+          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                    (onClick)="openEdit(pkg)" pTooltip="Editar" />
+          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                    (onClick)="confirmDelete(pkg)" pTooltip="Eliminar" />
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="7" class="text-center py-8 text-neutro-500">No hay paquetes registrados.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<!-- Dialog crear/editar -->
+<p-dialog [header]="editingPackage() ? 'Editar paquete' : 'Nuevo paquete'"
+          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '32rem' }"
+          [closable]="true" [draggable]="false">
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <p-floatlabel variant="on">
+      <input pInputText id="pkg-name" formControlName="name" class="w-full" />
+      <label for="pkg-name">Nombre *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <textarea pTextarea id="pkg-desc" formControlName="description" [rows]="3" class="w-full"></textarea>
+      <label for="pkg-desc">Descripción</label>
+    </p-floatlabel>
+
+    <div class="grid grid-cols-2 gap-4">
+      <p-floatlabel variant="on">
+        <p-inputNumber id="pkg-min" formControlName="min_guests" [min]="1" [showButtons]="true" class="w-full" />
+        <label for="pkg-min">Mín. invitados *</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-inputNumber id="pkg-max" formControlName="max_guests" [min]="1" [showButtons]="true" class="w-full" />
+        <label for="pkg-max">Máx. invitados *</label>
+      </p-floatlabel>
+    </div>
+
+    <p-floatlabel variant="on">
+      <p-inputNumber id="pkg-price" formControlName="price_cents" [min]="0" [showButtons]="true"
+                     mode="currency" currency="MXN" locale="es-MX" class="w-full" />
+      <label for="pkg-price">Precio (MXN) *</label>
+    </p-floatlabel>
+    <small class="text-neutro-500 -mt-3">El valor se guarda en centavos automáticamente.</small>
+
+    <div>
+      <label class="block text-sm font-medium text-neutro-700 mb-2">Inclusiones</label>
+      <div class="flex gap-2 mb-2">
+        <input pInputText [value]="inclusionInput()" (input)="inclusionInput.set($any($event.target).value)"
+               (keydown.enter)="$event.preventDefault(); addInclusion()"
+               placeholder="Ej: Merienda" class="flex-1" />
+        <p-button icon="pi pi-plus" (onClick)="addInclusion()" [outlined]="true" />
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @for (inc of form.controls.inclusions.value; track inc; let i = $index) {
+          <p-tag [value]="inc" severity="info" [rounded]="true">
+            <button type="button" class="ml-1 cursor-pointer text-xs" (click)="removeInclusion(i)"
+                    [attr.aria-label]="'Quitar ' + inc">✕</button>
+          </p-tag>
+        }
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <p-floatlabel variant="on">
+        <p-inputNumber id="pkg-order" formControlName="sort_order" [showButtons]="true" class="w-full" />
+        <label for="pkg-order">Orden</label>
+      </p-floatlabel>
+      <div class="flex items-center gap-3">
+        <p-toggleSwitch formControlName="is_active" inputId="pkg-active" />
+        <label for="pkg-active" class="text-sm">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="dialogVisible.set(false)" type="button" />
+      <p-button [label]="editingPackage() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+                type="submit" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

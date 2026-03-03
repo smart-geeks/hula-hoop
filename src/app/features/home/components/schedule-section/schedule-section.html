@@ -10,45 +10,55 @@
       </p>
     </div>
 
-    <!-- Schedule cards -->
-    <div class="mt-12 grid gap-6 md:grid-cols-2">
-      <!-- Weekday card -->
-      <div class="rounded-2xl border-2 border-azul-cielo/30 bg-azul-cielo/10 p-6 text-center shadow-sm">
-        <div class="font-display text-2xl font-bold text-morado">
-          {{ weekdaySchedule.label }}
-        </div>
-        <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
-          {{ weekdaySchedule.days }}
-        </div>
-        <div class="mt-4">
-          @for (session of weekdaySchedule.sessions; track session) {
-            <div
-              class="font-body inline-block rounded-full bg-white px-4 py-2 text-lg font-bold text-morado shadow-sm"
-            >
-              {{ session }}
-            </div>
-          }
-        </div>
+    @if (loading()) {
+      <div class="mt-12 flex justify-center">
+        <i class="pi pi-spin pi-spinner text-4xl text-morado"></i>
       </div>
+    } @else {
+      <!-- Schedule cards -->
+      <div class="mt-12 grid gap-6 md:grid-cols-2">
+        <!-- Weekday card -->
+        <div class="rounded-2xl border-2 border-azul-cielo/30 bg-azul-cielo/10 p-6 text-center shadow-sm">
+          <div class="font-display text-2xl font-bold text-morado">
+            Entre Semana
+          </div>
+          <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
+            Lun - Vie
+          </div>
+          <div class="mt-4">
+            @for (session of weekdaySessions(); track session) {
+              <div
+                class="font-body inline-block rounded-full bg-white px-4 py-2 text-lg font-bold text-morado shadow-sm"
+              >
+                {{ session }}
+              </div>
+            } @empty {
+              <p class="font-body text-neutral-400 italic">Sin horarios configurados</p>
+            }
+          </div>
+        </div>
 
-      <!-- Weekend card -->
-      <div class="rounded-2xl border-2 border-naranja/30 bg-naranja/10 p-6 text-center shadow-sm">
-        <div class="font-display text-2xl font-bold text-naranja">
-          {{ weekendSchedule.label }}
-        </div>
-        <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
-          {{ weekendSchedule.days }}
-        </div>
-        <div class="mt-4 flex flex-col items-center gap-2">
-          @for (session of weekendSchedule.sessions; track session) {
-            <div
-              class="font-body rounded-full bg-white px-4 py-2 text-lg font-bold text-naranja shadow-sm"
-            >
-              {{ session }}
-            </div>
-          }
+        <!-- Weekend card -->
+        <div class="rounded-2xl border-2 border-naranja/30 bg-naranja/10 p-6 text-center shadow-sm">
+          <div class="font-display text-2xl font-bold text-naranja">
+            Fines de Semana
+          </div>
+          <div class="font-body mt-1 text-sm font-semibold text-neutral-500">
+            Sáb - Dom
+          </div>
+          <div class="mt-4 flex flex-col items-center gap-2">
+            @for (session of weekendSessions(); track session) {
+              <div
+                class="font-body rounded-full bg-white px-4 py-2 text-lg font-bold text-naranja shadow-sm"
+              >
+                {{ session }}
+              </div>
+            } @empty {
+              <p class="font-body text-neutral-400 italic">Sin horarios configurados</p>
+            }
+          </div>
         </div>
       </div>
-    </div>
+    }
   </div>
 </section>

@@ -1,0 +1,269 @@
+<p-toast />
+
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="text-2xl md:text-3xl font-bold font-display text-center mb-2">
+    Reservar Play Day
+  </h1>
+  <p class="text-center text-neutro-500 mb-6">Juego abierto al público — elige tu horario</p>
+
+  @if (loading()) {
+    <div class="flex justify-center py-12">
+      <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+    </div>
+  } @else {
+    <p-stepper [(value)]="activeStep" [linear]="true">
+      <p-step-list>
+        <p-step [value]="1">Fecha y horario</p-step>
+        <p-step [value]="2">Asistentes</p-step>
+        <p-step [value]="3">Datos y pago</p-step>
+      </p-step-list>
+
+      <p-step-panels>
+        <!-- STEP 1: Fecha y horario -->
+        <p-step-panel [value]="1">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="flex flex-col gap-6 py-4">
+              <div>
+                <h2 class="text-lg font-semibold mb-3">Selecciona una fecha</h2>
+                <p-datepicker
+                  [inline]="true"
+                  [minDate]="minDate()"
+                  [showIcon]="false"
+                  (onSelect)="onDateSelect($event)"
+                  styleClass="w-full" />
+              </div>
+
+              @if (selectedDate()) {
+                <div>
+                  <h2 class="text-lg font-semibold mb-3">
+                    Horarios disponibles para {{ formatDateDisplay(selectedDate()!) }}
+                  </h2>
+
+                  @if (checkingAvailability()) {
+                    <div class="flex items-center gap-2 text-neutro-500">
+                      <i class="pi pi-spin pi-spinner"></i>
+                      <span>Verificando disponibilidad...</span>
+                    </div>
+                  } @else if (availableSlots().length === 0) {
+                    <p class="text-neutro-500 bg-neutro-50 rounded-lg p-4">
+                      No hay horarios disponibles para esta fecha. Puede que todos estén reservados para fiestas privadas o llenos.
+                    </p>
+                  } @else {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      @for (sa of availableSlots(); track sa.slot.id) {
+                        <button
+                          type="button"
+                          class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer"
+                          [class]="selectedSlot()?.slot?.id === sa.slot.id
+                            ? 'border-rojo-brillante bg-rojo-brillante/5'
+                            : 'border-neutro-200 hover:border-neutro-400'"
+                          (click)="selectSlot(sa)">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                              <i class="pi pi-clock text-lg"
+                                 [class]="selectedSlot()?.slot?.id === sa.slot.id ? 'text-rojo-brillante' : 'text-neutro-400'"></i>
+                              <div>
+                                <p class="font-semibold">{{ formatTime(sa.slot.start_time) }} – {{ formatTime(sa.slot.end_time) }}</p>
+                                <p class="text-sm text-neutro-500">
+                                  {{ sa.slot.day_type === 'weekday' ? 'Entre semana' : 'Fin de semana' }}
+                                </p>
+                              </div>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-lima/20 text-green-700 font-medium">
+                              {{ sa.remaining }} lugares
+                            </span>
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="flex justify-end pt-4">
+              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                        [disabled]="!canGoToStep2()" (onClick)="activateCallback(2)" />
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- STEP 2: Asistentes -->
+        <p-step-panel [value]="2">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="py-4">
+              <h2 class="text-lg font-semibold mb-4">¿Cuántos asistirán?</h2>
+
+              <!-- Pricing info -->
+              <div class="bg-azul-cielo/10 rounded-xl p-4 mb-6">
+                <p class="text-sm font-medium mb-2">Precios</p>
+                <div class="flex flex-col gap-1 text-sm">
+                  <div class="flex justify-between">
+                    <span>Ticket (1 niño + 1 adulto)</span>
+                    <span class="font-medium">{{ ticketPriceCents() | currencyMxn }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Adulto extra</span>
+                    <span class="font-medium">{{ extraAdultPriceCents() | currencyMxn }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-5">
+                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
+                  <div>
+                    <p class="font-semibold">Niños</p>
+                    <p class="text-sm text-neutro-500">Cada niño incluye 1 adulto acompañante</p>
+                  </div>
+                  <p-inputNumber
+                    [ngModel]="kidsCount()"
+                    (ngModelChange)="updateKidsCount($event)"
+                    [min]="1"
+                    [max]="selectedSlot()?.remaining ?? 10"
+                    [showButtons]="true"
+                    styleClass="w-28" />
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
+                  <div>
+                    <p class="font-semibold">Adultos incluidos</p>
+                    <p class="text-sm text-neutro-500">1 por cada niño (incluido en el ticket)</p>
+                  </div>
+                  <span class="text-lg font-bold text-neutro-600 w-28 text-center">{{ adultsCount() }}</span>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
+                  <div>
+                    <p class="font-semibold">Adultos extra</p>
+                    <p class="text-sm text-neutro-500">{{ extraAdultPriceCents() | currencyMxn }} cada uno</p>
+                  </div>
+                  <p-inputNumber
+                    [ngModel]="extraAdultsCount()"
+                    (ngModelChange)="updateExtraAdults($event)"
+                    [min]="0"
+                    [max]="(selectedSlot()?.remaining ?? 0) - kidsCount() - adultsCount()"
+                    [showButtons]="true"
+                    styleClass="w-28" />
+                </div>
+              </div>
+
+              <!-- Total preview -->
+              <div class="mt-6 p-4 bg-lima/10 rounded-xl">
+                <div class="flex justify-between text-sm mb-1">
+                  <span>{{ kidsCount() }} ticket(s) x {{ ticketPriceCents() | currencyMxn }}</span>
+                  <span>{{ kidsCount() * ticketPriceCents() | currencyMxn }}</span>
+                </div>
+                @if (extraAdultsCount() > 0) {
+                  <div class="flex justify-between text-sm mb-1">
+                    <span>{{ extraAdultsCount() }} adulto(s) extra x {{ extraAdultPriceCents() | currencyMxn }}</span>
+                    <span>{{ extraAdultsCount() * extraAdultPriceCents() | currencyMxn }}</span>
+                  </div>
+                }
+                <hr class="border-neutro-200 my-2" />
+                <div class="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span class="text-rojo-brillante">{{ totalCents() | currencyMxn }}</span>
+                </div>
+                <p class="text-xs text-neutro-500 mt-1">Total personas: {{ totalPersons() }}</p>
+              </div>
+            </div>
+
+            <div class="flex justify-between pt-4">
+              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                        (onClick)="activateCallback(1)" />
+              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                        [disabled]="!canGoToStep3()" (onClick)="activateCallback(3)" />
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- STEP 3: Datos y pago -->
+        <p-step-panel [value]="3">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="py-4">
+              <h2 class="text-lg font-semibold mb-4">Datos de contacto</h2>
+
+              <form [formGroup]="contactForm" class="flex flex-col gap-5 mb-6">
+                <p-floatlabel variant="on">
+                  <input pInputText id="pd-name" formControlName="guest_name" class="w-full" />
+                  <label for="pd-name">Nombre completo *</label>
+                </p-floatlabel>
+
+                <p-floatlabel variant="on">
+                  <input pInputText id="pd-email" formControlName="guest_email" type="email" class="w-full" />
+                  <label for="pd-email">Correo electrónico *</label>
+                </p-floatlabel>
+
+                <p-floatlabel variant="on">
+                  <p-inputMask id="pd-phone" formControlName="guest_phone"
+                               mask="(999) 999-9999" placeholder="(999) 999-9999" styleClass="w-full" />
+                  <label for="pd-phone">Teléfono *</label>
+                </p-floatlabel>
+              </form>
+
+              <!-- Resumen -->
+              <h2 class="text-lg font-semibold mb-3">Resumen de tu reserva</h2>
+              <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3">
+                <div class="flex justify-between">
+                  <span class="text-neutro-600">Fecha</span>
+                  <span class="font-medium">{{ selectedDate() ? formatDateDisplay(selectedDate()!) : '' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutro-600">Horario</span>
+                  <span class="font-medium">
+                    @if (selectedSlot()) {
+                      {{ formatTime(selectedSlot()!.slot.start_time) }} – {{ formatTime(selectedSlot()!.slot.end_time) }}
+                    }
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutro-600">Niños</span>
+                  <span class="font-medium">{{ kidsCount() }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutro-600">Adultos (incluidos)</span>
+                  <span class="font-medium">{{ adultsCount() }}</span>
+                </div>
+                @if (extraAdultsCount() > 0) {
+                  <div class="flex justify-between">
+                    <span class="text-neutro-600">Adultos extra</span>
+                    <span class="font-medium">{{ extraAdultsCount() }}</span>
+                  </div>
+                }
+
+                <hr class="border-neutro-200" />
+
+                <div class="flex justify-between text-sm">
+                  <span class="text-neutro-500">{{ kidsCount() }} ticket(s)</span>
+                  <span>{{ kidsCount() * ticketPriceCents() | currencyMxn }}</span>
+                </div>
+                @if (extraAdultsCount() > 0) {
+                  <div class="flex justify-between text-sm">
+                    <span class="text-neutro-500">{{ extraAdultsCount() }} adulto(s) extra</span>
+                    <span>{{ extraAdultsCount() * extraAdultPriceCents() | currencyMxn }}</span>
+                  </div>
+                }
+
+                <hr class="border-neutro-200" />
+
+                <div class="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span class="text-rojo-brillante">{{ totalCents() | currencyMxn }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between pt-4">
+              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                        (onClick)="activateCallback(2)" />
+              <p-button label="Confirmar y pagar" icon="pi pi-credit-card" iconPos="right"
+                        [loading]="submitting()"
+                        [disabled]="contactForm.invalid"
+                        (onClick)="submitReservation()" />
+            </div>
+          </ng-template>
+        </p-step-panel>
+      </p-step-panels>
+    </p-stepper>
+  }
+</div>

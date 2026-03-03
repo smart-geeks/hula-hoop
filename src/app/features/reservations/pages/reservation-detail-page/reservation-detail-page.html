@@ -1,0 +1,141 @@
+<p-toast />
+
+<div class="max-w-2xl mx-auto px-4 py-6">
+  @if (loading()) {
+    <div class="flex justify-center py-12">
+      <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+    </div>
+  } @else if (notFound()) {
+    <div class="text-center py-12">
+      <i class="pi pi-exclamation-circle text-5xl text-neutro-400 mb-4"></i>
+      <h1 class="text-2xl font-bold font-display mb-2">Reserva no encontrada</h1>
+      <p class="text-neutro-500">El enlace de reserva no es válido o ha expirado.</p>
+      <p-button label="Volver al inicio" icon="pi pi-home" styleClass="mt-4"
+                routerLink="/" />
+    </div>
+  } @else if (reservation(); as res) {
+    <!-- Payment status banner from MP redirect -->
+    @if (paymentStatus() === 'approved') {
+      <div class="bg-lima/20 border border-lima rounded-xl p-4 mb-6 flex items-center gap-3">
+        <i class="pi pi-check-circle text-2xl text-green-700"></i>
+        <div>
+          <p class="font-semibold text-green-800">Pago recibido</p>
+          <p class="text-sm text-green-700">Tu pago está siendo procesado. El estado de la reserva se actualizará en breve.</p>
+        </div>
+      </div>
+    } @else if (paymentStatus() === 'failure') {
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+        <i class="pi pi-times-circle text-2xl text-red-600"></i>
+        <div>
+          <p class="font-semibold text-red-700">Pago no completado</p>
+          <p class="text-sm text-red-600">Hubo un problema con el pago. Puedes intentar de nuevo.</p>
+        </div>
+      </div>
+    } @else if (paymentStatus() === 'pending') {
+      <div class="bg-amarillo-merengue/30 border border-amarillo-merengue rounded-xl p-4 mb-6 flex items-center gap-3">
+        <i class="pi pi-clock text-2xl text-amber-600"></i>
+        <div>
+          <p class="font-semibold text-amber-700">Pago pendiente</p>
+          <p class="text-sm text-amber-600">El pago está siendo procesado. Te notificaremos cuando se confirme.</p>
+        </div>
+      </div>
+    }
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold font-display">
+          {{ reservationType() === 'private' ? 'Fiesta Privada' : 'Play Day' }}
+        </h1>
+        <p class="text-sm text-neutro-500 mt-1">Reserva #{{ res.id.slice(0, 8) }}</p>
+      </div>
+      <p-tag [value]="statusConfig().label" [severity]="$any(statusConfig().severity)" class="text-sm" />
+    </div>
+
+    <!-- Reservation details -->
+    <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-4 mb-6">
+      <h2 class="font-semibold text-lg">Detalles de la reserva</h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <p class="text-sm text-neutro-500">Fecha</p>
+          <p class="font-medium">{{ formatDate(res.reservation_date) }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Nombre</p>
+          <p class="font-medium">{{ res.guest_name }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Email</p>
+          <p class="font-medium">{{ res.guest_email }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Teléfono</p>
+          <p class="font-medium">{{ res.guest_phone }}</p>
+        </div>
+      </div>
+
+      @if (isPrivateReservation(res)) {
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <p class="text-sm text-neutro-500">Invitados</p>
+            <p class="font-medium">{{ res.guest_count }}</p>
+          </div>
+        </div>
+        @if (res.notes) {
+          <div>
+            <p class="text-sm text-neutro-500">Notas</p>
+            <p class="font-medium">{{ res.notes }}</p>
+          </div>
+        }
+      } @else {
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <p class="text-sm text-neutro-500">Niños</p>
+            <p class="font-medium">{{ res.kids_count }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-neutro-500">Adultos</p>
+            <p class="font-medium">{{ res.adults_count }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-neutro-500">Adultos extra</p>
+            <p class="font-medium">{{ res.extra_adults_count }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Pricing -->
+    <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3 mb-6">
+      <h2 class="font-semibold text-lg">Resumen de pago</h2>
+
+      @if (isPrivateReservation(res)) {
+        <div class="flex justify-between">
+          <span class="text-neutro-600">Paquete</span>
+          <span class="font-medium">{{ res.subtotal_cents | currencyMxn }}</span>
+        </div>
+        @if (res.total_cents > res.subtotal_cents) {
+          <div class="flex justify-between text-sm">
+            <span class="text-neutro-500">Extras</span>
+            <span>{{ res.total_cents - res.subtotal_cents | currencyMxn }}</span>
+          </div>
+        }
+      }
+
+      <hr class="border-neutro-200" />
+
+      <div class="flex justify-between text-lg font-bold">
+        <span>Total</span>
+        <span class="text-rojo-brillante">{{ res.total_cents | currencyMxn }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    @if (res.status === 'pending_payment') {
+      <div class="flex justify-center">
+        <p-button label="Pagar ahora" icon="pi pi-credit-card" size="large"
+                  [loading]="retryingPayment()" (onClick)="retryPayment()" />
+      </div>
+    }
+  }
+</div>

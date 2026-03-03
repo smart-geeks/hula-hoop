@@ -6,6 +6,22 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    path: 'reserva/:accessToken',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'reservar/**',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'mi-cuenta/**',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'admin/**',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender,
   },

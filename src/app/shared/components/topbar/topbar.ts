@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { AuthService } from '../../../core/services/auth.service';
@@ -14,6 +14,7 @@ import { AuthDialog } from '../auth-dialog/auth-dialog';
 })
 export class Topbar {
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly authDialog = viewChild.required(AuthDialog);
 
   readonly drawerVisible = signal(false);
@@ -21,7 +22,7 @@ export class Topbar {
   readonly isAdmin = this.auth.isAdmin;
 
   onBookParty(): void {
-    // TODO: navigate to booking flow
+    this.router.navigate(['/reservar/fiesta-privada']);
   }
 
   onLogin(): void {
@@ -30,5 +31,6 @@ export class Topbar {
 
   async onLogout(): Promise<void> {
     await this.auth.logout();
+    this.router.navigate(['/']);
   }
 }

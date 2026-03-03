@@ -15,14 +15,18 @@
 
     <!-- Available slots -->
     <div class="mt-12">
-      @if (hasAvailability) {
+      @if (loading()) {
+        <div class="flex justify-center">
+          <i class="pi pi-spin pi-spinner text-4xl text-morado"></i>
+        </div>
+      } @else if (hasAvailability()) {
         <p
           class="font-body mb-4 text-center text-sm font-bold tracking-wide text-morado uppercase"
         >
-          Horarios disponibles próximamente:
+          Horarios disponibles:
         </p>
         <div class="flex flex-wrap justify-center gap-4">
-          @for (slot of availableSlots; track slot.time) {
+          @for (slot of displaySlots(); track slot.time) {
             <div
               class="flex flex-col items-center rounded-2xl border-2 border-lima/40 bg-lima/10 px-6 py-4 shadow-sm"
             >
@@ -56,16 +60,17 @@
         privada reservada.
       </p>
       <div class="mt-6">
-        <p-button
-          label="Reservar Entrada"
-          icon="pi pi-ticket"
-          severity="warn"
-          size="large"
-          [rounded]="true"
-          [outlined]="true"
-          [disabled]="!hasAvailability"
-          (onClick)="onReservar()"
-        />
+        <a routerLink="/reservar/play-day">
+          <p-button
+            label="Reservar Entrada"
+            icon="pi pi-ticket"
+            severity="warn"
+            size="large"
+            [rounded]="true"
+            [outlined]="true"
+            [disabled]="!hasAvailability()"
+          />
+        </a>
       </div>
     </div>
   </div>

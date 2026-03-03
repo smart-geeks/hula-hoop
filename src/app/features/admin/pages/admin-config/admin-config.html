@@ -1,0 +1,76 @@
+<p-toast />
+
+<h1 class="text-2xl font-bold font-display mb-6">Configuración del local</h1>
+
+@if (loading()) {
+  <p class="text-neutro-500">Cargando configuración...</p>
+} @else if (config()) {
+  <form [formGroup]="form" (ngSubmit)="save()" class="max-w-lg flex flex-col gap-6">
+    <!-- Capacidad -->
+    <div>
+      <h2 class="text-lg font-semibold mb-3">Capacidad</h2>
+      <p-floatlabel variant="on">
+        <p-inputNumber id="cfg-capacity" formControlName="max_capacity_per_slot"
+                       [min]="1" [showButtons]="true" class="w-full" />
+        <label for="cfg-capacity">Capacidad máxima por horario *</label>
+      </p-floatlabel>
+      <small class="text-neutro-500">Personas máximas permitidas en un horario de play day.</small>
+    </div>
+
+    <!-- Precios Play Day -->
+    <div>
+      <h2 class="text-lg font-semibold mb-3">Precios Play Day</h2>
+      <div class="flex flex-col gap-4">
+        <div>
+          <p-floatlabel variant="on">
+            <p-inputNumber id="cfg-ticket" formControlName="playdate_ticket_price_cents"
+                           [min]="0" [showButtons]="true" mode="currency" currency="MXN" locale="es-MX"
+                           class="w-full" />
+            <label for="cfg-ticket">Ticket (1 niño + 1 adulto) *</label>
+          </p-floatlabel>
+          <small class="text-neutro-500">Precio base en MXN. Se guarda en centavos.</small>
+        </div>
+        <div>
+          <p-floatlabel variant="on">
+            <p-inputNumber id="cfg-extra-adult" formControlName="playdate_extra_adult_price_cents"
+                           [min]="0" [showButtons]="true" mode="currency" currency="MXN" locale="es-MX"
+                           class="w-full" />
+            <label for="cfg-extra-adult">Adulto extra *</label>
+          </p-floatlabel>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservas privadas -->
+    <div>
+      <h2 class="text-lg font-semibold mb-3">Reservas privadas</h2>
+      <div class="flex flex-col gap-4">
+        <div>
+          <p-floatlabel variant="on">
+            <p-inputNumber id="cfg-min-hours" formControlName="min_hours_before_private"
+                           [min]="1" [showButtons]="true" suffix=" horas" class="w-full" />
+            <label for="cfg-min-hours">Anticipación mínima *</label>
+          </p-floatlabel>
+          <small class="text-neutro-500">Horas mínimas de anticipación para reservar fiesta privada.</small>
+        </div>
+        <div>
+          <p-floatlabel variant="on">
+            <p-datepicker id="cfg-horizon" formControlName="private_booking_horizon_date"
+                          [showClear]="true" dateFormat="dd/mm/yy" [showIcon]="true"
+                          class="w-full" />
+            <label for="cfg-horizon">Fecha límite de reservas</label>
+          </p-floatlabel>
+          <small class="text-neutro-500">
+            Fecha máxima hasta la que se pueden hacer reservas privadas. Dejar vacío = sin límite.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <p-button label="Guardar configuración" icon="pi pi-check" type="submit" [loading]="saving()" />
+    </div>
+  </form>
+} @else {
+  <p class="text-neutro-500">No se encontró la configuración. Verifica que exista la fila en venue_config.</p>
+}

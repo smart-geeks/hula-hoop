@@ -32,14 +32,15 @@
 
         <!-- CTA -->
         <div class="mt-10">
-          <p-button
-            label="Reservar Fiesta"
-            icon="pi pi-calendar"
-            severity="danger"
-            size="large"
-            [rounded]="true"
-            (onClick)="onReservar()"
-          />
+          <a routerLink="/reservar/fiesta-privada">
+            <p-button
+              label="Reservar Fiesta"
+              icon="pi pi-calendar"
+              severity="danger"
+              size="large"
+              [rounded]="true"
+            />
+          </a>
         </div>
       </div>
 

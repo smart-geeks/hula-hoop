@@ -1,0 +1,89 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold font-display">Extras</h1>
+  <p-button label="Nuevo extra" icon="pi pi-plus" (onClick)="openNew()" />
+</div>
+
+<p-table [value]="extras()" [loading]="loading()" [rowHover]="true" breakpoint="768px">
+  <ng-template #header>
+    <tr>
+      <th>Nombre</th>
+      <th>Precio</th>
+      <th>Estado</th>
+      <th>Orden</th>
+      <th style="width: 8rem">Acciones</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-extra>
+    <tr>
+      <td>
+        <span class="font-semibold">{{ extra.name }}</span>
+        @if (extra.description) {
+          <br><span class="text-sm text-neutro-500">{{ extra.description }}</span>
+        }
+      </td>
+      <td>{{ extra.price_cents | currencyMxn }}</td>
+      <td>
+        <p-tag [value]="extra.is_active ? 'Activo' : 'Inactivo'"
+               [severity]="extra.is_active ? 'success' : 'warn'" />
+      </td>
+      <td>{{ extra.sort_order }}</td>
+      <td>
+        <div class="flex gap-1">
+          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                    (onClick)="openEdit(extra)" pTooltip="Editar" />
+          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                    (onClick)="confirmDelete(extra)" pTooltip="Eliminar" />
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="5" class="text-center py-8 text-neutro-500">No hay extras registrados.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<!-- Dialog crear/editar -->
+<p-dialog [header]="editingExtra() ? 'Editar extra' : 'Nuevo extra'"
+          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '28rem' }"
+          [closable]="true" [draggable]="false">
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <p-floatlabel variant="on">
+      <input pInputText id="extra-name" formControlName="name" class="w-full" />
+      <label for="extra-name">Nombre *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <textarea pTextarea id="extra-desc" formControlName="description" [rows]="3" class="w-full"></textarea>
+      <label for="extra-desc">Descripción</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-inputNumber id="extra-price" formControlName="price_cents" [min]="0" [showButtons]="true"
+                     mode="currency" currency="MXN" locale="es-MX" class="w-full" />
+      <label for="extra-price">Precio (MXN) *</label>
+    </p-floatlabel>
+
+    <div class="grid grid-cols-2 gap-4">
+      <p-floatlabel variant="on">
+        <p-inputNumber id="extra-order" formControlName="sort_order" [showButtons]="true" class="w-full" />
+        <label for="extra-order">Orden</label>
+      </p-floatlabel>
+      <div class="flex items-center gap-3">
+        <p-toggleSwitch formControlName="is_active" inputId="extra-active" />
+        <label for="extra-active" class="text-sm">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="dialogVisible.set(false)" type="button" />
+      <p-button [label]="editingExtra() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+                type="submit" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>
