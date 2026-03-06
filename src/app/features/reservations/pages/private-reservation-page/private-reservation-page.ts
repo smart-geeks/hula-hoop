@@ -178,9 +178,18 @@ export class PrivateReservationPage {
 
     const dateStr = this.formatDateISO(date);
     const slotsForDay = this.slotsForSelectedDate();
+    const now = new Date();
+    const minHours = this.venueConfig()?.min_hours_before_private ?? 24;
+    const cutoff = new Date(now.getTime() + minHours * 60 * 60 * 1000);
     const available: TimeSlot[] = [];
 
     for (const slot of slotsForDay) {
+      // Verify the slot starts at least minHours from now
+      const [h, m] = slot.start_time.split(':').map(Number);
+      const slotStart = new Date(date);
+      slotStart.setHours(h, m, 0, 0);
+      if (slotStart < cutoff) continue;
+
       const blocked = await this.reservationService.isSlotBlockedByPrivate(dateStr, slot.id);
       if (!blocked) {
         available.push(slot);

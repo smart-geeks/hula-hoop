@@ -13,7 +13,7 @@
       </p>
     </div>
 
-    <!-- Available slots -->
+    <!-- Available slots (real-time, <24h window) -->
     <div class="mt-12">
       @if (loading()) {
         <div class="flex justify-center">
@@ -23,18 +23,21 @@
         <p
           class="font-body mb-4 text-center text-sm font-bold tracking-wide text-morado uppercase"
         >
-          Horarios disponibles:
+          Horarios disponibles próximamente:
         </p>
         <div class="flex flex-wrap justify-center gap-4">
-          @for (slot of displaySlots(); track slot.time) {
+          @for (item of slots(); track item.date + item.slot.id) {
             <div
               class="flex flex-col items-center rounded-2xl border-2 border-lima/40 bg-lima/10 px-6 py-4 shadow-sm"
             >
-              <span class="font-body text-sm font-semibold text-neutral-500">
-                {{ slot.day }}
+              <span class="font-body text-sm font-semibold capitalize text-neutral-500">
+                {{ item.dayLabel }}
               </span>
               <span class="font-display mt-1 text-xl font-bold text-morado">
-                {{ slot.time }}
+                {{ formatTime(item.slot.start_time) }} - {{ formatTime(item.slot.end_time) }}
+              </span>
+              <span class="font-body mt-1 text-xs text-lima-700">
+                {{ item.remaining }} lugares
               </span>
             </div>
           }
@@ -57,7 +60,7 @@
     <div class="mt-10 text-center">
       <p class="font-body text-sm text-neutral-500 italic">
         * Sujeto a disponibilidad. El Play Day no opera cuando hay fiesta
-        privada reservada.
+        privada reservada en ese turno.
       </p>
       <div class="mt-6">
         <a routerLink="/reservar/play-day">

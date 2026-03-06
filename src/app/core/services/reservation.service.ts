@@ -7,6 +7,14 @@ import type {
   CreatePlaydateReservationData,
   ReservationStatus,
 } from '../interfaces/reservation';
+import type { TimeSlot } from '../interfaces/time-slot';
+
+export interface AvailablePlaydateSlot {
+  date: string;       // YYYY-MM-DD
+  dayLabel: string;   // "Hoy viernes", "Mañana sábado"
+  slot: TimeSlot;
+  remaining: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
@@ -262,5 +270,78 @@ export class ReservationService {
     );
 
     return Math.max(0, maxCapacity - occupied);
+  }
+
+  // ── Play Day availability (< 24h rule) ──────────────────
+
+  /**
+   * Returns time slots available for play day (public).
+   * A slot is available when:
+   *  1. It starts in the FUTURE (hasn't begun yet)
+   *  2. It starts in LESS than 24 hours from now
+   *  3. No private reservation exists for that date + slot
+   *  4. There is remaining capacity
+   *
+   * @param activeSlots  All active time slots from DB
+   * @param maxCapacity  Max persons per slot from venue config
+   */
+  async getAvailablePlaydateSlots(
+    activeSlots: TimeSlot[],
+    maxCapacity: number,
+  ): Promise<AvailablePlaydateSlot[]> {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000); // +24h
+
+    // We only need to check today and tomorrow (calendar days)
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const daysToCheck = [today, tomorrow];
+    const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+    const available: AvailablePlaydateSlot[] = [];
+
+    for (const checkDate of daysToCheck) {
+      const dayOfWeek = checkDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dayType = isWeekend ? 'weekend' : 'weekday';
+      const dateStr = this.formatDateISO(checkDate);
+
+      const isToday = checkDate.getTime() === today.getTime();
+      const dayLabel = isToday
+        ? `Hoy ${dayNames[dayOfWeek]}`
+        : `Mañana ${dayNames[dayOfWeek]}`;
+
+      const slotsForDay = activeSlots.filter(s => s.day_type === dayType);
+
+      for (const slot of slotsForDay) {
+        // Build the actual datetime this slot starts
+        const [h, m] = slot.start_time.split(':').map(Number);
+        const slotStart = new Date(checkDate);
+        slotStart.setHours(h, m, 0, 0);
+
+        // Rule 1: must be in the future
+        if (slotStart <= now) continue;
+        // Rule 2: must start within 24h
+        if (slotStart > cutoff) continue;
+
+        // Rule 3 + 4: not blocked by private AND has capacity
+        const remaining = await this.getPlaydateAvailability(dateStr, slot.id, maxCapacity);
+        if (remaining > 0) {
+          available.push({ date: dateStr, dayLabel, slot, remaining });
+        }
+      }
+    }
+
+    return available;
+  }
+
+  private formatDateISO(date: Date): string {
+    const y = date.getFullYear();
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
   }
 }

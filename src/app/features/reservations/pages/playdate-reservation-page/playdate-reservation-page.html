@@ -4,81 +4,71 @@
   <h1 class="text-2xl md:text-3xl font-bold font-display text-center mb-2">
     Reservar Play Day
   </h1>
-  <p class="text-center text-neutro-500 mb-6">Juego abierto al público — elige tu horario</p>
+  <p class="text-center text-neutro-500 mb-6">
+    Juego abierto al público — turnos disponibles en las próximas 24 horas
+  </p>
 
   @if (loading()) {
     <div class="flex justify-center py-12">
       <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
     </div>
+  } @else if (availableSlots().length === 0) {
+    <!-- No availability -->
+    <div class="text-center py-12">
+      <div class="mx-auto inline-flex flex-col items-center gap-4 rounded-2xl border-2 border-neutral-200 bg-neutral-50 px-8 py-8">
+        <i class="pi pi-info-circle text-4xl text-neutral-400"></i>
+        <p class="font-body text-lg font-semibold text-neutral-600">
+          No hay horarios disponibles en este momento
+        </p>
+        <p class="font-body text-sm text-neutral-500 max-w-md">
+          Los turnos para juego público se abren menos de 24 horas antes de su inicio,
+          siempre que no haya una fiesta privada reservada. Vuelve más tarde.
+        </p>
+      </div>
+    </div>
   } @else {
     <p-stepper [(value)]="activeStep" [linear]="true">
       <p-step-list>
-        <p-step [value]="1">Fecha y horario</p-step>
+        <p-step [value]="1">Horario</p-step>
         <p-step [value]="2">Asistentes</p-step>
         <p-step [value]="3">Datos y pago</p-step>
       </p-step-list>
 
       <p-step-panels>
-        <!-- STEP 1: Fecha y horario -->
+        <!-- STEP 1: Seleccionar horario -->
         <p-step-panel [value]="1">
           <ng-template #content let-activateCallback="activateCallback">
             <div class="flex flex-col gap-6 py-4">
-              <div>
-                <h2 class="text-lg font-semibold mb-3">Selecciona una fecha</h2>
-                <p-datepicker
-                  [inline]="true"
-                  [minDate]="minDate()"
-                  [showIcon]="false"
-                  (onSelect)="onDateSelect($event)"
-                  styleClass="w-full" />
+              <h2 class="text-lg font-semibold">Selecciona un horario disponible</h2>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @for (sa of availableSlots(); track sa.date + sa.slot.id) {
+                  <button
+                    type="button"
+                    class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer"
+                    [class]="selectedSlot()?.date === sa.date && selectedSlot()?.slot?.id === sa.slot.id
+                      ? 'border-rojo-brillante bg-rojo-brillante/5'
+                      : 'border-neutro-200 hover:border-neutro-400'"
+                    (click)="selectSlot(sa)">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <i class="pi pi-clock text-lg"
+                           [class]="selectedSlot()?.date === sa.date && selectedSlot()?.slot?.id === sa.slot.id
+                             ? 'text-rojo-brillante' : 'text-neutro-400'"></i>
+                        <div>
+                          <p class="font-semibold">
+                            {{ formatTime(sa.slot.start_time) }} – {{ formatTime(sa.slot.end_time) }}
+                          </p>
+                          <p class="text-sm text-neutro-500 capitalize">{{ sa.dayLabel }}</p>
+                        </div>
+                      </div>
+                      <span class="text-xs px-2 py-1 rounded-full bg-lima/20 text-green-700 font-medium">
+                        {{ sa.remaining }} lugares
+                      </span>
+                    </div>
+                  </button>
+                }
               </div>
-
-              @if (selectedDate()) {
-                <div>
-                  <h2 class="text-lg font-semibold mb-3">
-                    Horarios disponibles para {{ formatDateDisplay(selectedDate()!) }}
-                  </h2>
-
-                  @if (checkingAvailability()) {
-                    <div class="flex items-center gap-2 text-neutro-500">
-                      <i class="pi pi-spin pi-spinner"></i>
-                      <span>Verificando disponibilidad...</span>
-                    </div>
-                  } @else if (availableSlots().length === 0) {
-                    <p class="text-neutro-500 bg-neutro-50 rounded-lg p-4">
-                      No hay horarios disponibles para esta fecha. Puede que todos estén reservados para fiestas privadas o llenos.
-                    </p>
-                  } @else {
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      @for (sa of availableSlots(); track sa.slot.id) {
-                        <button
-                          type="button"
-                          class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer"
-                          [class]="selectedSlot()?.slot?.id === sa.slot.id
-                            ? 'border-rojo-brillante bg-rojo-brillante/5'
-                            : 'border-neutro-200 hover:border-neutro-400'"
-                          (click)="selectSlot(sa)">
-                          <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                              <i class="pi pi-clock text-lg"
-                                 [class]="selectedSlot()?.slot?.id === sa.slot.id ? 'text-rojo-brillante' : 'text-neutro-400'"></i>
-                              <div>
-                                <p class="font-semibold">{{ formatTime(sa.slot.start_time) }} – {{ formatTime(sa.slot.end_time) }}</p>
-                                <p class="text-sm text-neutro-500">
-                                  {{ sa.slot.day_type === 'weekday' ? 'Entre semana' : 'Fin de semana' }}
-                                </p>
-                              </div>
-                            </div>
-                            <span class="text-xs px-2 py-1 rounded-full bg-lima/20 text-green-700 font-medium">
-                              {{ sa.remaining }} lugares
-                            </span>
-                          </div>
-                        </button>
-                      }
-                    </div>
-                  }
-                </div>
-              }
             </div>
 
             <div class="flex justify-end pt-4">
@@ -110,8 +100,8 @@
               </div>
 
               <div class="flex flex-col gap-5">
-                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
-                  <div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-neutro-50 rounded-xl">
+                  <div class="min-w-0">
                     <p class="font-semibold">Niños</p>
                     <p class="text-sm text-neutro-500">Cada niño incluye 1 adulto acompañante</p>
                   </div>
@@ -121,19 +111,19 @@
                     [min]="1"
                     [max]="selectedSlot()?.remaining ?? 10"
                     [showButtons]="true"
-                    styleClass="w-28" />
+                    class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
                 </div>
 
-                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
-                  <div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-neutro-50 rounded-xl">
+                  <div class="min-w-0">
                     <p class="font-semibold">Adultos incluidos</p>
                     <p class="text-sm text-neutro-500">1 por cada niño (incluido en el ticket)</p>
                   </div>
-                  <span class="text-lg font-bold text-neutro-600 w-28 text-center">{{ adultsCount() }}</span>
+                  <span class="text-lg font-bold text-neutro-600 shrink-0">{{ adultsCount() }}</span>
                 </div>
 
-                <div class="flex items-center justify-between p-4 bg-neutro-50 rounded-xl">
-                  <div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-neutro-50 rounded-xl">
+                  <div class="min-w-0">
                     <p class="font-semibold">Adultos extra</p>
                     <p class="text-sm text-neutro-500">{{ extraAdultPriceCents() | currencyMxn }} cada uno</p>
                   </div>
@@ -143,7 +133,7 @@
                     [min]="0"
                     [max]="(selectedSlot()?.remaining ?? 0) - kidsCount() - adultsCount()"
                     [showButtons]="true"
-                    styleClass="w-28" />
+                    class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
                 </div>
               </div>
 
@@ -206,7 +196,7 @@
               <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3">
                 <div class="flex justify-between">
                   <span class="text-neutro-600">Fecha</span>
-                  <span class="font-medium">{{ selectedDate() ? formatDateDisplay(selectedDate()!) : '' }}</span>
+                  <span class="font-medium capitalize">{{ selectedSlot()?.dayLabel }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-neutro-600">Horario</span>

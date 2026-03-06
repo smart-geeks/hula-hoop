@@ -137,7 +137,7 @@
                     [min]="selectedPackage()!.min_guests"
                     [max]="selectedPackage()!.max_guests"
                     [showButtons]="true"
-                    styleClass="w-32" />
+                    class="w-full sm:w-24 [&_input]:w-full" />
                 </div>
               }
             </div>
@@ -171,15 +171,13 @@
                         }
                         <p class="text-sm font-medium text-rojo-brillante mt-1">{{ extra.price_cents | currencyMxn }} c/u</p>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <p-inputNumber
-                          [ngModel]="getExtraQuantity(extra)"
-                          (ngModelChange)="updateExtraQuantity(extra, $event)"
-                          [min]="0"
-                          [max]="50"
-                          [showButtons]="true"
-                          styleClass="w-28" />
-                      </div>
+                      <p-inputNumber
+                        [ngModel]="getExtraQuantity(extra)"
+                        (ngModelChange)="updateExtraQuantity(extra, $event)"
+                        [min]="0"
+                        [max]="50"
+                        [showButtons]="true"
+                        class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
                     </div>
                   }
                 </div>
