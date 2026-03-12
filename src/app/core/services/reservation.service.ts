@@ -223,7 +223,7 @@ export class ReservationService {
 
   // ── Availability ──────────────────────────────────────────
 
-  /** Check if a slot has a confirmed private reservation for a given date */
+  /** Check if a slot has a PAID (confirmed) private reservation for a given date */
   async isSlotBlockedByPrivate(date: string, timeSlotId: string): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;
@@ -233,7 +233,7 @@ export class ReservationService {
       .select('*', { count: 'exact', head: true })
       .eq('reservation_date', date)
       .eq('time_slot_id', timeSlotId)
-      .in('status', ['confirmed', 'pending_payment']);
+      .eq('status', 'confirmed');
 
     if (error) {
       console.error('Error checking slot availability:', error.message);
