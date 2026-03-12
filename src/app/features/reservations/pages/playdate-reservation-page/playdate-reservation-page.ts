@@ -195,7 +195,7 @@ export class PlaydateReservationPage {
     const preference = await this.paymentService.createPayment(reservation.id, 'playdate');
 
     if (preference) {
-      this.paymentService.redirectToCheckout(preference, true);
+      this.paymentService.redirectToCheckout(preference);
     } else {
       this.messageService.add({
         severity: 'warn',

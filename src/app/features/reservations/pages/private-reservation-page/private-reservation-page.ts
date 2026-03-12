@@ -302,8 +302,7 @@ export class PrivateReservationPage {
     const preference = await this.paymentService.createPayment(reservation.id, 'private');
 
     if (preference) {
-      // Redirect to Mercado Pago checkout (sandbox for dev)
-      this.paymentService.redirectToCheckout(preference, true);
+      this.paymentService.redirectToCheckout(preference);
     } else {
       // If payment creation fails, still redirect to detail page
       this.messageService.add({

@@ -86,7 +86,7 @@ export class ReservationDetailPage {
     const preference = await this.paymentService.createPayment(res.id, type);
 
     if (preference) {
-      this.paymentService.redirectToCheckout(preference, true);
+      this.paymentService.redirectToCheckout(preference);
     } else {
       this.messageService.add({
         severity: 'error',

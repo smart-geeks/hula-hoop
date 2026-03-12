@@ -34,8 +34,9 @@ export class PaymentService {
   }
 
   /** Redirect user to Mercado Pago checkout */
-  redirectToCheckout(preference: PaymentPreference, useSandbox = true): void {
-    const url = useSandbox ? preference.sandbox_init_point : preference.init_point;
-    window.location.href = url;
+  redirectToCheckout(preference: PaymentPreference): void {
+    // Use init_point — sandbox_init_point has redirect loop issues in MP Mexico
+    // With test credentials, init_point still works in test mode
+    window.location.href = preference.init_point;
   }
 }
