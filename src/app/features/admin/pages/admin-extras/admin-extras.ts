@@ -81,7 +81,7 @@ export class AdminExtras {
     this.form.patchValue({
       name: extra.name,
       description: extra.description ?? '',
-      price_cents: extra.price_cents,
+      price_cents: extra.price_cents / 100, // Convert centavos → pesos for display
       is_active: extra.is_active,
       sort_order: extra.sort_order,
     });
@@ -95,7 +95,9 @@ export class AdminExtras {
     }
 
     this.saving.set(true);
-    const values = this.form.getRawValue();
+    const raw = this.form.getRawValue();
+    // Convert pesos → centavos before saving
+    const values = { ...raw, price_cents: Math.round(raw.price_cents * 100) };
     const editing = this.editingExtra();
 
     if (editing) {

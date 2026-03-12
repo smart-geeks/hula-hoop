@@ -53,8 +53,8 @@ export class AdminConfig {
       this.config.set(data);
       this.form.patchValue({
         max_capacity_per_slot: data.max_capacity_per_slot,
-        playdate_ticket_price_cents: data.playdate_ticket_price_cents,
-        playdate_extra_adult_price_cents: data.playdate_extra_adult_price_cents,
+        playdate_ticket_price_cents: data.playdate_ticket_price_cents / 100, // centavos → pesos
+        playdate_extra_adult_price_cents: data.playdate_extra_adult_price_cents / 100, // centavos → pesos
         min_hours_before_private: data.min_hours_before_private,
         private_booking_horizon_date: data.private_booking_horizon_date
           ? new Date(data.private_booking_horizon_date + 'T00:00:00')
@@ -84,8 +84,8 @@ export class AdminConfig {
 
     const result = await this.configService.updateConfig(cfg.id, {
       max_capacity_per_slot: values.max_capacity_per_slot,
-      playdate_ticket_price_cents: values.playdate_ticket_price_cents,
-      playdate_extra_adult_price_cents: values.playdate_extra_adult_price_cents,
+      playdate_ticket_price_cents: Math.round(values.playdate_ticket_price_cents * 100), // pesos → centavos
+      playdate_extra_adult_price_cents: Math.round(values.playdate_extra_adult_price_cents * 100), // pesos → centavos
       min_hours_before_private: values.min_hours_before_private,
       private_booking_horizon_date: horizonDateStr,
       updated_by: userId,

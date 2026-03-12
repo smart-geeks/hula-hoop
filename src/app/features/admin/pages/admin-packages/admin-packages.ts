@@ -98,7 +98,7 @@ export class AdminPackages {
       description: pkg.description ?? '',
       min_guests: pkg.min_guests,
       max_guests: pkg.max_guests,
-      price_cents: pkg.price_cents,
+      price_cents: pkg.price_cents / 100, // Convert centavos → pesos for display
       inclusions: [...pkg.inclusions],
       is_active: pkg.is_active,
       sort_order: pkg.sort_order,
@@ -130,7 +130,9 @@ export class AdminPackages {
     }
 
     this.saving.set(true);
-    const values = this.form.getRawValue();
+    const raw = this.form.getRawValue();
+    // Convert pesos → centavos before saving
+    const values = { ...raw, price_cents: Math.round(raw.price_cents * 100) };
     const editing = this.editingPackage();
 
     if (editing) {
