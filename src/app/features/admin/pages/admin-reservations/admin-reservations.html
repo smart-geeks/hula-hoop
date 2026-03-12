@@ -55,6 +55,7 @@
       <th pSortableColumn="type">Tipo <p-sortIcon field="type" /></th>
       <th pSortableColumn="guest_name">Cliente <p-sortIcon field="guest_name" /></th>
       <th pSortableColumn="reservation_date">Fecha <p-sortIcon field="reservation_date" /></th>
+      <th>Turno</th>
       <th>Detalle</th>
       <th pSortableColumn="total_cents">Total <p-sortIcon field="total_cents" /></th>
       <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
@@ -73,6 +74,9 @@
         <p class="text-xs text-neutro-500">{{ row.guest_phone }}</p>
       </td>
       <td>{{ formatDate(row.reservation_date) }}</td>
+      <td>
+        <span class="text-sm font-medium">{{ row.time_slot_label }}</span>
+      </td>
       <td>
         <span class="text-sm">{{ row.detail }}</span>
       </td>
@@ -93,7 +97,7 @@
   </ng-template>
   <ng-template #emptymessage>
     <tr>
-      <td colspan="7" class="text-center py-8 text-neutro-500">
+      <td colspan="8" class="text-center py-8 text-neutro-500">
         No hay reservas que coincidan con los filtros.
       </td>
     </tr>

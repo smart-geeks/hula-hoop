@@ -11,7 +11,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
+import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
 interface AdminReservationRow {
   id: string;
@@ -20,10 +22,11 @@ interface AdminReservationRow {
   guest_email: string;
   guest_phone: string;
   reservation_date: string;
+  time_slot_label: string;
   status: ReservationStatus;
   total_cents: number;
   access_token: string;
-  detail: string; // e.g. "15 invitados" or "2 niños, 3 adultos"
+  detail: string;
   created_at: string;
 }
 
@@ -47,16 +50,18 @@ interface AdminReservationRow {
 })
 export class AdminReservations {
   private readonly reservationService = inject(ReservationService);
+  private readonly timeSlotService = inject(TimeSlotService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
   readonly loading = signal(true);
   readonly allRows = signal<AdminReservationRow[]>([]);
+  private slotsMap = new Map<string, TimeSlot>();
 
-  // Filters
+  // Filters — defaults: confirmed + today
   readonly filterType = signal<string | null>(null);
-  readonly filterStatus = signal<string | null>(null);
-  readonly filterDate = signal<Date | null>(null);
+  readonly filterStatus = signal<string | null>('confirmed');
+  readonly filterDate = signal<Date | null>(new Date());
 
   readonly typeOptions = [
     { label: 'Todos', value: null },
@@ -117,17 +122,20 @@ export class AdminReservations {
   async loadReservations(): Promise<void> {
     this.loading.set(true);
 
-    const [privateRes, playdateRes] = await Promise.all([
+    const [privateRes, playdateRes, slots] = await Promise.all([
       this.reservationService.getAllPrivateReservations(),
       this.reservationService.getAllPlaydateReservations(),
+      this.timeSlotService.getActiveSlots(),
     ]);
+
+    // Build slots lookup map
+    this.slotsMap = new Map(slots.map(s => [s.id, s]));
 
     const rows: AdminReservationRow[] = [
       ...privateRes.map((r) => this.mapPrivate(r)),
       ...playdateRes.map((r) => this.mapPlaydate(r)),
     ];
 
-    // Sort by date desc, then created_at desc
     rows.sort((a, b) => {
       const dateCmp = b.reservation_date.localeCompare(a.reservation_date);
       if (dateCmp !== 0) return dateCmp;
@@ -206,6 +214,20 @@ export class AdminReservations {
     return `${y}-${m}-${d}`;
   }
 
+  private formatTime(time: string): string {
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+  }
+
+  private getSlotLabel(timeSlotId: string): string {
+    const slot = this.slotsMap.get(timeSlotId);
+    if (!slot) return '—';
+    return `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`;
+  }
+
   private mapPrivate(r: PrivateReservation): AdminReservationRow {
     return {
       id: r.id,
@@ -214,6 +236,7 @@ export class AdminReservations {
       guest_email: r.guest_email,
       guest_phone: r.guest_phone,
       reservation_date: r.reservation_date,
+      time_slot_label: this.getSlotLabel(r.time_slot_id),
       status: r.status,
       total_cents: r.total_cents,
       access_token: r.access_token,
@@ -231,6 +254,7 @@ export class AdminReservations {
       guest_email: r.guest_email,
       guest_phone: r.guest_phone,
       reservation_date: r.reservation_date,
+      time_slot_label: this.getSlotLabel(r.time_slot_id),
       status: r.status,
       total_cents: r.total_cents,
       access_token: r.access_token,
