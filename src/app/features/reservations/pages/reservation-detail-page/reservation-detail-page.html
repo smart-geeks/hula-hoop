@@ -105,6 +105,23 @@
       }
     </div>
 
+    <!-- Extras (private only) -->
+    @if (isPrivateReservation(res) && reservationExtras().length > 0) {
+      <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3 mb-6">
+        <h2 class="font-semibold text-lg">Extras solicitados</h2>
+        @for (ext of reservationExtras(); track ext.name) {
+          <div class="flex justify-between text-sm">
+            <span>{{ ext.name }} x {{ ext.quantity }}</span>
+            @if (ext.pay_at_venue) {
+              <span class="text-morado font-medium">Cobro en local</span>
+            } @else {
+              <span class="font-medium">{{ ext.unit_price_cents * ext.quantity | currencyMxn }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+
     <!-- Pricing -->
     <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3 mb-6">
       <h2 class="font-semibold text-lg">Resumen de pago</h2>
@@ -114,11 +131,13 @@
           <span class="text-neutro-600">Paquete</span>
           <span class="font-medium">{{ res.subtotal_cents | currencyMxn }}</span>
         </div>
-        @if (res.total_cents > res.subtotal_cents) {
-          <div class="flex justify-between text-sm">
-            <span class="text-neutro-500">Extras</span>
-            <span>{{ res.total_cents - res.subtotal_cents | currencyMxn }}</span>
-          </div>
+        @for (ext of reservationExtras(); track ext.name) {
+          @if (!ext.pay_at_venue) {
+            <div class="flex justify-between text-sm">
+              <span class="text-neutro-500">{{ ext.name }} x {{ ext.quantity }}</span>
+              <span>{{ ext.unit_price_cents * ext.quantity | currencyMxn }}</span>
+            </div>
+          }
         }
       }
 

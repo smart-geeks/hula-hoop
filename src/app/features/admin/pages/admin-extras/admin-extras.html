@@ -24,7 +24,13 @@
           <br><span class="text-sm text-neutro-500">{{ extra.description }}</span>
         }
       </td>
-      <td>{{ extra.price_cents | currencyMxn }}</td>
+      <td>
+        @if (extra.pay_at_venue) {
+          <span class="text-morado font-medium text-sm">Cobro en local</span>
+        } @else {
+          {{ extra.price_cents | currencyMxn }}
+        }
+      </td>
       <td>
         <p-tag [value]="extra.is_active ? 'Activo' : 'Inactivo'"
                [severity]="extra.is_active ? 'success' : 'warn'" />
@@ -62,11 +68,18 @@
       <label for="extra-desc">Descripción</label>
     </p-floatlabel>
 
-    <p-floatlabel variant="on">
-      <p-inputNumber id="extra-price" formControlName="price_cents" [min]="0" [showButtons]="true"
-                     mode="currency" currency="MXN" locale="es-MX" class="w-full" />
-      <label for="extra-price">Precio (MXN) *</label>
-    </p-floatlabel>
+    <div class="flex items-center gap-3">
+      <p-toggleSwitch formControlName="pay_at_venue" inputId="extra-venue" />
+      <label for="extra-venue" class="text-sm">Se cobra en el local (no se cobra online)</label>
+    </div>
+
+    @if (!form.controls.pay_at_venue.value) {
+      <p-floatlabel variant="on">
+        <p-inputNumber id="extra-price" formControlName="price_cents" [min]="0" [showButtons]="true"
+                       mode="currency" currency="MXN" locale="es-MX" class="w-full" />
+        <label for="extra-price">Precio (MXN) *</label>
+      </p-floatlabel>
+    }
 
     <div class="grid grid-cols-2 gap-4">
       <p-floatlabel variant="on">

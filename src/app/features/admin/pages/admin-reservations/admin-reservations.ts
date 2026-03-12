@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
@@ -14,6 +15,13 @@ import { ReservationService } from '../../../../core/services/reservation.servic
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+
+interface ReservationExtra {
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  pay_at_venue: boolean;
+}
 
 interface AdminReservationRow {
   id: string;
@@ -25,6 +33,9 @@ interface AdminReservationRow {
   time_slot_label: string;
   status: ReservationStatus;
   total_cents: number;
+  subtotal_cents: number;
+  guest_count: number;
+  notes: string;
   access_token: string;
   detail: string;
   created_at: string;
@@ -40,6 +51,7 @@ interface AdminReservationRow {
     TagModule,
     SelectModule,
     DatePickerModule,
+    DialogModule,
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
@@ -85,6 +97,12 @@ export class AdminReservations {
     { label: 'Cancelada', value: 'cancelled' },
     { label: 'Expirada', value: 'expired' },
   ];
+
+  // Detail dialog
+  readonly detailVisible = signal(false);
+  readonly detailRow = signal<AdminReservationRow | null>(null);
+  readonly detailExtras = signal<ReservationExtra[]>([]);
+  readonly detailLoading = signal(false);
 
   readonly filteredRows = computed(() => {
     let rows = this.allRows();
@@ -175,6 +193,19 @@ export class AdminReservations {
     });
   }
 
+  async openDetail(row: AdminReservationRow): Promise<void> {
+    this.detailRow.set(row);
+    this.detailExtras.set([]);
+    this.detailVisible.set(true);
+
+    if (row.type === 'private') {
+      this.detailLoading.set(true);
+      const extras = await this.reservationService.getPrivateReservationExtras(row.id);
+      this.detailExtras.set(extras);
+      this.detailLoading.set(false);
+    }
+  }
+
   clearFilters(): void {
     this.filterType.set(null);
     this.filterStatus.set(null);
@@ -239,6 +270,9 @@ export class AdminReservations {
       time_slot_label: this.getSlotLabel(r.time_slot_id),
       status: r.status,
       total_cents: r.total_cents,
+      subtotal_cents: r.subtotal_cents,
+      guest_count: r.guest_count,
+      notes: r.notes ?? '',
       access_token: r.access_token,
       detail: `${r.guest_count} invitados`,
       created_at: r.created_at,
@@ -257,6 +291,9 @@ export class AdminReservations {
       time_slot_label: this.getSlotLabel(r.time_slot_id),
       status: r.status,
       total_cents: r.total_cents,
+      subtotal_cents: r.total_cents,
+      guest_count: r.kids_count + r.adults_count + r.extra_adults_count,
+      notes: '',
       access_token: r.access_token,
       detail: `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
       created_at: r.created_at,

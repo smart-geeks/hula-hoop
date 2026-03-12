@@ -59,6 +59,7 @@
       <th>Detalle</th>
       <th pSortableColumn="total_cents">Total <p-sortIcon field="total_cents" /></th>
       <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
+      <th style="width: 5rem"></th>
       <th style="width: 12rem">Cambiar estado</th>
     </tr>
   </ng-template>
@@ -88,6 +89,10 @@
                [severity]="$any(getStatusConfig(row.status).severity)" />
       </td>
       <td>
+        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info"
+                  (onClick)="openDetail(row)" pTooltip="Ver detalle" />
+      </td>
+      <td>
         <p-select [options]="statusChangeOptions" [ngModel]="row.status"
                   (ngModelChange)="confirmStatusChange(row, $event)"
                   optionLabel="label" optionValue="value"
@@ -97,9 +102,103 @@
   </ng-template>
   <ng-template #emptymessage>
     <tr>
-      <td colspan="8" class="text-center py-8 text-neutro-500">
+      <td colspan="9" class="text-center py-8 text-neutro-500">
         No hay reservas que coincidan con los filtros.
       </td>
     </tr>
   </ng-template>
 </p-table>
+
+<!-- Detail dialog -->
+@if (detailRow(); as row) {
+  <p-dialog header="Detalle de reserva" [(visible)]="detailVisible" [modal]="true"
+            [style]="{ width: '32rem' }" [closable]="true" [draggable]="false">
+    <div class="flex flex-col gap-4 pt-2">
+      <!-- Type + Status -->
+      <div class="flex items-center gap-2">
+        <p-tag [value]="row.type === 'private' ? 'Fiesta Privada' : 'Play Day'"
+               [severity]="row.type === 'private' ? 'contrast' : 'info'" />
+        <p-tag [value]="getStatusConfig(row.status).label"
+               [severity]="$any(getStatusConfig(row.status).severity)" />
+      </div>
+
+      <!-- Client info -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <p class="text-sm text-neutro-500">Cliente</p>
+          <p class="font-medium">{{ row.guest_name }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Teléfono</p>
+          <p class="font-medium">{{ row.guest_phone }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Email</p>
+          <p class="font-medium">{{ row.guest_email }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Fecha</p>
+          <p class="font-medium">{{ formatDate(row.reservation_date) }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">Turno</p>
+          <p class="font-medium">{{ row.time_slot_label }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-neutro-500">{{ row.type === 'private' ? 'Invitados' : 'Personas' }}</p>
+          <p class="font-medium">{{ row.guest_count }}</p>
+        </div>
+      </div>
+
+      @if (row.notes) {
+        <div>
+          <p class="text-sm text-neutro-500">Notas</p>
+          <p class="font-medium">{{ row.notes }}</p>
+        </div>
+      }
+
+      <!-- Extras (private only) -->
+      @if (row.type === 'private') {
+        <hr class="border-neutro-200" />
+        <h3 class="font-semibold">Extras</h3>
+
+        @if (detailLoading()) {
+          <div class="flex justify-center py-4">
+            <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+          </div>
+        } @else if (detailExtras().length === 0) {
+          <p class="text-sm text-neutro-500">Sin extras solicitados.</p>
+        } @else {
+          <div class="flex flex-col gap-2">
+            @for (ext of detailExtras(); track ext.name) {
+              <div class="flex justify-between items-center bg-neutro-50 rounded-lg px-3 py-2">
+                <div>
+                  <span class="font-medium">{{ ext.name }}</span>
+                  <span class="text-neutro-500 text-sm ml-1">x {{ ext.quantity }}</span>
+                </div>
+                @if (ext.pay_at_venue) {
+                  <span class="text-morado font-medium text-sm">Cobro en local</span>
+                } @else {
+                  <span class="font-medium">{{ ext.unit_price_cents * ext.quantity | currencyMxn }}</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <!-- Totals -->
+      <hr class="border-neutro-200" />
+      @if (row.type === 'private' && row.subtotal_cents !== row.total_cents) {
+        <div class="flex justify-between text-sm">
+          <span class="text-neutro-500">Paquete</span>
+          <span>{{ row.subtotal_cents | currencyMxn }}</span>
+        </div>
+      }
+      <div class="flex justify-between text-lg font-bold">
+        <span>Total</span>
+        <span class="text-rojo-brillante">{{ row.total_cents | currencyMxn }}</span>
+      </div>
+    </div>
+  </p-dialog>
+}

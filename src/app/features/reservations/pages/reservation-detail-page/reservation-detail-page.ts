@@ -29,6 +29,7 @@ export class ReservationDetailPage {
   readonly reservation = signal<PrivateReservation | PlaydateReservation | null>(null);
   readonly reservationType = signal<ReservationType>(null);
   readonly retryingPayment = signal(false);
+  readonly reservationExtras = signal<{ name: string; quantity: number; unit_price_cents: number; pay_at_venue: boolean }[]>([]);
 
   /** Query param from MP redirect */
   readonly paymentStatus = signal<string | null>(null);
@@ -61,6 +62,8 @@ export class ReservationDetailPage {
     if (privateRes) {
       this.reservation.set(privateRes);
       this.reservationType.set('private');
+      const extras = await this.reservationService.getPrivateReservationExtras(privateRes.id);
+      this.reservationExtras.set(extras);
       this.loading.set(false);
       return;
     }

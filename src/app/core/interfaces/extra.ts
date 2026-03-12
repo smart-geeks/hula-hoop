@@ -3,6 +3,7 @@ export interface Extra {
   name: string;
   description: string | null;
   price_cents: number;
+  pay_at_venue: boolean;
   is_active: boolean;
   sort_order: number;
   created_at: string;

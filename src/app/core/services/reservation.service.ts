@@ -221,6 +221,30 @@ export class ReservationService {
     return true;
   }
 
+  // ── Reservation Extras ───────────────────────────────────
+
+  async getPrivateReservationExtras(reservationId: string): Promise<{ name: string; quantity: number; unit_price_cents: number; pay_at_venue: boolean }[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('private_reservation_extras')
+      .select('quantity, unit_price_cents, extras(name, pay_at_venue)')
+      .eq('reservation_id', reservationId);
+
+    if (error) {
+      console.error('Error fetching reservation extras:', error.message);
+      return [];
+    }
+
+    return (data ?? []).map((row: any) => ({
+      name: row.extras?.name ?? 'Extra',
+      quantity: row.quantity,
+      unit_price_cents: row.unit_price_cents,
+      pay_at_venue: row.extras?.pay_at_venue ?? false,
+    }));
+  }
+
   // ── Availability ──────────────────────────────────────────
 
   /** Check if a slot has a PAID (confirmed) private reservation for a given date */

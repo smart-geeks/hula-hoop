@@ -163,21 +163,35 @@
               } @else {
                 <div class="flex flex-col gap-3">
                   @for (extra of extras(); track extra.id) {
-                    <div class="p-4 rounded-xl border border-neutro-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div class="flex-1">
-                        <h3 class="font-semibold">{{ extra.name }}</h3>
-                        @if (extra.description) {
-                          <p class="text-sm text-neutro-500">{{ extra.description }}</p>
+                    <div class="p-4 rounded-xl border transition-colors"
+                         [class]="getExtraQuantity(extra) > 0
+                           ? 'border-rojo-brillante/40 bg-rojo-brillante/5'
+                           : 'border-neutro-200'">
+                      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex-1 cursor-pointer" (click)="toggleExtra(extra)">
+                          <h3 class="font-semibold">{{ extra.name }}</h3>
+                          @if (extra.description) {
+                            <p class="text-sm text-neutro-500">{{ extra.description }}</p>
+                          }
+                          @if (extra.pay_at_venue) {
+                            <p class="text-sm font-medium text-morado mt-1">Se cobra en el local</p>
+                          } @else {
+                            <p class="text-sm font-medium text-rojo-brillante mt-1">{{ extra.price_cents | currencyMxn }} c/u</p>
+                          }
+                        </div>
+                        @if (getExtraQuantity(extra) > 0) {
+                          <p-inputNumber
+                            [ngModel]="getExtraQuantity(extra)"
+                            (ngModelChange)="updateExtraQuantity(extra, $event)"
+                            [min]="1"
+                            [max]="50"
+                            [showButtons]="true"
+                            class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
+                        } @else {
+                          <p-button icon="pi pi-plus" [rounded]="true" [outlined]="true"
+                                    severity="secondary" (onClick)="toggleExtra(extra)" />
                         }
-                        <p class="text-sm font-medium text-rojo-brillante mt-1">{{ extra.price_cents | currencyMxn }} c/u</p>
                       </div>
-                      <p-inputNumber
-                        [ngModel]="getExtraQuantity(extra)"
-                        (ngModelChange)="updateExtraQuantity(extra, $event)"
-                        [min]="0"
-                        [max]="50"
-                        [showButtons]="true"
-                        class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
                     </div>
                   }
                 </div>
@@ -189,13 +203,19 @@
                   @for (se of selectedExtras(); track se.extra.id) {
                     <div class="flex justify-between text-sm">
                       <span>{{ se.extra.name }} x {{ se.quantity }}</span>
-                      <span class="font-medium">{{ se.extra.price_cents * se.quantity | currencyMxn }}</span>
+                      @if (se.extra.pay_at_venue) {
+                        <span class="text-morado font-medium">Cobro en local</span>
+                      } @else {
+                        <span class="font-medium">{{ se.extra.price_cents * se.quantity | currencyMxn }}</span>
+                      }
                     </div>
                   }
-                  <div class="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-neutro-200">
-                    <span>Subtotal extras</span>
-                    <span>{{ extrasTotalCents() | currencyMxn }}</span>
-                  </div>
+                  @if (extrasTotalCents() > 0) {
+                    <div class="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-neutro-200">
+                      <span>Subtotal extras</span>
+                      <span>{{ extrasTotalCents() | currencyMxn }}</span>
+                    </div>
+                  }
                 </div>
               }
             </div>

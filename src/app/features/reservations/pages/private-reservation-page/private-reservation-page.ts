@@ -123,7 +123,7 @@ export class PrivateReservationPage {
 
   readonly extrasTotalCents = computed(() => {
     return this.selectedExtras().reduce(
-      (sum, se) => sum + se.extra.price_cents * se.quantity,
+      (sum, se) => sum + (se.extra.pay_at_venue ? 0 : se.extra.price_cents * se.quantity),
       0,
     );
   });
@@ -207,7 +207,7 @@ export class PrivateReservationPage {
   // ── Step 2: Package ──
   selectPackage(pkg: PartyPackage): void {
     this.selectedPackage.set(pkg);
-    this.guestCount.set(pkg.min_guests);
+    this.guestCount.set(pkg.max_guests);
   }
 
   updateGuestCount(count: number): void {
@@ -221,6 +221,16 @@ export class PrivateReservationPage {
   getExtraQuantity(extra: Extra): number {
     const found = this.selectedExtras().find((se) => se.extra.id === extra.id);
     return found?.quantity ?? 0;
+  }
+
+  toggleExtra(extra: Extra): void {
+    const current = this.selectedExtras();
+    const exists = current.find((se) => se.extra.id === extra.id);
+    if (exists) {
+      this.selectedExtras.set(current.filter((se) => se.extra.id !== extra.id));
+    } else {
+      this.selectedExtras.set([...current, { extra, quantity: 1 }]);
+    }
   }
 
   updateExtraQuantity(extra: Extra, quantity: number): void {

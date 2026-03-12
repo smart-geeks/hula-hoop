@@ -55,6 +55,7 @@ export class AdminExtras {
     name: ['', Validators.required],
     description: [''],
     price_cents: [0, [Validators.required, Validators.min(0)]],
+    pay_at_venue: [false],
     is_active: [true],
     sort_order: [0],
   });
@@ -72,7 +73,7 @@ export class AdminExtras {
 
   openNew(): void {
     this.editingExtra.set(null);
-    this.form.reset({ name: '', description: '', price_cents: 0, is_active: true, sort_order: 0 });
+    this.form.reset({ name: '', description: '', price_cents: 0, pay_at_venue: false, is_active: true, sort_order: 0 });
     this.dialogVisible.set(true);
   }
 
@@ -82,6 +83,7 @@ export class AdminExtras {
       name: extra.name,
       description: extra.description ?? '',
       price_cents: extra.price_cents / 100, // Convert centavos → pesos for display
+      pay_at_venue: extra.pay_at_venue,
       is_active: extra.is_active,
       sort_order: extra.sort_order,
     });
