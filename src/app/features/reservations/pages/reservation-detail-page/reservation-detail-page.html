@@ -156,5 +156,13 @@
                   [loading]="retryingPayment()" (onClick)="retryPayment()" />
       </div>
     }
+
+    <!-- Navigation -->
+    <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
+      <p-button label="Ir a mi cuenta" icon="pi pi-user" severity="secondary" [outlined]="true"
+                routerLink="/mi-cuenta" />
+      <p-button label="Volver al inicio" icon="pi pi-home" severity="secondary" [outlined]="true"
+                routerLink="/" />
+    </div>
   }
 </div>

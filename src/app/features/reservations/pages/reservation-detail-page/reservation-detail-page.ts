@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
@@ -14,7 +14,7 @@ type ReservationType = 'private' | 'playdate' | null;
 @Component({
   selector: 'app-reservation-detail-page',
   templateUrl: './reservation-detail-page.html',
-  imports: [ButtonModule, TagModule, ToastModule, CurrencyMxnPipe],
+  imports: [RouterLink, ButtonModule, TagModule, ToastModule, CurrencyMxnPipe],
   providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
