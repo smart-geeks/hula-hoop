@@ -1,0 +1,114 @@
+<!-- Gallery Section -->
+<section class="py-16 md:py-24 bg-white">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <span class="font-body text-sm font-bold tracking-widest text-morado uppercase">
+        Nuestro espacio
+      </span>
+      <h2 class="font-display mt-2 text-4xl font-bold text-rojo-brillante md:text-5xl">
+        Galería
+        <i class="pi pi-images ml-2 text-naranja" aria-hidden="true"></i>
+      </h2>
+      <p class="font-body mt-4 text-lg text-neutro-600 max-w-2xl mx-auto">
+        Conoce nuestras instalaciones y vive la experiencia Hula Hoop antes de visitarnos.
+      </p>
+    </div>
+
+    <!-- Loading skeleton -->
+    @if (loading()) {
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+        @for (i of [1,2,3,4,5,6]; track i) {
+          <p-skeleton height="12rem" styleClass="rounded-2xl" />
+        }
+      </div>
+    }
+
+    <!-- Gallery grid -->
+    @if (!loading() && images().length > 0) {
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+        @for (image of images(); track image.id; let i = $index) {
+          <button
+            type="button"
+            class="group relative aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
+            (click)="openLightbox(i)"
+            [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 1))"
+          >
+            <img
+              [src]="getImageUrl(image)"
+              [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
+              loading="lazy"
+              class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+            <!-- Hover overlay -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+              @if (image.title) {
+                <span class="text-white font-body text-sm font-semibold">{{ image.title }}</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Lightbox Dialog -->
+<p-dialog
+  [(visible)]="lightboxVisible"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [style]="{ width: '90vw', maxWidth: '64rem' }"
+  [showHeader]="false"
+  [contentStyle]="{ padding: '0', background: 'transparent', overflow: 'hidden', borderRadius: '1rem' }"
+  styleClass="gallery-lightbox"
+  (onKeydown)="onKeydown($any($event))"
+>
+  @if (selectedImage(); as img) {
+    <div class="relative bg-black rounded-2xl overflow-hidden">
+      <img
+        [src]="getImageUrl(img)"
+        [alt]="img.alt_text || img.title || 'Foto de Hula Hoop'"
+        class="w-full max-h-[80vh] object-contain"
+      />
+
+      <!-- Close button -->
+      <button
+        type="button"
+        class="absolute top-3 right-3 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
+        (click)="lightboxVisible.set(false)"
+        aria-label="Cerrar"
+      >
+        <i class="pi pi-times text-lg" aria-hidden="true"></i>
+      </button>
+
+      <!-- Navigation arrows -->
+      @if (hasPrev()) {
+        <button
+          type="button"
+          class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
+          (click)="prev()"
+          aria-label="Imagen anterior"
+        >
+          <i class="pi pi-chevron-left text-lg" aria-hidden="true"></i>
+        </button>
+      }
+      @if (hasNext()) {
+        <button
+          type="button"
+          class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
+          (click)="next()"
+          aria-label="Imagen siguiente"
+        >
+          <i class="pi pi-chevron-right text-lg" aria-hidden="true"></i>
+        </button>
+      }
+
+      <!-- Counter -->
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 text-white text-sm font-body">
+        {{ selectedIndex() + 1 }} / {{ images().length }}
+      </div>
+    </div>
+  }
+</p-dialog>

@@ -40,6 +40,13 @@ export const adminRoutes: Routes = [
           ),
       },
       {
+        path: 'galeria',
+        loadComponent: () =>
+          import('./pages/admin-gallery/admin-gallery').then(
+            (m) => m.AdminGallery,
+          ),
+      },
+      {
         path: 'configuracion',
         loadComponent: () =>
           import('./pages/admin-config/admin-config').then(

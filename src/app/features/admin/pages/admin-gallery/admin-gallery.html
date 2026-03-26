@@ -1,0 +1,152 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold font-display">Galería</h1>
+</div>
+
+<!-- Upload area -->
+<div class="mb-6 rounded-2xl border-2 border-dashed border-neutro-300 bg-neutro-50 p-6 text-center">
+  <i class="pi pi-cloud-upload text-4xl text-neutro-400 mb-3" aria-hidden="true"></i>
+  <p class="text-neutro-600 mb-4">Sube nuevas imágenes a la galería</p>
+  <p-fileUpload
+    mode="basic"
+    accept="image/*"
+    [multiple]="true"
+    [auto]="true"
+    [customUpload]="true"
+    (uploadHandler)="onUpload($event)"
+    chooseLabel="Seleccionar imágenes"
+    chooseIcon="pi pi-images"
+    [disabled]="uploading()"
+  />
+  @if (uploading()) {
+    <p class="mt-3 text-sm text-morado font-semibold">
+      <i class="pi pi-spin pi-spinner mr-1" aria-hidden="true"></i>
+      Subiendo imágenes...
+    </p>
+  }
+</div>
+
+<!-- Images grid -->
+@if (loading()) {
+  <div class="flex items-center justify-center py-12">
+    <i class="pi pi-spin pi-spinner text-2xl text-neutro-400" aria-hidden="true"></i>
+  </div>
+} @else if (images().length === 0) {
+  <div class="text-center py-12 text-neutro-500">
+    <i class="pi pi-image text-4xl mb-3" aria-hidden="true"></i>
+    <p>No hay imágenes en la galería.</p>
+  </div>
+} @else {
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    @for (image of images(); track image.id) {
+      <div class="group relative rounded-xl overflow-hidden bg-neutro-100 border border-neutro-200"
+           [class.opacity-50]="!image.is_active">
+        <div class="aspect-[4/3]">
+          <img
+            [src]="getImageUrl(image)"
+            [alt]="image.alt_text || image.title || 'Imagen de galería'"
+            loading="lazy"
+            class="h-full w-full object-cover"
+          />
+        </div>
+
+        <!-- Info bar -->
+        <div class="p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-neutro-800 truncate">
+                {{ image.title || image.storage_path }}
+              </p>
+              <p class="text-xs text-neutro-500">Orden: {{ image.sort_order }}</p>
+            </div>
+            <p-tag
+              [value]="image.is_active ? 'Activa' : 'Inactiva'"
+              [severity]="image.is_active ? 'success' : 'warn'"
+            />
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-1 mt-2">
+            <p-button
+              icon="pi pi-pencil"
+              [rounded]="true"
+              [text]="true"
+              severity="info"
+              size="small"
+              (onClick)="openEdit(image)"
+              pTooltip="Editar"
+            />
+            <p-button
+              [icon]="image.is_active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+              [rounded]="true"
+              [text]="true"
+              severity="warn"
+              size="small"
+              (onClick)="toggleActive(image)"
+              [pTooltip]="image.is_active ? 'Desactivar' : 'Activar'"
+            />
+            <p-button
+              icon="pi pi-trash"
+              [rounded]="true"
+              [text]="true"
+              severity="danger"
+              size="small"
+              (onClick)="confirmDelete(image)"
+              pTooltip="Eliminar"
+            />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Edit dialog -->
+<p-dialog
+  header="Editar imagen"
+  [(visible)]="dialogVisible"
+  [modal]="true"
+  [style]="{ width: '28rem' }"
+  [closable]="true"
+  [draggable]="false"
+>
+  @if (editingImage(); as img) {
+    <div class="mb-4">
+      <img
+        [src]="getImageUrl(img)"
+        [alt]="img.title || 'Preview'"
+        class="w-full h-40 object-cover rounded-lg"
+      />
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <p-floatlabel variant="on">
+      <input pInputText id="img-title" formControlName="title" class="w-full" />
+      <label for="img-title">Título</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <input pInputText id="img-alt" formControlName="alt_text" class="w-full" />
+      <label for="img-alt">Texto alternativo (accesibilidad)</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-inputNumber id="img-order" formControlName="sort_order" [showButtons]="true" class="w-full" />
+      <label for="img-order">Orden</label>
+    </p-floatlabel>
+
+    <div class="flex items-center gap-3">
+      <p-toggleSwitch formControlName="is_active" inputId="img-active" />
+      <label for="img-active" class="text-sm">Activa</label>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="dialogVisible.set(false)" type="button" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

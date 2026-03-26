@@ -13,13 +13,14 @@ import { PrivateEventsSection } from '../../components/private-events-section/pr
 import { ScheduleSection } from '../../components/schedule-section/schedule-section';
 import { PlayDaySection } from '../../components/play-day-section/play-day-section';
 import { ContactSection } from '../../components/contact-section/contact-section';
+import { GallerySection } from '../../components/gallery-section/gallery-section';
 import { HomeFooter } from '../../components/home-footer/home-footer';
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
 @Component({
   selector: 'app-home-page',
-  imports: [HeroSection, PrivateEventsSection, ScheduleSection, PlayDaySection, ContactSection, HomeFooter],
+  imports: [HeroSection, PrivateEventsSection, ScheduleSection, PlayDaySection, GallerySection, ContactSection, HomeFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-screen flex-col grid-bg' },
   templateUrl: './home-page.html',
