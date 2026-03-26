@@ -1,20 +1,15 @@
 <header class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
   <nav
-    class="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 max-w-7xl"
+    class="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-20 max-w-7xl"
     aria-label="Navegación principal"
   >
     <!-- Logo -->
-    <a routerLink="/" class="flex items-center gap-2 shrink-0" aria-label="Ir al inicio de Hula Hoop">
-      <span
-        class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amarillo-merengue"
-        aria-hidden="true"
-      >
-        <span class="text-lg">&#x1F642;</span>
-      </span>
-      <span class="font-display text-2xl font-bold leading-none">
-        <span class="text-rojo-brillante">Hula</span>
-        <span class="text-morado ml-0.5">Hoop</span>
-      </span>
+    <a routerLink="/" class="flex items-center shrink-0" aria-label="Ir al inicio de Hula Hoop">
+      <img
+        src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png"
+        alt="Hula Hoop"
+        class="h-44 -my-12 w-auto"
+      />
     </a>
 
     <!-- Desktop nav -->
@@ -97,10 +92,11 @@
   ariaCloseLabel="Cerrar menú"
 >
   <ng-template #header>
-    <span class="font-display text-xl font-bold">
-      <span class="text-rojo-brillante">Hula</span>
-      <span class="text-morado ml-0.5">Hoop</span>
-    </span>
+    <img
+      src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png"
+      alt="Hula Hoop"
+      class="w-40 object-contain"
+    />
   </ng-template>
 
   <div class="flex flex-col gap-1 py-2">

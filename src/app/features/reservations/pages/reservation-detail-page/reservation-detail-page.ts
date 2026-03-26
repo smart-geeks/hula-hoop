@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -23,6 +24,7 @@ export class ReservationDetailPage {
   private readonly reservationService = inject(ReservationService);
   private readonly paymentService = inject(PaymentService);
   private readonly messageService = inject(MessageService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   readonly loading = signal(true);
   readonly notFound = signal(false);
@@ -55,6 +57,9 @@ export class ReservationDetailPage {
     const queryStatus = this.route.snapshot.queryParamMap.get('status');
     if (queryStatus) {
       this.paymentStatus.set(queryStatus);
+      if (queryStatus === 'approved') {
+        this.launchConfetti();
+      }
     }
 
     // Try private first, then playdate
@@ -121,6 +126,22 @@ export class ReservationDetailPage {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  private async launchConfetti(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const confetti = (await import('canvas-confetti')).default;
+
+    // First burst from the left
+    confetti({ particleCount: 80, spread: 70, origin: { x: 0.15, y: 0.6 } });
+    // First burst from the right
+    confetti({ particleCount: 80, spread: 70, origin: { x: 0.85, y: 0.6 } });
+
+    // Second wave after a short delay
+    setTimeout(() => {
+      confetti({ particleCount: 50, spread: 100, origin: { x: 0.5, y: 0.4 } });
+    }, 300);
   }
 
   getStatusConfig(status: ReservationStatus): { label: string; severity: string } {
