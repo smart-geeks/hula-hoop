@@ -13,8 +13,10 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { SelectModule } from 'primeng/select';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PackageService } from '../../../../core/services/package.service';
+import { PACKAGE_COLORS } from '../../../../core/interfaces/package';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 
 @Component({
@@ -34,6 +36,7 @@ import type { PartyPackage } from '../../../../core/interfaces/package';
     ConfirmDialogModule,
     ToastModule,
     TooltipModule,
+    SelectModule,
     CurrencyMxnPipe,
   ],
   providers: [ConfirmationService, MessageService],
@@ -52,6 +55,7 @@ export class AdminPackages {
   readonly saving = signal(false);
 
   readonly inclusionInput = signal('');
+  readonly colorOptions = PACKAGE_COLORS;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -60,6 +64,7 @@ export class AdminPackages {
     max_guests: [10, [Validators.required, Validators.min(1)]],
     price_cents: [0, [Validators.required, Validators.min(0)]],
     inclusions: [[] as string[]],
+    color: [null as string | null],
     is_active: [true],
     sort_order: [0],
   });
@@ -84,6 +89,7 @@ export class AdminPackages {
       max_guests: 10,
       price_cents: 0,
       inclusions: [],
+      color: null,
       is_active: true,
       sort_order: 0,
     });
@@ -100,6 +106,7 @@ export class AdminPackages {
       max_guests: pkg.max_guests,
       price_cents: pkg.price_cents / 100, // Convert centavos → pesos for display
       inclusions: [...pkg.inclusions],
+      color: pkg.color,
       is_active: pkg.is_active,
       sort_order: pkg.sort_order,
     });
@@ -132,7 +139,11 @@ export class AdminPackages {
     this.saving.set(true);
     const raw = this.form.getRawValue();
     // Convert pesos → centavos before saving
-    const values = { ...raw, price_cents: Math.round(raw.price_cents * 100) };
+    const values = {
+      ...raw,
+      price_cents: Math.round(raw.price_cents * 100),
+      color: (raw.color || null) as PartyPackage['color'],
+    };
     const editing = this.editingPackage();
 
     if (editing) {
