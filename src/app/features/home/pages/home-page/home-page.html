@@ -1,7 +1,25 @@
 <main class="flex-1 pt-8">
   <app-hero-section />
-  <app-private-events-section />
-  <app-play-day-section />
+
+  <!-- Wrapper for scroll-driven mascot animation -->
+  <div #scrollZone class="relative overflow-x-clip">
+    <img
+      #fugaz
+      src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/fugaz.png"
+      alt=""
+      aria-hidden="true"
+      width="600"
+      height="400"
+      class="pointer-events-none absolute left-0 top-0 z-10 w-28 md:w-40 opacity-0"
+    />
+    <div #eventsSection>
+      <app-private-events-section />
+    </div>
+    <div #playDaySection>
+      <app-play-day-section />
+    </div>
+  </div>
+
   <app-schedule-section />
 </main>
 
