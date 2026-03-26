@@ -6,16 +6,14 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { GalleryService } from '../../../../core/services/gallery.service';
 import type { GalleryImage } from '../../../../core/interfaces/gallery-image';
 
-/** Max images shown in the home preview (desktop bento grid). */
-const PREVIEW_LIMIT = 5;
-
 @Component({
-  selector: 'app-gallery-section',
-  templateUrl: './gallery-section.html',
+  selector: 'app-gallery-page',
+  templateUrl: './gallery-page.html',
   imports: [RouterLink, DialogModule, ButtonModule, SkeletonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
 })
-export class GallerySection {
+export class GalleryPage {
   private readonly galleryService = inject(GalleryService);
 
   readonly images = signal<GalleryImage[]>([]);
@@ -23,26 +21,14 @@ export class GallerySection {
   readonly lightboxVisible = signal(false);
   readonly selectedIndex = signal(0);
 
-  /** First image — hero slot in bento grid. */
-  readonly heroImage = computed(() => this.images()[0] ?? null);
-
-  /** Images 1–4 for the smaller bento slots on desktop. */
-  readonly sideImages = computed(() => this.images().slice(1, PREVIEW_LIMIT));
-
-  /** Total active count to show "Ver las N fotos". */
-  readonly totalCount = computed(() => this.images().length);
-
-  /** Images available for preview lightbox (all except the last bento slot if it's the "ver más" tile). */
-  readonly previewImages = computed(() => this.images().slice(0, PREVIEW_LIMIT));
-
   readonly selectedImage = computed(() => {
-    const imgs = this.previewImages();
+    const imgs = this.images();
     const idx = this.selectedIndex();
     return imgs[idx] ?? null;
   });
 
   readonly hasPrev = computed(() => this.selectedIndex() > 0);
-  readonly hasNext = computed(() => this.selectedIndex() < this.previewImages().length - 1);
+  readonly hasNext = computed(() => this.selectedIndex() < this.images().length - 1);
 
   constructor() {
     this.loadImages();

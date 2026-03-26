@@ -1,8 +1,8 @@
-<!-- Gallery Section -->
+<!-- Gallery Section — Home Preview -->
 <section class="py-16 md:py-24 bg-white">
   <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
     <!-- Header -->
-    <div class="text-center mb-12">
+    <div class="text-center mb-10">
       <span class="font-body text-sm font-bold tracking-widest text-morado uppercase">
         Nuestro espacio
       </span>
@@ -17,43 +17,141 @@
 
     <!-- Loading skeleton -->
     @if (loading()) {
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-        @for (i of [1,2,3,4,5,6]; track i) {
-          <p-skeleton height="12rem" styleClass="rounded-2xl" />
+      <!-- Mobile -->
+      <div class="flex gap-4 overflow-hidden md:hidden">
+        @for (i of [1,2]; track i) {
+          <div class="w-[80vw] shrink-0">
+            <p-skeleton height="14rem" />
+          </div>
         }
+      </div>
+      <!-- Desktop bento skeleton -->
+      <div class="hidden md:grid grid-cols-4 grid-rows-2 gap-3 h-112">
+        <div class="col-span-2 row-span-2"><p-skeleton height="100%" width="100%" /></div>
+        <div><p-skeleton height="100%" width="100%" /></div>
+        <div><p-skeleton height="100%" width="100%" /></div>
+        <div><p-skeleton height="100%" width="100%" /></div>
+        <div><p-skeleton height="100%" width="100%" /></div>
       </div>
     }
 
-    <!-- Gallery grid -->
     @if (!loading() && images().length > 0) {
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-        @for (image of images(); track image.id; let i = $index) {
+      <!-- Mobile: horizontal carousel with snap scroll -->
+      <div class="md:hidden -mx-4">
+        <div
+          class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 pb-4"
+          style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+          role="region"
+          aria-label="Galería de fotos"
+        >
+          @for (image of images(); track image.id; let i = $index) {
+            <button
+              type="button"
+              class="relative w-[80vw] shrink-0 snap-center aspect-4/3 overflow-hidden rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
+              (click)="openLightbox(i)"
+              [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 1))"
+            >
+              <img
+                [src]="getImageUrl(image)"
+                [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+              @if (image.title) {
+                <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/50 to-transparent p-4 pt-10">
+                  <span class="text-white font-body text-sm font-semibold">{{ image.title }}</span>
+                </div>
+              }
+            </button>
+          }
+        </div>
+        <!-- Dots -->
+        <div class="flex justify-center gap-1.5 mt-2" aria-hidden="true">
+          @for (image of images(); track image.id) {
+            <div class="size-1.5 rounded-full bg-neutro-300"></div>
+          }
+        </div>
+      </div>
+
+      <!-- Desktop: bento grid (1 hero + 4 side) -->
+      @if (heroImage(); as hero) {
+        <div class="hidden md:grid grid-cols-4 grid-rows-2 gap-3 h-112">
+          <!-- Hero image — spans 2 cols × 2 rows, opens lightbox at index 0 -->
           <button
             type="button"
-            class="group relative aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
-            (click)="openLightbox(i)"
-            [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 1))"
+            class="col-span-2 row-span-2 relative overflow-hidden rounded-2xl group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
+            (click)="openLightbox(0)"
+            [attr.aria-label]="'Ver imagen: ' + (hero.title || 'Foto principal')"
           >
             <img
-              [src]="getImageUrl(image)"
-              [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
+              [src]="getImageUrl(hero)"
+              [alt]="hero.alt_text || hero.title || 'Foto principal de Hula Hoop'"
               loading="lazy"
-              class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            <!-- Hover overlay -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-              @if (image.title) {
-                <span class="text-white font-body text-sm font-semibold">{{ image.title }}</span>
-              }
-            </div>
+            @if (hero.title) {
+              <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/50 to-transparent p-5 pt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span class="text-white font-display text-lg font-bold">{{ hero.title }}</span>
+              </div>
+            }
           </button>
-        }
+          <!-- Side images -->
+          @for (image of sideImages(); track image.id; let i = $index; let last = $last) {
+            @if (last && totalCount() > 5) {
+              <!-- Last tile: "Ver todas" link to /galeria -->
+              <a
+                routerLink="/galeria"
+                class="relative overflow-hidden rounded-2xl group"
+              >
+                <img
+                  [src]="getImageUrl(image)"
+                  [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
+                  loading="lazy"
+                  class="h-full w-full object-cover"
+                />
+                <div class="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-colors group-hover:bg-black/70">
+                  <i class="pi pi-th-large text-3xl mb-2" aria-hidden="true"></i>
+                  <span class="font-display text-lg font-bold">Ver las {{ totalCount() }} fotos</span>
+                </div>
+              </a>
+            } @else {
+              <!-- Regular tile: opens lightbox (index offset +1 because hero is index 0) -->
+              <button
+                type="button"
+                class="relative overflow-hidden rounded-2xl group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
+                (click)="openLightbox(i + 1)"
+                [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 2))"
+              >
+                <img
+                  [src]="getImageUrl(image)"
+                  [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
+                  loading="lazy"
+                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              </button>
+            }
+          }
+        </div>
+      }
+
+      <!-- CTA -->
+      <div class="text-center mt-8">
+        <a routerLink="/galeria">
+          <p-button
+            label="Ver galería completa"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            severity="secondary"
+            [rounded]="true"
+            [outlined]="true"
+          />
+        </a>
       </div>
     }
   </div>
 </section>
 
-<!-- Lightbox Dialog -->
+<!-- Lightbox -->
 <p-dialog
   [(visible)]="lightboxVisible"
   [modal]="true"
@@ -73,7 +171,7 @@
         class="w-full max-h-[80vh] object-contain"
       />
 
-      <!-- Close button -->
+      <!-- Close -->
       <button
         type="button"
         class="absolute top-3 right-3 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
@@ -83,7 +181,7 @@
         <i class="pi pi-times text-lg" aria-hidden="true"></i>
       </button>
 
-      <!-- Navigation arrows -->
+      <!-- Prev -->
       @if (hasPrev()) {
         <button
           type="button"
@@ -94,6 +192,8 @@
           <i class="pi pi-chevron-left text-lg" aria-hidden="true"></i>
         </button>
       }
+
+      <!-- Next -->
       @if (hasNext()) {
         <button
           type="button"
@@ -107,7 +207,7 @@
 
       <!-- Counter -->
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 text-white text-sm font-body">
-        {{ selectedIndex() + 1 }} / {{ images().length }}
+        {{ selectedIndex() + 1 }} / {{ previewImages().length }}
       </div>
     </div>
   }

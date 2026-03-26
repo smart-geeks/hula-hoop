@@ -14,6 +14,12 @@
 
     <!-- Desktop nav -->
     <div class="hidden lg:flex items-center gap-1">
+      <a
+        routerLink="/galeria"
+        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante"
+      >
+        Galería
+      </a>
       @if (isLoggedIn()) {
         <a
           routerLink="/mi-cuenta/reservas"
@@ -115,6 +121,14 @@
     >
       <i class="pi pi-users" aria-hidden="true"></i>
       Reservar Play Day
+    </a>
+    <a
+      routerLink="/galeria"
+      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
+      (click)="drawerVisible.set(false)"
+    >
+      <i class="pi pi-images" aria-hidden="true"></i>
+      Galería
     </a>
 
     @if (isLoggedIn()) {

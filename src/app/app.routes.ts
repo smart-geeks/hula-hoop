@@ -9,6 +9,13 @@ export const routes: Routes = [
       import('./features/home/pages/home-page/home-page').then((m) => m.HomePage),
   },
   {
+    path: 'galeria',
+    loadComponent: () =>
+      import('./features/gallery/pages/gallery-page/gallery-page').then(
+        (m) => m.GalleryPage,
+      ),
+  },
+  {
     path: 'auth/update-password',
     loadComponent: () =>
       import('./features/auth/pages/update-password/update-password-page').then(
