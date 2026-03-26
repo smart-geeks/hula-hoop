@@ -37,16 +37,18 @@ export class HomePage {
 
   private animateFugaz(): void {
     const fugazEl = this.fugaz().nativeElement;
-    const scrollZoneEl = this.scrollZone().nativeElement;
     const eventsEl = this.eventsSection().nativeElement;
     const playDayEl = this.playDaySection().nativeElement;
 
-    const zoneW = scrollZoneEl.offsetWidth;
-    const zoneH = scrollZoneEl.offsetHeight;
+    const isMobile = window.innerWidth < 768;
 
-    // Start: left side, near top of events section
-    // End: right-center, near play day section
-    gsap.set(fugazEl, { x: -60, y: 40, opacity: 0 });
+    // On mobile: smaller scale, tighter path that stays within viewport
+    const eventsH = eventsEl.offsetHeight;
+    const playDayH = playDayEl.offsetHeight;
+    const totalH = eventsH + playDayH;
+    const vw = window.innerWidth;
+
+    gsap.set(fugazEl, { x: -60, y: 20, opacity: 0, scale: isMobile ? 0.7 : 1 });
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -58,25 +60,31 @@ export class HomePage {
       },
     });
 
-    // Fade in
     tl.to(fugazEl, { opacity: 1, duration: 0.1 });
 
-    // Curved path across both sections
+    const path = isMobile
+      ? [
+          { x: vw * 0.1, y: totalH * 0.1 },
+          { x: vw * 0.5, y: totalH * 0.3 },
+          { x: vw * 0.15, y: totalH * 0.55 },
+          { x: vw * 0.45, y: totalH * 0.8 },
+        ]
+      : [
+          { x: vw * 0.15, y: totalH * 0.15 },
+          { x: vw * 0.55, y: totalH * 0.3 },
+          { x: vw * 0.35, y: totalH * 0.55 },
+          { x: vw * 0.65, y: totalH * 0.75 },
+        ];
+
     tl.to(fugazEl, {
       motionPath: {
-        path: [
-          { x: zoneW * 0.15, y: zoneH * 0.15 },
-          { x: zoneW * 0.6, y: zoneH * 0.3 },
-          { x: zoneW * 0.4, y: zoneH * 0.55 },
-          { x: zoneW * 0.7, y: zoneH * 0.75 },
-        ],
+        path,
         curviness: 1.5,
         autoRotate: true,
       },
       duration: 1,
     });
 
-    // Fade out at the end
     tl.to(fugazEl, { opacity: 0, duration: 0.1 }, '-=0.1');
   }
 }
