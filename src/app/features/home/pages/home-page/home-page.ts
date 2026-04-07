@@ -23,7 +23,7 @@ gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
   selector: 'app-home-page',
   imports: [HeroSection, PolaroidSection, PrivateEventsSection, ScheduleSection, PlayDaySection, GallerySection, ContactSection, HomeFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'flex min-h-screen flex-col grid-bg' },
+  host: { class: 'flex min-h-screen flex-col grid-bg overflow-x-clip' },
   templateUrl: './home-page.html',
 })
 export class HomePage {
