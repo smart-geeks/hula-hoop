@@ -1,80 +1,185 @@
-<section class="py-16 md:py-24">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-    <div class="text-center">
-      <h2 class="font-display text-4xl font-bold text-morado md:text-5xl">
-        Día de Juego Abierto
-        <i class="pi pi-play-circle ml-2 text-azul-cielo"></i>
-      </h2>
-      <p
-        class="font-body mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-neutral-700"
-      >
-        Trae a tus pequeños a disfrutar de juego libre en nuestro playground.
-        Sin reserva de fiesta, diversión para todos.
-      </p>
-    </div>
+<!-- Sección roja: cara animada -->
+<section class="relative bg-[#E30D1C] overflow-hidden py-12 md:py-20 flex flex-col items-center">
 
-    <!-- Available slots (real-time, <24h window) -->
-    <div class="mt-12">
-      @if (loading()) {
-        <div class="flex justify-center">
-          <i class="pi pi-spin pi-spinner text-4xl text-morado"></i>
-        </div>
-      } @else if (hasAvailability()) {
-        <p
-          class="font-body mb-4 text-center text-sm font-bold tracking-wide text-morado uppercase"
-        >
-          Horarios disponibles próximamente:
-        </p>
-        <div class="flex flex-wrap justify-center gap-4">
-          @for (item of slots(); track item.date + item.slot.id) {
-            <div
-              class="flex flex-col items-center rounded-2xl border-2 border-lima/40 bg-lima/10 px-6 py-4 shadow-sm"
-            >
-              <span class="font-body text-sm font-semibold capitalize text-neutral-500">
-                {{ item.dayLabel }}
-              </span>
-              <span class="font-display mt-1 text-xl font-bold text-morado">
-                {{ formatTime(item.slot.start_time) }} - {{ formatTime(item.slot.end_time) }}
-              </span>
-              <span class="font-body mt-1 text-xs text-lima-700">
-                {{ item.remaining }} lugares
-              </span>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="text-center">
+  <!-- Imagen central con pupilas animadas -->
+  <div class="relative z-10 inline-block">
+    <img
+      src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/rojo.png"
+      alt="Play Day"
+      class="w-[333px] md:w-[416px] lg:w-[499px] object-contain block"
+    />
+    <!-- Pupila izquierda -->
+    <div
+      class="pupil-anim absolute rounded-full bg-black"
+      style="width: 13.65%; height: 21%; top: 20%; left: 18%;"
+    ></div>
+    <!-- Pupila derecha -->
+    <div
+      class="pupil-anim absolute rounded-full bg-black"
+      style="width: 13.65%; height: 21%; top: 20%; left: 75%;"
+    ></div>
+  </div>
+
+</section>
+
+<!-- Divisor inferior: ondas largas y planas rojo → fondo neutro -->
+<div class="w-full overflow-hidden leading-none mb-[-2px]" style="background-color: #F3ECE5;" aria-hidden="true">
+  <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-10 md:h-16 block">
+    <path d="M0,0 Q180,60 360,25 Q540,0 720,30 Q900,60 1080,25 Q1260,0 1440,30 L1440,0 Z" fill="#E30D1C"/>
+  </svg>
+</div>
+
+<!-- Sección Play Day: fondo cuadrícula -->
+<section class="relative grid-bg bg-[#F3ECE5] overflow-hidden py-16 md:py-24">
+
+  <!-- Cometa: esquina superior derecha -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/fugaz.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute top-0 w-60 md:w-84 lg:w-96 object-contain" style="right: 10%;"
+  />
+
+  <!-- Título -->
+  <div class="relative z-10 text-center mb-4">
+    <h2 class="font-display text-6xl md:text-8xl lg:text-9xl font-black text-morado uppercase tracking-wide">
+      Play Day
+    </h2>
+  </div>
+
+  <!-- Subtítulo -->
+  <div class="relative z-10 text-center mb-12 px-6">
+    <p class="font-display text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-gray-700 max-w-xl mx-auto leading-relaxed">
+      Explora los diferentes mundos de Hula Hoop con un pase libre para disfrutar de nuestros juegos y actividades
+    </p>
+  </div>
+
+  <!-- Tarjetas de horarios dinámicas -->
+  <div class="relative z-10 flex justify-center px-6 mb-12">
+    @if (loading()) {
+      <div class="flex justify-center">
+        <div class="w-48 h-32 rounded-3xl animate-pulse" style="background: linear-gradient(135deg, #85E8E3, #8CE9AF);"></div>
+      </div>
+    } @else if (hasAvailability()) {
+      <div class="flex flex-wrap justify-center gap-4">
+        @for (item of slots(); track item.date + item.slot.id) {
           <div
-            class="mx-auto inline-flex items-center gap-2 rounded-2xl border-2 border-neutral-200 bg-neutral-100 px-6 py-4"
+            class="flex flex-col items-center justify-center px-8 py-6 rounded-3xl min-w-[180px]"
+            style="background: linear-gradient(135deg, #85E8E3 0%, #8CE9AF 100%);"
           >
-            <i class="pi pi-info-circle text-lg text-neutral-400"></i>
-            <span class="font-body text-lg font-semibold text-neutral-500">
-              Sin disponibilidad por el momento
+            <span class="font-display text-xs font-bold uppercase tracking-widest text-gray-700 mb-1">
+              {{ item.dayLabel }}
+            </span>
+            <span class="font-display text-2xl font-black text-gray-800">
+              {{ formatTime(item.slot.start_time) }}
+            </span>
+            <span class="font-display text-sm font-bold text-gray-600">
+              – {{ formatTime(item.slot.end_time) }}
+            </span>
+            <span class="font-display text-xs font-bold text-gray-600 mt-2 uppercase tracking-widest">
+              {{ item.remaining }} lugares
             </span>
           </div>
-        </div>
-      }
-    </div>
-
-    <!-- Note + CTA -->
-    <div class="mt-10 text-center">
-      <p class="font-body text-sm text-neutral-500 italic">
-        * Sujeto a disponibilidad. El Play Day no opera cuando hay fiesta
-        privada reservada en ese turno.
-      </p>
-      <div class="mt-6">
-        <a routerLink="/reservar/play-day">
-          <p-button
-            label="Reservar Entrada"
-            icon="pi pi-ticket"
-            severity="warn"
-            size="large"
-            [rounded]="true"
-            [outlined]="true"
-            [disabled]="!hasAvailability()"
-          />
-        </a>
+        }
       </div>
-    </div>
+    } @else {
+      <div
+        class="flex items-center gap-3 px-8 py-5 rounded-3xl"
+        style="background: linear-gradient(135deg, #85E8E3 0%, #8CE9AF 100%);"
+      >
+        <span class="font-display text-sm font-bold uppercase tracking-widest text-gray-700">
+          Sin disponibilidad por el momento
+        </span>
+      </div>
+    }
   </div>
+
+  <!-- Menú restaurante acordeón -->
+  <div class="relative z-10 w-full max-w-xl mx-auto px-6 mb-10">
+    <p-accordion>
+      <p-accordion-panel value="menu">
+        <p-accordion-header>
+          <span class="font-display font-black uppercase tracking-widest text-gray-800 text-sm md:text-base">
+            <i class="pi pi-utensils mr-2" aria-hidden="true"></i>
+            Menú Restaurante
+          </span>
+        </p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-col gap-4 py-2">
+
+            <!-- Categoría: Botanas -->
+            <div>
+              <p class="font-display font-black uppercase tracking-widest text-xs text-morado mb-2">Botanas</p>
+              <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Papas fritas</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$65</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Nuggets de pollo</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$80</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Hot dog</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$70</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="border-gray-200"/>
+
+            <!-- Categoría: Bebidas -->
+            <div>
+              <p class="font-display font-black uppercase tracking-widest text-xs text-morado mb-2">Bebidas</p>
+              <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Agua natural</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$30</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Refresco</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$40</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Jugo natural</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$55</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="border-gray-200"/>
+
+            <!-- Categoría: Postres -->
+            <div>
+              <p class="font-display font-black uppercase tracking-widest text-xs text-morado mb-2">Postres</p>
+              <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Paleta de hielo</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$35</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-body text-sm text-gray-700">Helado</span>
+                  <span class="font-display font-bold text-sm text-gray-800">$50</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  </div>
+
+  <!-- Botón obtén tu ticket -->
+  <div class="relative z-10 flex justify-center">
+    <a
+      routerLink="/reservar/play-day"
+      class="flex items-center gap-3 px-8 py-3 font-display text-sm font-bold uppercase tracking-widest text-gray-800"
+      style="background-color: #8CE9AF;"
+    >
+      <i class="pi pi-ticket text-base" aria-hidden="true"></i>
+      Obtén tu ticket
+    </a>
+  </div>
+
 </section>

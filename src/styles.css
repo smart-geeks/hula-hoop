@@ -44,6 +44,101 @@ body {
   animation: floating 4s ease-in-out infinite;
 }
 
+/* Hero planet responsive positioning */
+.hero-planet-wrap {
+  width: min(203vw, 2366px);
+  transform: translate(-65%, 53%);
+}
+
+@media (min-width: 768px) {
+  .hero-planet-wrap {
+    width: min(203vw, 2366px);
+    transform: translate(-65%, 53%);
+  }
+}
+
+/* Personaje H position — mobile solo */
+.hero-h-pos {
+  right: -25%;
+}
+
+@media (min-width: 768px) {
+  .hero-h-pos {
+    right: -15%;
+  }
+}
+
+/* Hero logo mobile adjustments */
+.hero-logo-wrap {
+  transform: translateX(calc(-25% + 20%));
+}
+
+@media (min-width: 768px) {
+  .hero-logo-wrap {
+    transform: translateX(-25%);
+  }
+}
+
+/* Tarjeta estampilla */
+.stamp-card {
+  position: relative;
+}
+/* Top y bottom */
+.stamp-card::before,
+.stamp-card::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 10px;
+  background-image: radial-gradient(circle at 50% 0%, #F2A7D8 10px, transparent 10px);
+  background-size: 40px 10px;
+  background-repeat: repeat-x;
+  background-position: 16px top;
+  flex-shrink: 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+.stamp-card::after  {
+  background-image: radial-gradient(circle at 50% 100%, #F2A7D8 10px, transparent 10px);
+  background-position: 16px bottom;
+}
+
+/* Laterales izquierdo y derecho */
+.stamp-card-inner {
+  position: relative;
+}
+.stamp-card-inner::before,
+.stamp-card-inner::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  width: 10px;
+  background-image: radial-gradient(circle at 0% 50%, #F2A7D8 10px, transparent 10px);
+  background-size: 10px 40px;
+  background-repeat: repeat-y;
+  pointer-events: none;
+  z-index: 1;
+}
+.stamp-card-inner::before { left: 0; background-position: left center; }
+.stamp-card-inner::after  {
+  right: 0;
+  background-image: radial-gradient(circle at 100% 50%, #F2A7D8 10px, transparent 10px);
+  background-position: right center;
+}
+
+/* Pupil side-to-side animation */
+@keyframes pupil-move {
+  0%   { transform: translateX(0); }
+  30%  { transform: translateX(40%); }
+  70%  { transform: translateX(-40%); }
+  100% { transform: translateX(0); }
+}
+
+.pupil-anim {
+  animation: pupil-move 3s ease-in-out infinite;
+}
+
 /* Bounce scale animation */
 @keyframes bounce-scale {
   0%, 100% { transform: scale(1); }

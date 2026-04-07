@@ -1,31 +1,40 @@
-<section class="relative px-6 pt-10 pb-16 text-center overflow-hidden">
-  <!-- Floating character -->
-  <img
-    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/nube.png"
-    alt=""
-    aria-hidden="true"
-    width="208"
-    height="208"
-    class="absolute -top-2 -right-4 w-36 h-36 md:w-52 md:h-52 object-contain pixel-float"
-  />
+<section class="relative min-h-[441px] md:min-h-[83.2vh]">
 
-  <!-- Decorative blob -->
+  <!-- Logo: top right -->
+  <div class="absolute top-6 right-4 md:top-10 md:right-12 z-10 hero-logo-wrap">
+    <img
+      ngSrc="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/logo.png"
+      alt="Hula Hoop — Playground Infantil"
+      width="520"
+      height="184"
+      priority
+      class="w-[22.8rem] md:w-[32rem] lg:w-[48rem] h-auto object-contain pixel-float"
+    />
+  </div>
+
+  <!-- Composición planeta + astronauta -->
+  <!-- Mobile: centrado (~110vw), Desktop: grande y desplazado a la izquierda -->
   <div
-    class="absolute bottom-20 -left-5 w-24 h-24 bg-rosa-pastel/30 rounded-full blur-2xl"
+    class="absolute left-1/2 pointer-events-none hero-planet-wrap z-0"
+    style="bottom: 0;"
     aria-hidden="true"
-  ></div>
-
-  <!-- Heading -->
-  <h1
-    #heading
-    class="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mt-10 mb-6 invisible"
   >
-    Where Fun <br />
-    <span class="text-morado">Bounces</span> to Life!
-  </h1>
+    <!-- Planeta cuadrado 1:1 -->
+    <div class="relative w-full" style="padding-top: 100%;">
+      <img
+        ngSrc="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/planeta.png"
+        alt=""
+        fill
+        class="object-contain"
+      />
+      <!-- Astronauta: sobre el borde superior del planeta -->
+      <img
+        src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/astronauta.png"
+        alt=""
+        class="absolute w-[30%] h-auto object-contain"
+        style="top: 20%; left: 33%;"
+      />
+    </div>
+  </div>
 
-  <!-- Subtitle -->
-  <p #subtitle class="text-gray-500 text-lg md:text-xl mb-8 max-w-sm mx-auto opacity-0">
-    Colorful pixel playgrounds for the coolest kids on the block.
-  </p>
 </section>
