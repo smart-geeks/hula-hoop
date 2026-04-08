@@ -17,11 +17,13 @@ export interface PrivateReservation {
   guest_count: number;
   subtotal_cents: number;
   total_cents: number;
+  deposit_cents: number;
   status: ReservationStatus;
   mp_preference_id: string | null;
   mp_payment_id: string | null;
   access_token: string;
   notes: string | null;
+  snack_option_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,7 +68,9 @@ export interface CreatePrivateReservationData {
   guest_count: number;
   subtotal_cents: number;
   total_cents: number;
+  deposit_cents: number;
   notes?: string;
+  snack_option_id?: string;
   extras: { extra_id: string; quantity: number; unit_price_cents: number }[];
 }
 

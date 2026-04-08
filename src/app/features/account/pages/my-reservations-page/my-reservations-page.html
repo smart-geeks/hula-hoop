@@ -64,6 +64,10 @@
                     </div>
                     <div class="text-right">
                       <p class="text-lg font-bold text-rojo-brillante">{{ res.total_cents | currencyMxn }}</p>
+                      @if (res.deposit_cents > 0 && res.deposit_cents < res.total_cents) {
+                        <p class="text-xs text-green-600">Anticipo: {{ res.deposit_cents | currencyMxn }}</p>
+                        <p class="text-xs text-amber-600">Pendiente: {{ res.total_cents - res.deposit_cents | currencyMxn }}</p>
+                      }
                       <p class="text-xs text-neutro-500">#{{ res.id.slice(0, 8) }}</p>
                     </div>
                   </div>

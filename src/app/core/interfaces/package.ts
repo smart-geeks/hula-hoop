@@ -19,6 +19,8 @@ export const PACKAGE_COLORS: { label: string; value: PackageColor; hex: string }
   { label: 'Amarillo Merengue', value: 'amarillo-merengue', hex: '#F6F090' },
 ];
 
+export type DepositType = 'full' | 'percentage' | 'fixed';
+
 export interface PartyPackage {
   id: string;
   name: string;
@@ -30,6 +32,8 @@ export interface PartyPackage {
   is_active: boolean;
   sort_order: number;
   color: PackageColor | null;
+  deposit_type: DepositType;
+  deposit_value: number;
   created_at: string;
   updated_at: string;
 }

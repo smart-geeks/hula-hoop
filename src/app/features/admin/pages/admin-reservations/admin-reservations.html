@@ -150,6 +150,15 @@
         </div>
       </div>
 
+      @if (detailSnackName()) {
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <p class="text-sm text-neutro-500">Merienda</p>
+            <p class="font-medium">{{ detailSnackName() }}</p>
+          </div>
+        </div>
+      }
+
       @if (row.notes) {
         <div>
           <p class="text-sm text-neutro-500">Notas</p>
@@ -199,6 +208,18 @@
         <span>Total</span>
         <span class="text-rojo-brillante">{{ row.total_cents | currencyMxn }}</span>
       </div>
+
+      @if (row.type === 'private' && row.deposit_cents > 0 && row.deposit_cents < row.total_cents) {
+        <hr class="border-neutro-200" />
+        <div class="flex justify-between font-semibold text-green-700">
+          <span>Pagado (anticipo)</span>
+          <span>{{ row.deposit_cents | currencyMxn }}</span>
+        </div>
+        <div class="flex justify-between text-sm text-amber-600 font-medium">
+          <span>Pendiente por pagar</span>
+          <span>{{ row.total_cents - row.deposit_cents | currencyMxn }}</span>
+        </div>
+      }
     </div>
   </p-dialog>
 }

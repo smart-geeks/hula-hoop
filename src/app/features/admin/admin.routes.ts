@@ -33,6 +33,13 @@ export const adminRoutes: Routes = [
           ),
       },
       {
+        path: 'meriendas',
+        loadComponent: () =>
+          import('./pages/admin-snacks/admin-snacks').then(
+            (m) => m.AdminSnacks,
+          ),
+      },
+      {
         path: 'horarios',
         loadComponent: () =>
           import('./pages/admin-time-slots/admin-time-slots').then(
