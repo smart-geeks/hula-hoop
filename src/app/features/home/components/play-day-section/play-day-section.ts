@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { AccordionModule } from 'primeng/accordion';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
 import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
 
 @Component({
   selector: 'app-play-day-section',
-  imports: [ButtonModule, RouterLink],
+  imports: [ButtonModule, RouterLink, AccordionModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './play-day-section.html',
 })

@@ -80,6 +80,12 @@
             <p class="text-sm text-neutro-500">Invitados</p>
             <p class="font-medium">{{ res.guest_count }}</p>
           </div>
+          @if (snackOptionName()) {
+            <div>
+              <p class="text-sm text-neutro-500">Merienda</p>
+              <p class="font-medium">{{ snackOptionName() }}</p>
+            </div>
+          }
         </div>
         @if (res.notes) {
           <div>
@@ -147,6 +153,18 @@
         <span>Total</span>
         <span class="text-rojo-brillante">{{ res.total_cents | currencyMxn }}</span>
       </div>
+
+      @if (isPrivateReservation(res) && res.deposit_cents > 0 && res.deposit_cents < res.total_cents) {
+        <hr class="border-neutro-200" />
+        <div class="flex justify-between font-semibold text-green-700">
+          <span>Pagado (anticipo)</span>
+          <span>{{ res.deposit_cents | currencyMxn }}</span>
+        </div>
+        <div class="flex justify-between text-sm text-amber-600 font-medium">
+          <span>Pendiente por pagar</span>
+          <span>{{ res.total_cents - res.deposit_cents | currencyMxn }}</span>
+        </div>
+      }
     </div>
 
     <!-- Actions -->

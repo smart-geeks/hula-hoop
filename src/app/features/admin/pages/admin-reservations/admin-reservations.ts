@@ -34,11 +34,13 @@ interface AdminReservationRow {
   status: ReservationStatus;
   total_cents: number;
   subtotal_cents: number;
+  deposit_cents: number;
   guest_count: number;
   notes: string;
   access_token: string;
   detail: string;
   created_at: string;
+  snack_option_id: string | null;
 }
 
 @Component({
@@ -102,6 +104,7 @@ export class AdminReservations {
   readonly detailVisible = signal(false);
   readonly detailRow = signal<AdminReservationRow | null>(null);
   readonly detailExtras = signal<ReservationExtra[]>([]);
+  readonly detailSnackName = signal<string | null>(null);
   readonly detailLoading = signal(false);
 
   readonly filteredRows = computed(() => {
@@ -196,12 +199,17 @@ export class AdminReservations {
   async openDetail(row: AdminReservationRow): Promise<void> {
     this.detailRow.set(row);
     this.detailExtras.set([]);
+    this.detailSnackName.set(null);
     this.detailVisible.set(true);
 
     if (row.type === 'private') {
       this.detailLoading.set(true);
       const extras = await this.reservationService.getPrivateReservationExtras(row.id);
       this.detailExtras.set(extras);
+      if (row.snack_option_id) {
+        const name = await this.reservationService.getSnackOptionName(row.snack_option_id);
+        this.detailSnackName.set(name);
+      }
       this.detailLoading.set(false);
     }
   }
@@ -271,11 +279,13 @@ export class AdminReservations {
       status: r.status,
       total_cents: r.total_cents,
       subtotal_cents: r.subtotal_cents,
+      deposit_cents: r.deposit_cents,
       guest_count: r.guest_count,
       notes: r.notes ?? '',
       access_token: r.access_token,
       detail: `${r.guest_count} invitados`,
       created_at: r.created_at,
+      snack_option_id: r.snack_option_id,
     };
   }
 
@@ -292,11 +302,13 @@ export class AdminReservations {
       status: r.status,
       total_cents: r.total_cents,
       subtotal_cents: r.total_cents,
+      deposit_cents: r.total_cents,
       guest_count: r.kids_count + r.adults_count + r.extra_adults_count,
       notes: '',
       access_token: r.access_token,
       detail: `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
       created_at: r.created_at,
+      snack_option_id: null,
     };
   }
 }

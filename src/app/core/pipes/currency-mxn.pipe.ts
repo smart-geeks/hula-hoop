@@ -4,8 +4,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 @Pipe({ name: 'currencyMxn' })
 export class CurrencyMxnPipe implements PipeTransform {
   transform(cents: number | null | undefined): string {
-    if (cents == null) return '$0.00';
+    if (cents == null) return '$0';
     const amount = cents / 100;
-    return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   }
 }

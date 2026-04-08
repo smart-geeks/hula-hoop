@@ -1,0 +1,87 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold font-display">Meriendas</h1>
+  <p-button label="Nueva merienda" icon="pi pi-plus" (onClick)="openNew()" />
+</div>
+
+<p-table [value]="snacks()" [loading]="loading()" [rowHover]="true"
+         responsiveLayout="stack" breakpoint="768px" styleClass="p-datatable-sm">
+  <ng-template #header>
+    <tr>
+      <th>Nombre</th>
+      <th>Descripción</th>
+      <th>Estado</th>
+      <th>Orden</th>
+      <th style="width: 8rem">Acciones</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-snack>
+    <tr>
+      <td>
+        <span class="font-semibold">{{ snack.name }}</span>
+      </td>
+      <td>
+        @if (snack.description) {
+          <span class="text-sm text-neutro-500">{{ snack.description }}</span>
+        } @else {
+          <span class="text-neutro-400">—</span>
+        }
+      </td>
+      <td>
+        <p-tag [value]="snack.is_active ? 'Activa' : 'Inactiva'"
+               [severity]="snack.is_active ? 'success' : 'warn'" />
+      </td>
+      <td>{{ snack.sort_order }}</td>
+      <td>
+        <div class="flex gap-1">
+          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                    (onClick)="openEdit(snack)" pTooltip="Editar" />
+          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                    (onClick)="confirmDelete(snack)" pTooltip="Eliminar" />
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="5" class="text-center py-8 text-neutro-500">No hay meriendas registradas.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<!-- Dialog crear/editar -->
+<p-dialog [header]="editingSnack() ? 'Editar merienda' : 'Nueva merienda'"
+          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '28rem' }"
+          [closable]="true" [draggable]="false">
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <p-floatlabel variant="on">
+      <input pInputText id="snack-name" formControlName="name" class="w-full" />
+      <label for="snack-name">Nombre *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <textarea pTextarea id="snack-desc" formControlName="description" [rows]="3" class="w-full"></textarea>
+      <label for="snack-desc">Descripción</label>
+    </p-floatlabel>
+
+    <div class="grid grid-cols-2 gap-4">
+      <p-floatlabel variant="on">
+        <p-inputNumber id="snack-order" formControlName="sort_order" [showButtons]="true" class="w-full" />
+        <label for="snack-order">Orden</label>
+      </p-floatlabel>
+      <div class="flex items-center gap-3">
+        <p-toggleSwitch formControlName="is_active" inputId="snack-active" />
+        <label for="snack-active" class="text-sm">Activa</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="dialogVisible.set(false)" type="button" />
+      <p-button [label]="editingSnack() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+                type="submit" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

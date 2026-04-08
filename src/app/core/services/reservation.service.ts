@@ -245,6 +245,26 @@ export class ReservationService {
     }));
   }
 
+  // ── Snack Option Name ─────────────────────────────────────
+
+  async getSnackOptionName(snackOptionId: string): Promise<string | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('snack_options')
+      .select('name')
+      .eq('id', snackOptionId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching snack option:', error.message);
+      return null;
+    }
+
+    return data?.name ?? null;
+  }
+
   // ── Availability ──────────────────────────────────────────
 
   /** Check if a slot has a PAID (confirmed) private reservation for a given date */

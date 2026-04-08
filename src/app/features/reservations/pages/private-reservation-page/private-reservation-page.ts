@@ -16,6 +16,7 @@ import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { PackageService } from '../../../../core/services/package.service';
 import { ExtraService } from '../../../../core/services/extra.service';
+import { SnackOptionService } from '../../../../core/services/snack-option.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -23,6 +24,7 @@ import { PaymentService } from '../../../../core/services/payment.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 import type { Extra } from '../../../../core/interfaces/extra';
+import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
 
 interface SelectedExtra {
@@ -55,6 +57,7 @@ export class PrivateReservationPage {
   private readonly timeSlotService = inject(TimeSlotService);
   private readonly packageService = inject(PackageService);
   private readonly extraService = inject(ExtraService);
+  private readonly snackOptionService = inject(SnackOptionService);
   private readonly configService = inject(VenueConfigService);
   private readonly reservationService = inject(ReservationService);
   private readonly authService = inject(AuthService);
@@ -72,6 +75,7 @@ export class PrivateReservationPage {
   readonly timeSlots = signal<TimeSlot[]>([]);
   readonly packages = signal<PartyPackage[]>([]);
   readonly extras = signal<Extra[]>([]);
+  readonly snackOptions = signal<SnackOption[]>([]);
   readonly venueConfig = signal<VenueConfig | null>(null);
 
   // ── Step 1: Date + Slot ──
@@ -86,6 +90,9 @@ export class PrivateReservationPage {
 
   // ── Step 3: Extras ──
   readonly selectedExtras = signal<SelectedExtra[]>([]);
+
+  // ── Step 4: Merienda ──
+  readonly selectedSnackOption = signal<SnackOption | null>(null);
 
   // ── Computed ──
   readonly minDate = computed(() => {
@@ -132,6 +139,25 @@ export class PrivateReservationPage {
     return this.subtotalCents() + this.extrasTotalCents();
   });
 
+  readonly depositCents = computed(() => {
+    const pkg = this.selectedPackage();
+    const total = this.totalCents();
+    if (!pkg || pkg.deposit_type === 'full') return total;
+    if (pkg.deposit_type === 'percentage') {
+      return Math.round(total * pkg.deposit_value / 100);
+    }
+    // fixed: deposit_value is in cents, cap at total
+    return Math.min(pkg.deposit_value, total);
+  });
+
+  readonly remainingCents = computed(() => {
+    return this.totalCents() - this.depositCents();
+  });
+
+  readonly hasPartialDeposit = computed(() => {
+    return this.depositCents() < this.totalCents();
+  });
+
   // ── Step 4: Contact Form ──
   readonly contactForm = this.fb.nonNullable.group({
     guest_name: ['', Validators.required],
@@ -146,15 +172,17 @@ export class PrivateReservationPage {
 
   private async loadData(): Promise<void> {
     this.loading.set(true);
-    const [slots, pkgs, extras, config] = await Promise.all([
+    const [slots, pkgs, extras, snacks, config] = await Promise.all([
       this.timeSlotService.getActiveSlots(),
       this.packageService.getActivePackages(),
       this.extraService.getActiveExtras(),
+      this.snackOptionService.getActiveSnackOptions(),
       this.configService.getConfig(),
     ]);
     this.timeSlots.set(slots);
     this.packages.set(pkgs);
     this.extras.set(extras);
+    this.snackOptions.set(snacks);
     this.venueConfig.set(config);
 
     // Pre-fill contact form if logged in
@@ -249,6 +277,11 @@ export class PrivateReservationPage {
     }
   }
 
+  // ── Step 4: Merienda ──
+  selectSnackOption(option: SnackOption): void {
+    this.selectedSnackOption.set(option);
+  }
+
   // ── Step navigation ──
   canGoToStep2(): boolean {
     return this.selectedDate() !== null && this.selectedSlot() !== null;
@@ -260,6 +293,11 @@ export class PrivateReservationPage {
 
   canGoToStep4(): boolean {
     return true; // extras are optional
+  }
+
+  canGoToStep5(): boolean {
+    // Merienda is required if there are options available
+    return this.snackOptions().length === 0 || this.selectedSnackOption() !== null;
   }
 
   // ── Step 5: Submit ──
@@ -279,6 +317,8 @@ export class PrivateReservationPage {
     const contact = this.contactForm.getRawValue();
     const user = this.authService.currentUser();
 
+    const snack = this.selectedSnackOption();
+
     const reservation = await this.reservationService.createPrivateReservation({
       profile_id: user?.id ?? null,
       guest_name: contact.guest_name,
@@ -290,7 +330,9 @@ export class PrivateReservationPage {
       guest_count: this.guestCount(),
       subtotal_cents: this.subtotalCents(),
       total_cents: this.totalCents(),
+      deposit_cents: this.depositCents(),
       notes: contact.notes || undefined,
+      snack_option_id: snack?.id,
       extras: this.selectedExtras().map((se) => ({
         extra_id: se.extra.id,
         quantity: se.quantity,

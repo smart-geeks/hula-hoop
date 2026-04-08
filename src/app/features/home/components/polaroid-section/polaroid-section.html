@@ -1,0 +1,84 @@
+<!-- Divisor superior: ondas/montañas desde el hero hacia esta sección -->
+<div class="relative z-10 w-full overflow-hidden leading-none" aria-hidden="true">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-20 block">
+    <path d="M0,80 L0,40 Q120,0 240,40 Q360,80 480,40 Q600,0 720,40 Q840,80 960,40 Q1080,0 1200,40 Q1320,80 1440,40 L1440,80 Z" fill="#F6F090"/>
+  </svg>
+</div>
+
+<!-- Sección amarilla -->
+<section class="relative z-10 bg-[#F6F090] overflow-hidden py-12 md:py-20">
+
+  <!-- Garabato 1: esquina inferior izquierda -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/garabato-1.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute left-0 bottom-16 w-[17.8rem] md:w-[26.8rem] opacity-80"
+  />
+
+  <!-- Garabato 2: arriba a la derecha -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/garabato-2.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute right-8 top-8 w-[16.2rem] md:w-[22.7rem] opacity-80"
+  />
+
+  <!-- Garabato 3: centro izquierda -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/garabato-3.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute left-[30%] top-4 w-[12.4rem] md:w-[19.35rem] opacity-70"
+  />
+
+  <!-- Personaje H: derecha -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/personaje-h.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute bottom-0 w-[28.75rem] md:w-[37.4rem] lg:w-[46rem] object-contain pixel-float hero-h-pos"
+  />
+
+  <!-- CTA texto: visible solo en mobile, arriba de los polaroids -->
+  <div class="relative z-10 flex justify-center mb-8 md:hidden">
+    <p class="font-display text-sm tracking-[0.2em] font-semibold px-6 py-2 uppercase"
+       style="background-color: #8ce9b0;">
+      Conoce más del mundo Hula Hoop
+    </p>
+  </div>
+
+  <!-- Polaroids -->
+  <div class="relative z-10 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-[8%] px-8 md:px-16 mb-10 md:mb-14">
+    @for (img of polaroids(); track img.id; let i = $index) {
+      <div
+        class="bg-white p-3 pb-10 shadow-lg w-56 md:w-64 lg:w-72 shrink-0"
+        [style.transform]="'rotate(' + rotations[i] + 'deg)'"
+      >
+        <div class="w-full aspect-square overflow-hidden bg-gray-100">
+          <img
+            [src]="getImageUrl(img)"
+            [alt]="img.alt_text ?? img.title ?? 'Foto Hula Hoop'"
+            class="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- CTA texto: visible solo en desktop, abajo de los polaroids -->
+  <div class="relative z-10 hidden md:flex justify-center">
+    <p class="font-display text-sm md:text-base tracking-[0.2em] font-semibold px-6 py-2 uppercase"
+       style="background-color: #8ce9b0;">
+      Conoce más del mundo Hula Hoop
+    </p>
+  </div>
+
+</section>
+
+<!-- Divisor inferior: amarillo → rosa -->
+<div class="w-full overflow-hidden leading-none mb-[-2px]" style="background-color: #F2A7D8;" aria-hidden="true">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-20 block">
+    <path d="M0,0 Q120,80 240,40 Q360,0 480,40 Q600,80 720,40 Q840,0 960,40 Q1080,80 1200,40 Q1320,0 1440,40 L1440,0 Z" fill="#F6F090"/>
+  </svg>
+</div>

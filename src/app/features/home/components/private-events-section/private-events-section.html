@@ -1,61 +1,82 @@
-<section class="bg-amarillo-merengue/40 py-16 md:py-24">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-    <div class="grid items-center gap-12 lg:grid-cols-2">
-      <!-- Text content -->
-      <div class="text-center lg:text-left">
-        <span
-          class="font-body text-sm font-bold tracking-widest text-morado uppercase"
-        >
-          Celebraciones
-        </span>
-        <h2
-          class="font-display mt-2 text-4xl font-bold text-rojo-brillante md:text-5xl"
-        >
-          Fiestas Privadas
-          <i class="pi pi-sparkles ml-2 text-naranja"></i>
-        </h2>
-        <p class="font-body mt-4 text-lg leading-relaxed text-neutral-700">
-          Celebra cumpleaños y eventos inolvidables en
-          <strong class="text-morado">Hula Hoop</strong>. Nos encargamos de
-          todo para que tú solo disfrutes.
-        </p>
+<!-- Sección rosa -->
+<section class="relative bg-[#F2A7D8] overflow-hidden py-12 md:py-20">
 
-        <!-- Inclusions chips -->
-        <p class="font-body mt-8 mb-3 text-sm font-bold tracking-wide text-morado uppercase">
-          Todos nuestros paquetes incluyen:
-        </p>
-        <div class="flex flex-wrap justify-center gap-3 lg:justify-start">
-          @for (item of inclusions; track item.label) {
-            <p-chip [label]="item.label" [icon]="item.icon" />
-          }
-        </div>
+  <!-- Personaje nube: esquina superior izquierda -->
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/nube.png"
+    alt=""
+    aria-hidden="true"
+    class="pointer-events-none absolute left-0 top-0 w-[306px] md:w-[460px] lg:w-[538px] object-contain"
+  />
 
-        <!-- CTA -->
-        <div class="mt-10">
-          <a routerLink="/reservar/fiesta-privada">
-            <p-button
-              label="Reservar Fiesta"
-              icon="pi pi-calendar"
-              severity="danger"
-              size="large"
-              [rounded]="true"
-            />
+  <!-- Título -->
+  <div class="relative z-10 text-center mb-10 md:mb-14">
+    <h2 class="font-display text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-wide drop-shadow-md">
+      Party with us!
+    </h2>
+  </div>
+
+  <!-- Tarjetas de paquetes -->
+  <div class="relative z-10 flex flex-wrap justify-center gap-6 md:gap-8 px-6 md:px-12 mb-12 md:mb-16">
+    @for (pkg of packages(); track pkg.id) {
+      <div class="stamp-card flex flex-col bg-[#F5EDD8] w-[179px] md:w-[206px] shrink-0 rounded-2xl overflow-hidden">
+        <div class="stamp-card-inner flex flex-col items-center w-full flex-1">
+          <!-- Espaciado superior -->
+          <div class="h-3 w-full"></div>
+
+          <!-- Color badge con capacidad: tarjeta redondeada elevada -->
+          <div
+            class="w-[60%] aspect-square flex items-center justify-center rounded-2xl z-10 relative"
+            [style.background-color]="getColorHex(pkg)"
+          >
+            <div class="text-center">
+              <p class="font-display text-5xl md:text-6xl font-black text-white leading-none">
+                {{ pkg.max_guests }}
+              </p>
+              <p class="font-display text-lg font-black text-white uppercase tracking-widest">
+                Personas
+              </p>
+            </div>
+          </div>
+
+          <!-- Precio -->
+          <p class="font-display text-2xl md:text-3xl font-black text-gray-800 mt-3">
+            {{ pkg.price_cents | currencyMxn }}
+          </p>
+
+          <!-- Botón reservar -->
+          <a
+            routerLink="/reservar/fiesta-privada"
+            [queryParams]="{ package: pkg.id }"
+            class="mt-2 mb-3 px-6 py-1 text-sm font-bold uppercase tracking-widest text-gray-800 font-display"
+            style="background-color: #8ce9b0;"
+          >
+            Reservar
           </a>
         </div>
       </div>
+    }
+  </div>
 
-      <!-- Decorative placeholder image -->
-      <div class="hidden md:flex items-center justify-center">
-        <div
-          class="flex h-80 w-80 items-center justify-center rounded-3xl bg-rojo-brillante/15 shadow-lg"
-        >
-          <img
-            src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/estrella.png"
-            alt="Mascota estrella de Hula Hoop"
-            class="h-64 w-auto object-contain"
-          />
-        </div>
-      </div>
+  <!-- Todas las reservaciones incluyen -->
+  <div class="relative z-10 flex flex-col items-center gap-4 px-6">
+    <p class="font-display text-sm md:text-base font-bold uppercase tracking-[0.2em] px-4 py-1.5 bg-[#F6F090] text-gray-800">
+      Todas las reservaciones incluyen:
+    </p>
+    <div class="flex flex-wrap justify-center gap-3 max-w-2xl">
+      @for (item of inclusions; track item) {
+        <span class="font-display text-xs md:text-sm font-bold uppercase tracking-widest px-3 py-1 bg-[#F6F090] text-gray-800">
+          · {{ item }}
+        </span>
+      }
     </div>
   </div>
+
 </section>
+
+<!-- Divisor inferior: ondas rosa → rojo -->
+<div class="w-full overflow-hidden leading-none mb-[-2px]" style="background-color: #E30D1C;" aria-hidden="true">
+  <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-24 block">
+    <path d="M0,0 Q100,90 220,45 Q340,0 480,60 Q620,100 760,40 Q900,0 1040,65 Q1180,100 1320,45 Q1380,20 1440,50 L1440,0 Z" fill="#F2A7D8"/>
+  </svg>
+</div>

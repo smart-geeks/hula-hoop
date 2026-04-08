@@ -17,7 +17,7 @@ import { SelectModule } from 'primeng/select';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PackageService } from '../../../../core/services/package.service';
 import { PACKAGE_COLORS } from '../../../../core/interfaces/package';
-import type { PartyPackage } from '../../../../core/interfaces/package';
+import type { PartyPackage, DepositType } from '../../../../core/interfaces/package';
 
 @Component({
   selector: 'app-admin-packages',
@@ -56,6 +56,11 @@ export class AdminPackages {
 
   readonly inclusionInput = signal('');
   readonly colorOptions = PACKAGE_COLORS;
+  readonly depositTypeOptions: { label: string; value: DepositType }[] = [
+    { label: 'Pago completo (100%)', value: 'full' },
+    { label: 'Porcentaje del total', value: 'percentage' },
+    { label: 'Monto fijo', value: 'fixed' },
+  ];
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -65,6 +70,8 @@ export class AdminPackages {
     price_cents: [0, [Validators.required, Validators.min(0)]],
     inclusions: [[] as string[]],
     color: [null as string | null],
+    deposit_type: ['full' as DepositType],
+    deposit_value: [0],
     is_active: [true],
     sort_order: [0],
   });
@@ -90,6 +97,8 @@ export class AdminPackages {
       price_cents: 0,
       inclusions: [],
       color: null,
+      deposit_type: 'full' as DepositType,
+      deposit_value: 0,
       is_active: true,
       sort_order: 0,
     });
@@ -107,6 +116,8 @@ export class AdminPackages {
       price_cents: pkg.price_cents / 100, // Convert centavos → pesos for display
       inclusions: [...pkg.inclusions],
       color: pkg.color,
+      deposit_type: pkg.deposit_type,
+      deposit_value: pkg.deposit_type === 'fixed' ? pkg.deposit_value / 100 : pkg.deposit_value,
       is_active: pkg.is_active,
       sort_order: pkg.sort_order,
     });
@@ -143,6 +154,9 @@ export class AdminPackages {
       ...raw,
       price_cents: Math.round(raw.price_cents * 100),
       color: (raw.color || null) as PartyPackage['color'],
+      deposit_value: raw.deposit_type === 'fixed'
+        ? Math.round(raw.deposit_value * 100)  // pesos → centavos
+        : raw.deposit_type === 'full' ? 0 : raw.deposit_value, // percentage as-is
     };
     const editing = this.editingPackage();
 
@@ -189,5 +203,17 @@ export class AdminPackages {
   /** Display price in pesos from cents */
   priceToPesos(cents: number): number {
     return cents / 100;
+  }
+
+  /** Display deposit config as readable string */
+  depositLabel(pkg: PartyPackage): string {
+    switch (pkg.deposit_type) {
+      case 'full':
+        return '100%';
+      case 'percentage':
+        return `${pkg.deposit_value}%`;
+      case 'fixed':
+        return `$${(pkg.deposit_value / 100).toLocaleString('es-MX')} MXN`;
+    }
   }
 }
