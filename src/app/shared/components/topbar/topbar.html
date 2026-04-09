@@ -15,11 +15,18 @@
     <!-- Desktop nav -->
     <div class="hidden lg:flex items-center gap-1">
       <a
-        routerLink="/galeria"
+        routerLink="/conocenos"
         class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante"
       >
-        Galería
+        Conócenos
       </a>
+      <button
+        type="button"
+        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante cursor-pointer"
+        (click)="scrollToContact()"
+      >
+        Contacto
+      </button>
       @if (isLoggedIn()) {
         <a
           routerLink="/mi-cuenta/reservas"
@@ -123,13 +130,21 @@
       Reservar Play Day
     </a>
     <a
-      routerLink="/galeria"
+      routerLink="/conocenos"
       class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
       (click)="drawerVisible.set(false)"
     >
       <i class="pi pi-images" aria-hidden="true"></i>
-      Galería
+      Conócenos
     </a>
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
+      (click)="scrollToContact(); drawerVisible.set(false)"
+    >
+      <i class="pi pi-envelope" aria-hidden="true"></i>
+      Contacto
+    </button>
 
     @if (isLoggedIn()) {
       <hr class="my-2 border-gray-200" />
