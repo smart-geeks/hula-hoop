@@ -7,11 +7,11 @@
         Nuestro espacio
       </span>
       <h2 class="font-display mt-2 text-4xl font-bold text-rojo-brillante md:text-5xl">
-        Galería
-        <i class="pi pi-images ml-2 text-naranja" aria-hidden="true"></i>
+        Conócenos
+        <i class="pi pi-sparkles ml-2 text-naranja" aria-hidden="true"></i>
       </h2>
       <p class="font-body mt-4 text-lg text-neutro-600 max-w-2xl mx-auto">
-        Conoce nuestras instalaciones y vive la experiencia Hula Hoop antes de visitarnos.
+        Un espacio donde el diseño contemporáneo y las experiencias sensoriales se unen para que cada visita sea un nuevo capítulo de aventura.
       </p>
     </div>
 
@@ -42,7 +42,7 @@
           class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 pb-4"
           style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
           role="region"
-          aria-label="Galería de fotos"
+          aria-label="Fotos de Hula Hoop"
         >
           @for (image of images(); track image.id; let i = $index) {
             <button
@@ -100,7 +100,7 @@
             @if (last && totalCount() > 5) {
               <!-- Last tile: "Ver todas" link to /galeria -->
               <a
-                routerLink="/galeria"
+                routerLink="/conocenos"
                 class="relative overflow-hidden rounded-2xl group"
               >
                 <img
@@ -136,9 +136,9 @@
 
       <!-- CTA -->
       <div class="text-center mt-8">
-        <a routerLink="/galeria">
+        <a routerLink="/conocenos">
           <p-button
-            label="Ver galería completa"
+            label="Conócenos"
             icon="pi pi-arrow-right"
             iconPos="right"
             severity="secondary"
