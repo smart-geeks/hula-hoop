@@ -4,11 +4,15 @@ import { ButtonModule } from 'primeng/button';
 import { AccordionModule } from 'primeng/accordion';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
+import type { VenueConfig } from '../../../../core/interfaces/venue-config';
 import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
+import { RestaurantItemService } from '../../../../core/services/restaurant-item.service';
+import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
+import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 
 @Component({
   selector: 'app-play-day-section',
-  imports: [ButtonModule, RouterLink, AccordionModule],
+  imports: [ButtonModule, RouterLink, AccordionModule, CurrencyMxnPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './play-day-section.html',
 })
@@ -16,13 +20,38 @@ export class PlayDaySection implements OnInit {
   private readonly timeSlotService = inject(TimeSlotService);
   private readonly configService = inject(VenueConfigService);
   private readonly reservationService = inject(ReservationService);
+  private readonly restaurantService = inject(RestaurantItemService);
 
   readonly slots = signal<AvailablePlaydateSlot[]>([]);
   readonly loading = signal(true);
   readonly hasAvailability = computed(() => this.slots().length > 0);
+  readonly config = signal<VenueConfig | null>(null);
+
+  readonly menuCategories = signal<{ category: string, items: RestaurantItem[] }[]>([]);
 
   ngOnInit(): void {
     this.loadAvailableSlots();
+    this.loadRestaurantMenu();
+  }
+
+  private async loadRestaurantMenu(): Promise<void> {
+    const items = await this.restaurantService.getActiveItems();
+    
+    // Group by category
+    const map = new Map<string, RestaurantItem[]>();
+    for (const item of items) {
+      if (!map.has(item.category)) {
+        map.set(item.category, []);
+      }
+      map.get(item.category)!.push(item);
+    }
+    
+    const grouped = Array.from(map.entries()).map(([category, catItems]) => ({
+      category,
+      items: catItems,
+    }));
+    
+    this.menuCategories.set(grouped);
   }
 
   private async loadAvailableSlots(): Promise<void> {
@@ -31,6 +60,7 @@ export class PlayDaySection implements OnInit {
       this.configService.getConfig(),
     ]);
 
+    this.config.set(config);
     const maxCapacity = config?.max_capacity_per_slot ?? 50;
     const available = await this.reservationService.getAvailablePlaydateSlots(activeSlots, maxCapacity);
     this.slots.set(available);

@@ -36,12 +36,13 @@ export class Topbar {
     this.router.navigate(['/']);
   }
 
-  async scrollToContact(): Promise<void> {
+  async scrollToSection(id: string): Promise<void> {
     if (this.router.url !== '/') {
       await this.router.navigate(['/']);
     }
+    // Set 350ms to allow mobile Drawer to completely animate out and remove 'overflow-hidden' from body
     setTimeout(() => {
-      document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
   }
 }

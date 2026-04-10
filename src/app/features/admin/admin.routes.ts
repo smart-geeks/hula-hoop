@@ -47,6 +47,13 @@ export const adminRoutes: Routes = [
           ),
       },
       {
+        path: 'restaurante',
+        loadComponent: () =>
+          import('./pages/admin-restaurant/admin-restaurant').then(
+            (m) => m.AdminRestaurant,
+          ),
+      },
+      {
         path: 'galeria',
         loadComponent: () =>
           import('./pages/admin-gallery/admin-gallery').then(

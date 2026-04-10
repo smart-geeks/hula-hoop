@@ -1,104 +1,66 @@
-<footer class="bg-neutro-900 px-6 py-12 text-neutro-300">
-  <div class="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-4">
-    <!-- Brand -->
-    <div>
-      <img
-        src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png"
-        alt="Hula Hoop"
-        class="h-16 w-auto"
-      />
-      <p class="mt-3 text-sm leading-relaxed text-neutro-400">
-        El playground infantil mas divertido de la ciudad. Celebra con nosotros momentos inolvidables.
-      </p>
-      <div class="mt-4 flex gap-3">
-        <a
-          href="https://www.facebook.com/hulahoop"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex size-9 items-center justify-center rounded-full bg-neutro-800 text-neutro-400 transition-colors hover:bg-morado hover:text-white"
-          aria-label="Facebook de Hula Hoop"
-        >
-          <i class="pi pi-facebook" aria-hidden="true"></i>
-        </a>
-        <a
-          href="https://www.instagram.com/hulahoop"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex size-9 items-center justify-center rounded-full bg-neutro-800 text-neutro-400 transition-colors hover:bg-rosa-pastel hover:text-white"
-          aria-label="Instagram de Hula Hoop"
-        >
-          <i class="pi pi-instagram" aria-hidden="true"></i>
-        </a>
-        <a
-          href="https://www.tiktok.com/@hulahoop"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex size-9 items-center justify-center rounded-full bg-neutro-800 text-neutro-400 transition-colors hover:bg-azul-cielo hover:text-white"
-          aria-label="TikTok de Hula Hoop"
-        >
-          <i class="pi pi-tiktok" aria-hidden="true"></i>
-        </a>
-      </div>
+<footer class="relative px-6 py-12 text-gray-700">
+
+  <div class="mx-auto max-w-5xl flex flex-col items-center gap-8">
+
+    <!-- Redes Sociales -->
+    <div class="flex gap-4">
+      <a
+        href="https://www.facebook.com/hulahoop"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex size-10 items-center justify-center rounded-full bg-white/60 border border-gray-200 text-gray-600 transition-colors hover:bg-[#686ABB] hover:text-white hover:border-[#686ABB]"
+        aria-label="Facebook de Hula Hoop"
+      >
+        <i class="pi pi-facebook" aria-hidden="true"></i>
+      </a>
+      <a
+        href="https://www.instagram.com/hulahoop"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex size-10 items-center justify-center rounded-full bg-white/60 border border-gray-200 text-gray-600 transition-colors hover:bg-[#686ABB] hover:text-white hover:border-[#686ABB]"
+        aria-label="Instagram de Hula Hoop"
+      >
+        <i class="pi pi-instagram" aria-hidden="true"></i>
+      </a>
+      <a
+        href="https://www.tiktok.com/@hulahoop"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex size-10 items-center justify-center rounded-full bg-white/60 border border-gray-200 text-gray-600 transition-colors hover:bg-[#686ABB] hover:text-white hover:border-[#686ABB]"
+        aria-label="TikTok de Hula Hoop"
+      >
+        <i class="pi pi-tiktok" aria-hidden="true"></i>
+      </a>
     </div>
 
-    <!-- Quick links -->
-    <div>
-      <h3 class="font-display text-sm font-bold uppercase tracking-wider text-white">Enlaces</h3>
-      <ul class="mt-4 flex flex-col gap-2 text-sm">
-        <li>
-          <a routerLink="/" class="transition-colors hover:text-white">Inicio</a>
-        </li>
-        <li>
-          <a routerLink="/reservar/fiesta-privada" class="transition-colors hover:text-white">Fiestas Privadas</a>
-        </li>
-        <li>
-          <a routerLink="/reservar/play-day" class="transition-colors hover:text-white">Play Day</a>
-        </li>
-      </ul>
+    <!-- Navegación por anclas -->
+    <nav class="flex flex-wrap justify-center gap-6 text-sm font-bold uppercase tracking-widest">
+      <a href="#party-with-us" class="text-gray-600 transition-colors hover:text-[#686ABB]">Party with us!</a>
+      <a href="#play-day" class="text-gray-600 transition-colors hover:text-[#686ABB]">Play Day</a>
+      <a href="#conocenos" class="text-gray-600 transition-colors hover:text-[#686ABB]">Sobre nosotros</a>
+      <a href="#contacto" class="text-gray-600 transition-colors hover:text-[#686ABB]">Contacto</a>
+    </nav>
+
+    <!-- Links legales -->
+    <div class="flex items-center gap-4 text-xs text-gray-400">
+      <a href="/aviso-de-privacidad" class="transition-colors hover:text-[#686ABB]">Aviso de privacidad</a>
+      <span class="text-gray-300">|</span>
+      <a href="/terminos-y-condiciones" class="transition-colors hover:text-[#686ABB]">Términos y condiciones</a>
     </div>
 
-    <!-- Contact -->
-    <div>
-      <h3 class="font-display text-sm font-bold uppercase tracking-wider text-white">Contacto</h3>
-      <ul class="mt-4 flex flex-col gap-3 text-sm">
-        <li class="flex items-start gap-2">
-          <i class="pi pi-map-marker mt-0.5 text-rojo-brillante" aria-hidden="true"></i>
-          <span>Torreon, Coah.</span>
-        </li>
-        <li class="flex items-center gap-2">
-          <i class="pi pi-phone text-rojo-brillante" aria-hidden="true"></i>
-          <a href="tel:+528711234567" class="transition-colors hover:text-white">871 123 4567</a>
-        </li>
-        <li class="flex items-center gap-2">
-          <i class="pi pi-whatsapp text-rojo-brillante" aria-hidden="true"></i>
-          <a href="https://wa.me/528711234567" target="_blank" rel="noopener noreferrer"
-             class="transition-colors hover:text-white">871 123 4567</a>
-        </li>
-        <li class="flex items-center gap-2">
-          <i class="pi pi-envelope text-rojo-brillante" aria-hidden="true"></i>
-          <a href="mailto:hola@hulahoop.mx" class="transition-colors hover:text-white">hola&#64;hulahoop.mx</a>
-        </li>
-      </ul>
+    <!-- Bottom bar -->
+    <div class="w-full border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
+      <p>&copy; {{ currentYear }} Hula Hoop. Todos los derechos reservados.</p>
+      <a
+        href="https://wa.me/528712610115"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition-colors hover:text-[#686ABB]"
+      >
+        Desarrollado por smartgeeks.mx
+      </a>
     </div>
 
-    <!-- Hours -->
-    <div>
-      <h3 class="font-display text-sm font-bold uppercase tracking-wider text-white">Horario</h3>
-      <ul class="mt-4 flex flex-col gap-2 text-sm">
-        <li class="flex items-center gap-2">
-          <i class="pi pi-clock text-rojo-brillante" aria-hidden="true"></i>
-          <span>Lun - Vie: 4:00 PM - 7:00 PM</span>
-        </li>
-        <li class="flex items-center gap-2">
-          <i class="pi pi-clock text-rojo-brillante" aria-hidden="true"></i>
-          <span>Sab - Dom: 9:30 AM - 6:30 PM</span>
-        </li>
-      </ul>
-    </div>
   </div>
 
-  <!-- Bottom bar -->
-  <div class="mx-auto mt-10 max-w-6xl border-t border-neutro-800 pt-6 text-center text-xs text-neutro-500">
-    <p>&copy; {{ currentYear }} Hula Hoop. Todos los derechos reservados.</p>
-  </div>
 </footer>

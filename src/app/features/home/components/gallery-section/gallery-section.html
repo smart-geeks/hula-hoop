@@ -1,157 +1,133 @@
-<!-- Gallery Section — Home Preview -->
-<section class="py-16 md:py-24 bg-white">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+<section id="conocenos" class="relative bg-white py-16 md:py-24 grid-bg overflow-hidden flex flex-col items-center" style="scroll-margin-top: 6rem;">
+  <div class="mx-auto max-w-[1800px] px-4 sm:px-6 w-full flex flex-col items-center">
+    
     <!-- Header -->
-    <div class="text-center mb-10">
-      <span class="font-body text-sm font-bold tracking-widest text-morado uppercase">
-        Nuestro espacio
-      </span>
-      <h2 class="font-display mt-2 text-4xl font-bold text-rojo-brillante md:text-5xl">
-        Conócenos
-        <i class="pi pi-sparkles ml-2 text-naranja" aria-hidden="true"></i>
+    <div class="text-center mb-8">
+      <h2 class="font-bubblegum text-5xl md:text-7xl lg:text-8xl font-black text-morado uppercase tracking-wide drop-shadow-lg">
+        SOBRE NOSOTROS
       </h2>
-      <p class="font-body mt-4 text-lg text-neutro-600 max-w-2xl mx-auto">
-        Un espacio donde el diseño contemporáneo y las experiencias sensoriales se unen para que cada visita sea un nuevo capítulo de aventura.
+    </div>
+
+    <!-- Pitch Text -->
+    <div class="w-full max-w-3xl mb-12">
+      <p class="font-body font-bold uppercase text-center text-base md:text-lg text-gray-700 leading-relaxed mx-auto px-4 md:px-8">
+        Hula Hoop Playground es un espacio que combina <span class="underline-crayon">diseño contemporáneo</span> y <span class="underline-crayon">experiencias sensoriales</span> para estimular la <span class="underline-crayon">imaginación infantil</span>. Cada área invita a explorar, donde los niños no solo juegan, sino que descubren, crean y se convierten en <span class="underline-crayon">protagonistas</span> de sus propias aventuras.
       </p>
     </div>
 
-    <!-- Loading skeleton -->
-    @if (loading()) {
-      <!-- Mobile -->
-      <div class="flex gap-4 overflow-hidden md:hidden">
-        @for (i of [1,2]; track i) {
-          <div class="w-[80vw] shrink-0">
-            <p-skeleton height="14rem" />
-          </div>
-        }
-      </div>
-      <!-- Desktop bento skeleton -->
-      <div class="hidden md:grid grid-cols-4 grid-rows-2 gap-3 h-112">
-        <div class="col-span-2 row-span-2"><p-skeleton height="100%" width="100%" /></div>
-        <div><p-skeleton height="100%" width="100%" /></div>
-        <div><p-skeleton height="100%" width="100%" /></div>
-        <div><p-skeleton height="100%" width="100%" /></div>
-        <div><p-skeleton height="100%" width="100%" /></div>
-      </div>
-    }
+    <!-- Imagen Grupal de Personajes -->
+    <div class="w-full flex justify-center mb-16 relative z-10 pointer-events-none">
+      <img
+        src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/personajes-todos.png"
+        alt="Personajes Hula Hoop"
+        class="w-full max-w-[50rem] object-contain drop-shadow-xl"
+      />
+    </div>
 
-    @if (!loading() && images().length > 0) {
-      <!-- Mobile: horizontal carousel with snap scroll -->
-      <div class="md:hidden -mx-4">
-        <div
-          class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 pb-4"
-          style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
-          role="region"
-          aria-label="Fotos de Hula Hoop"
-        >
-          @for (image of images(); track image.id; let i = $index) {
-            <button
-              type="button"
-              class="relative w-[80vw] shrink-0 snap-center aspect-4/3 overflow-hidden rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
-              (click)="openLightbox(i)"
-              [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 1))"
-            >
-              <img
-                [src]="getImageUrl(image)"
-                [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
-                loading="lazy"
-                class="h-full w-full object-cover"
-              />
-              @if (image.title) {
-                <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/50 to-transparent p-4 pt-10">
-                  <span class="text-white font-body text-sm font-semibold">{{ image.title }}</span>
-                </div>
+    <!-- Carrusel de Galería -->
+    <div class="relative w-full mx-auto z-20 flex flex-col items-center justify-center mt-4">
+      @if (loading()) {
+        <div class="w-full max-w-md aspect-square rounded-[2rem] md:rounded-[3.5rem] bg-[#F26422] p-2 md:p-3 border-[3px] border-black">
+           <div class="w-full h-full bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-2 flex items-center justify-center">
+              <p-skeleton height="100%" width="100%" styleClass="rounded-[1.5rem]" />
+           </div>
+        </div>
+      } @else if (images().length > 0) {
+        
+        <!-- Flecha Izquierda (Oculta en Móvil) -->
+        <button (click)="prev()" type="button" class="hidden md:flex absolute -left-12 md:-left-16 lg:-left-20 z-30 w-12 h-16 md:w-20 md:h-24 items-center justify-center text-[#85E8E3] hover:scale-110 active:scale-95 transition-all outline-none" aria-label="Anterior">
+          <svg fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-full h-full drop-shadow-md">
+             <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+          </svg>
+        </button>
+
+        <!-- Grid para las 3 Tarjetas en Desktop / 1 en Mobile -->
+        <div class="flex items-center justify-center gap-4 md:gap-8 lg:gap-12 w-full max-w-[98vw] lg:max-w-[92vw] xl:max-w-[85vw]"
+             (touchstart)="onTouchStart($any($event))" 
+             (touchend)="onTouchEnd($any($event))">
+          
+          <!-- Imagen Previa (Solo Desktop) -->
+          <div class="hidden md:block w-full max-w-[18rem] lg:max-w-[28rem] xl:max-w-[34rem] aspect-[4/3] rounded-[2rem] md:rounded-[3rem] bg-[#F26422] p-2 lg:p-3 border-[2px] border-black relative opacity-70 scale-90 transition-all duration-300">
+            <div class="w-full h-full rounded-[1.5rem] md:rounded-[2.5rem] bg-white overflow-hidden relative">
+              @if (prevImage(); as img) {
+                <img [src]="getImageUrl(img)" [alt]="img.title || 'Foto anterior'" class="w-full h-full object-cover" />
               }
-            </button>
-          }
-        </div>
-        <!-- Dots -->
-        <div class="flex justify-center gap-1.5 mt-2" aria-hidden="true">
-          @for (image of images(); track image.id) {
-            <div class="size-1.5 rounded-full bg-neutro-300"></div>
-          }
-        </div>
-      </div>
+            </div>
+          </div>
 
-      <!-- Desktop: bento grid (1 hero + 4 side) -->
-      @if (heroImage(); as hero) {
-        <div class="hidden md:grid grid-cols-4 grid-rows-2 gap-3 h-112">
-          <!-- Hero image — spans 2 cols × 2 rows, opens lightbox at index 0 -->
-          <button
-            type="button"
-            class="col-span-2 row-span-2 relative overflow-hidden rounded-2xl group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
-            (click)="openLightbox(0)"
-            [attr.aria-label]="'Ver imagen: ' + (hero.title || 'Foto principal')"
-          >
-            <img
-              [src]="getImageUrl(hero)"
-              [alt]="hero.alt_text || hero.title || 'Foto principal de Hula Hoop'"
-              loading="lazy"
-              class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            @if (hero.title) {
-              <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/50 to-transparent p-5 pt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <span class="text-white font-display text-lg font-bold">{{ hero.title }}</span>
-              </div>
-            }
+          <!-- Imagen Central (Mobile y Desktop) -->
+          <button (click)="openLightbox()" type="button" class="cursor-pointer appearance-none outline-none block w-full max-w-sm md:max-w-2xl lg:max-w-[50rem] xl:max-w-[62rem] aspect-[4/3] rounded-[1.5rem] md:rounded-[4rem] bg-[#F26422] p-2 md:p-3 lg:p-4 border-[2px] border-black relative z-10 transition-all duration-300 hover:scale-[1.02] shadow-2xl">
+            <div class="w-full h-full rounded-[1rem] md:rounded-[3.2rem] bg-white overflow-hidden relative group">
+              @if (selectedImage(); as img) {
+                <!-- Imagen visible -->
+                <img [src]="getImageUrl(img)" [alt]="img.title || 'Foto interna'" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+                @if (img.title) {
+                  <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent p-6 md:p-8 pt-16 md:pt-24 opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+                    <span class="text-white font-display text-lg md:text-2xl xl:text-3xl font-bold">{{ img.title }}</span>
+                  </div>
+                }
+              }
+            </div>
           </button>
-          <!-- Side images -->
-          @for (image of sideImages(); track image.id; let i = $index; let last = $last) {
-            @if (last && totalCount() > 5) {
-              <!-- Last tile: "Ver todas" link to /galeria -->
-              <a
-                routerLink="/conocenos"
-                class="relative overflow-hidden rounded-2xl group"
-              >
-                <img
-                  [src]="getImageUrl(image)"
-                  [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
-                  loading="lazy"
-                  class="h-full w-full object-cover"
-                />
-                <div class="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-colors group-hover:bg-black/70">
-                  <i class="pi pi-th-large text-3xl mb-2" aria-hidden="true"></i>
-                  <span class="font-display text-lg font-bold">Ver las {{ totalCount() }} fotos</span>
-                </div>
-              </a>
-            } @else {
-              <!-- Regular tile: opens lightbox (index offset +1 because hero is index 0) -->
-              <button
-                type="button"
-                class="relative overflow-hidden rounded-2xl group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rojo-brillante"
-                (click)="openLightbox(i + 1)"
-                [attr.aria-label]="'Ver imagen: ' + (image.title || 'Galería ' + (i + 2))"
-              >
-                <img
-                  [src]="getImageUrl(image)"
-                  [alt]="image.alt_text || image.title || 'Foto de Hula Hoop'"
-                  loading="lazy"
-                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-              </button>
-            }
-          }
+
+          <!-- Imagen Siguiente (Solo Desktop) -->
+            <div class="hidden md:block w-full max-w-[18rem] lg:max-w-[28rem] xl:max-w-[34rem] aspect-[4/3] rounded-[2rem] md:rounded-[3rem] bg-[#F26422] p-2 lg:p-3 border-[2px] border-black relative opacity-70 scale-90 transition-all duration-300">
+            <div class="w-full h-full rounded-[1.5rem] md:rounded-[2.5rem] bg-white overflow-hidden relative">
+              @if (nextImage(); as img) {
+                <img [src]="getImageUrl(img)" [alt]="img.title || 'Foto siguiente'" class="w-full h-full object-cover" />
+              }
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Flecha Derecha (Oculta en Móvil) -->
+        <button (click)="next()" type="button" class="hidden md:flex absolute -right-12 md:-right-16 lg:-right-20 z-30 w-12 h-16 md:w-20 md:h-24 items-center justify-center text-[#85E8E3] hover:scale-110 active:scale-95 transition-all outline-none" aria-label="Siguiente">
+          <svg fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-full h-full drop-shadow-md">
+             <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </button>
+
+        <!-- Controles Móvil (Exclusivo en pantallas pequeñas) -->
+        <div class="flex md:hidden items-center justify-center gap-16 mt-6 w-full z-30">
+           <button (click)="prev()" type="button" class="w-10 h-14 text-[#85E8E3] flex items-center justify-center hover:scale-110 transition-transform active:scale-90 outline-none" aria-label="Anterior">
+              <svg fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-full h-full drop-shadow-md">
+                 <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+              </svg>
+           </button>
+           
+           <button (click)="next()" type="button" class="w-10 h-14 text-[#85E8E3] flex items-center justify-center hover:scale-110 transition-transform active:scale-90 outline-none" aria-label="Siguiente">
+              <svg fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-full h-full drop-shadow-md">
+                 <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+              </svg>
+           </button>
         </div>
       }
+    </div>
 
-      <!-- CTA -->
-      <div class="text-center mt-8">
-        <a routerLink="/conocenos">
-          <p-button
-            label="Conócenos"
-            icon="pi pi-arrow-right"
-            iconPos="right"
-            severity="secondary"
-            [rounded]="true"
-            [outlined]="true"
-          />
-        </a>
-      </div>
-    }
+    <!-- Etiquetas / Pilares -->
+    <div class="relative z-10 flex flex-wrap justify-center gap-3 max-w-4xl px-4 mt-16 md:mt-24 w-full">
+      <span class="font-display text-sm md:text-base font-bold uppercase tracking-widest px-4 py-1.5 bg-[#8CE9AF] text-gray-800">
+        IMAGINACIÓN SIN LÍMITES
+      </span>
+      <span class="font-display text-sm md:text-base font-bold uppercase tracking-widest px-4 py-1.5 bg-[#8CE9AF] text-gray-800">
+        EXPLORACIÓN ACTIVA
+      </span>
+      <span class="font-display text-sm md:text-base font-bold uppercase tracking-widest px-4 py-1.5 bg-[#8CE9AF] text-gray-800">
+        DISEÑO CON PROPÓSITO
+      </span>
+      <span class="font-display text-sm md:text-base font-bold uppercase tracking-widest px-4 py-1.5 bg-[#8CE9AF] text-gray-800">
+        JUEGO LIBRE Y CONSCIENTE
+      </span>
+      <span class="font-display text-sm md:text-base font-bold uppercase tracking-widest px-4 py-1.5 bg-[#8CE9AF] text-gray-800">
+        INCLUSIÓN Y DIVERSIDAD
+      </span>
+    </div>
+
   </div>
 </section>
 
-<!-- Lightbox -->
+<!-- Lightbox Modal -->
 <p-dialog
   [(visible)]="lightboxVisible"
   [modal]="true"
@@ -159,55 +135,51 @@
   [draggable]="false"
   [style]="{ width: '90vw', maxWidth: '64rem' }"
   [showHeader]="false"
-  [contentStyle]="{ padding: '0', background: 'transparent', overflow: 'hidden', borderRadius: '1rem' }"
+  [contentStyle]="{ padding: '0', background: 'transparent', overflow: 'hidden', borderRadius: '1.5rem' }"
   styleClass="gallery-lightbox"
-  (onKeydown)="onKeydown($any($event))"
+  (onKeydown)="onLightboxKeydown($any($event))"
 >
   @if (selectedImage(); as img) {
-    <div class="relative bg-black rounded-2xl overflow-hidden">
+    <div class="relative bg-black rounded-[1.5rem] overflow-hidden">
       <img
         [src]="getImageUrl(img)"
-        [alt]="img.alt_text || img.title || 'Foto de Hula Hoop'"
+        [alt]="img.title || 'Vista previa'"
         class="w-full max-h-[80vh] object-contain"
       />
 
       <!-- Close -->
       <button
         type="button"
-        class="absolute top-3 right-3 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
+        class="absolute top-4 right-4 flex items-center justify-center size-10 md:size-12 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer outline-none"
         (click)="lightboxVisible.set(false)"
         aria-label="Cerrar"
       >
-        <i class="pi pi-times text-lg" aria-hidden="true"></i>
+        <i class="pi pi-times text-xl" aria-hidden="true"></i>
       </button>
 
       <!-- Prev -->
-      @if (hasPrev()) {
-        <button
-          type="button"
-          class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
-          (click)="prev()"
-          aria-label="Imagen anterior"
-        >
-          <i class="pi pi-chevron-left text-lg" aria-hidden="true"></i>
-        </button>
-      }
+      <button
+        type="button"
+        class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 md:size-12 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer outline-none"
+        (click)="prev()"
+        aria-label="Anterior"
+      >
+        <i class="pi pi-chevron-left text-xl" aria-hidden="true"></i>
+      </button>
 
       <!-- Next -->
-      @if (hasNext()) {
-        <button
-          type="button"
-          class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors cursor-pointer"
-          (click)="next()"
-          aria-label="Imagen siguiente"
-        >
-          <i class="pi pi-chevron-right text-lg" aria-hidden="true"></i>
-        </button>
-      }
+      <button
+        type="button"
+        class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center size-10 md:size-12 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer outline-none"
+        (click)="next()"
+        aria-label="Siguiente"
+      >
+        <i class="pi pi-chevron-right text-xl" aria-hidden="true"></i>
+      </button>
 
       <!-- Counter -->
-      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 text-white text-sm font-body">
-        {{ selectedIndex() + 1 }} / {{ previewImages().length }}
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 text-white text-sm font-body tracking-wider">
+        {{ selectedIndex() + 1 }} / {{ images().length }}
       </div>
     </div>
   }
