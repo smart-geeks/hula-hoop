@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { GalleryService } from '../../../../core/services/gallery.service';
 import type { GalleryImage } from '../../../../core/interfaces/gallery-image';
 
 @Component({
   selector: 'app-polaroid-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgOptimizedImage],
+  imports: [],
   templateUrl: './polaroid-section.html',
 })
 export class PolaroidSection implements OnInit {

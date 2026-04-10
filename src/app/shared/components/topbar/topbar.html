@@ -206,4 +206,6 @@
   </ng-template>
 </p-drawer>
 
-<app-auth-dialog />
+@defer (when authDialogRequested(); prefetch on idle) {
+  <app-auth-dialog #authDialogRef />
+}
