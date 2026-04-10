@@ -1,18 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { SkeletonModule } from 'primeng/skeleton';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
-import { SkeletonModule } from 'primeng/skeleton';
 import { GalleryService } from '../../../../core/services/gallery.service';
 import type { GalleryImage } from '../../../../core/interfaces/gallery-image';
-
-/** Max images shown in the home preview (desktop bento grid). */
-const PREVIEW_LIMIT = 5;
 
 @Component({
   selector: 'app-gallery-section',
   templateUrl: './gallery-section.html',
-  imports: [RouterLink, DialogModule, ButtonModule, SkeletonModule],
+  imports: [SkeletonModule, DialogModule, ButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GallerySection {
@@ -20,29 +16,35 @@ export class GallerySection {
 
   readonly images = signal<GalleryImage[]>([]);
   readonly loading = signal(true);
-  readonly lightboxVisible = signal(false);
   readonly selectedIndex = signal(0);
+  readonly lightboxVisible = signal(false);
 
-  /** First image — hero slot in bento grid. */
-  readonly heroImage = computed(() => this.images()[0] ?? null);
-
-  /** Images 1–4 for the smaller bento slots on desktop. */
-  readonly sideImages = computed(() => this.images().slice(1, PREVIEW_LIMIT));
-
-  /** Total active count to show "Ver las N fotos". */
-  readonly totalCount = computed(() => this.images().length);
-
-  /** Images available for preview lightbox (all except the last bento slot if it's the "ver más" tile). */
-  readonly previewImages = computed(() => this.images().slice(0, PREVIEW_LIMIT));
+  touchStartX = 0;
+  touchEndX = 0;
 
   readonly selectedImage = computed(() => {
-    const imgs = this.previewImages();
+    const imgs = this.images();
     const idx = this.selectedIndex();
     return imgs[idx] ?? null;
   });
 
-  readonly hasPrev = computed(() => this.selectedIndex() > 0);
-  readonly hasNext = computed(() => this.selectedIndex() < this.previewImages().length - 1);
+  readonly prevImage = computed(() => {
+    const imgs = this.images();
+    if (imgs.length === 0) return null;
+    const len = imgs.length;
+    let idx = this.selectedIndex() - 1;
+    if (idx < 0) idx = len - 1;
+    return imgs[idx] ?? null;
+  });
+
+  readonly nextImage = computed(() => {
+    const imgs = this.images();
+    if (imgs.length === 0) return null;
+    const len = imgs.length;
+    let idx = this.selectedIndex() + 1;
+    if (idx >= len) idx = 0;
+    return imgs[idx] ?? null;
+  });
 
   constructor() {
     this.loadImages();
@@ -58,25 +60,45 @@ export class GallerySection {
     return this.galleryService.getPublicUrl(image.storage_path);
   }
 
-  openLightbox(index: number): void {
-    this.selectedIndex.set(index);
-    this.lightboxVisible.set(true);
-  }
-
   prev(): void {
-    if (this.hasPrev()) {
-      this.selectedIndex.update((i) => i - 1);
-    }
+    const len = this.images().length;
+    if (len === 0) return;
+    this.selectedIndex.update((i) => (i === 0 ? len - 1 : i - 1));
   }
 
   next(): void {
-    if (this.hasNext()) {
-      this.selectedIndex.update((i) => i + 1);
+    const len = this.images().length;
+    if (len === 0) return;
+    this.selectedIndex.update((i) => (i === len - 1 ? 0 : i + 1));
+  }
+
+  openLightbox(): void {
+    if (this.images().length > 0) {
+      this.lightboxVisible.set(true);
     }
   }
 
-  onKeydown(event: KeyboardEvent): void {
+  onLightboxKeydown(event: KeyboardEvent): void {
     if (event.key === 'ArrowLeft') this.prev();
     if (event.key === 'ArrowRight') this.next();
+  }
+
+  onTouchStart(e: TouchEvent) {
+    this.touchStartX = e.changedTouches[0].screenX;
+  }
+
+  onTouchEnd(e: TouchEvent) {
+    this.touchEndX = e.changedTouches[0].screenX;
+    this.handleSwipe();
+  }
+
+  handleSwipe() {
+    const swipeThreshold = 50;
+    if (this.touchEndX < this.touchStartX - swipeThreshold) {
+      this.next(); // swiped left
+    }
+    if (this.touchEndX > this.touchStartX + swipeThreshold) {
+      this.prev(); // swiped right
+    }
   }
 }

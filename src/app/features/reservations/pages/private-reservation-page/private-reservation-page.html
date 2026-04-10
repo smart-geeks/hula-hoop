@@ -14,10 +14,9 @@
     <p-stepper [(value)]="activeStep" [linear]="true">
       <p-step-list>
         <p-step [value]="1">Fecha y horario</p-step>
-        <p-step [value]="2">Paquete</p-step>
+        <p-step [value]="2">Paquete y Merienda</p-step>
         <p-step [value]="3">Extras</p-step>
-        <p-step [value]="4">Merienda</p-step>
-        <p-step [value]="5">Datos y resumen</p-step>
+        <p-step [value]="4">Datos y resumen</p-step>
       </p-step-list>
 
       <p-step-panels>
@@ -133,17 +132,39 @@
               </div>
 
               @if (selectedPackage()) {
-                <div class="mt-6 p-4 bg-azul-cielo/10 rounded-xl">
-                  <label class="block text-sm font-medium mb-2">
-                    Número de invitados ({{ selectedPackage()!.min_guests }} – {{ selectedPackage()!.max_guests }})
-                  </label>
-                  <p-inputNumber
-                    [ngModel]="guestCount()"
-                    (ngModelChange)="updateGuestCount($event)"
-                    [min]="selectedPackage()!.min_guests"
-                    [max]="selectedPackage()!.max_guests"
-                    [showButtons]="true"
-                    class="w-full sm:w-24 [&_input]:w-full" />
+                <div id="merienda-section" class="mt-8 p-6 bg-[#fdf5e6] border-2 border-[#F6F090] rounded-2xl transition-all duration-500 shadow-md">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">⭐</span>
+                    <h2 class="text-xl font-bold font-display text-gray-800">Selecciona la Merienda para tu fiesta</h2>
+                  </div>
+                  <p class="text-sm text-neutro-500 mb-6 pl-11">Escoge la opción de merienda incluida en tu paquete</p>
+
+                  @if (snackOptions().length === 0) {
+                    <p class="text-neutro-500 bg-white rounded-lg p-4 pl-11 border border-gray-100">No hay opciones de merienda disponibles.</p>
+                  } @else {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-11">
+                      @for (option of snackOptions(); track option.id) {
+                        <button
+                          type="button"
+                          class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white"
+                          [class]="selectedSnackOption()?.id === option.id
+                            ? 'border-[#F2A7D8] bg-[#F2A7D8]/10 shadow-sm'
+                            : 'border-neutro-200 hover:border-[#F2A7D8]/50'"
+                          (click)="selectSnackOption(option)">
+                          <div class="flex items-center gap-3">
+                            <span class="text-2xl"
+                               [class]="selectedSnackOption()?.id === option.id ? 'opacity-100 grayscale-0' : 'opacity-60 grayscale'">🍱</span>
+                            <div>
+                              <p class="font-semibold text-gray-800">{{ option.name }}</p>
+                              @if (option.description) {
+                                <p class="text-sm text-neutro-500">{{ option.description }}</p>
+                              }
+                            </div>
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -235,52 +256,8 @@
           </ng-template>
         </p-step-panel>
 
-        <!-- STEP 4: Merienda -->
+        <!-- STEP 4: Datos y resumen -->
         <p-step-panel [value]="4">
-          <ng-template #content let-activateCallback="activateCallback">
-            <div class="py-4">
-              <h2 class="text-lg font-semibold mb-2">Selecciona una merienda</h2>
-              <p class="text-sm text-neutro-500 mb-4">Escoge la opción de merienda para tu fiesta</p>
-
-              @if (snackOptions().length === 0) {
-                <p class="text-neutro-500 bg-neutro-50 rounded-lg p-4">No hay opciones de merienda disponibles.</p>
-              } @else {
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  @for (option of snackOptions(); track option.id) {
-                    <button
-                      type="button"
-                      class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer"
-                      [class]="selectedSnackOption()?.id === option.id
-                        ? 'border-rojo-brillante bg-rojo-brillante/5'
-                        : 'border-neutro-200 hover:border-neutro-400'"
-                      (click)="selectSnackOption(option)">
-                      <div class="flex items-center gap-3">
-                        <i class="pi pi-gift text-lg"
-                           [class]="selectedSnackOption()?.id === option.id ? 'text-rojo-brillante' : 'text-neutro-400'"></i>
-                        <div>
-                          <p class="font-semibold">{{ option.name }}</p>
-                          @if (option.description) {
-                            <p class="text-sm text-neutro-500">{{ option.description }}</p>
-                          }
-                        </div>
-                      </div>
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-
-            <div class="flex justify-between pt-4">
-              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
-                        (onClick)="activateCallback(3)" />
-              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
-                        [disabled]="!canGoToStep5()" (onClick)="activateCallback(5)" />
-            </div>
-          </ng-template>
-        </p-step-panel>
-
-        <!-- STEP 5: Datos y resumen -->
-        <p-step-panel [value]="5">
           <ng-template #content let-activateCallback="activateCallback">
             <div class="py-4">
               <h2 class="text-lg font-semibold mb-4">Datos de contacto</h2>
@@ -377,7 +354,7 @@
 
             <div class="flex justify-between pt-4">
               <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
-                        (onClick)="activateCallback(4)" />
+                        (onClick)="activateCallback(3)" />
               <p-button [label]="hasPartialDeposit() ? 'Confirmar y pagar anticipo' : 'Confirmar y pagar'" icon="pi pi-credit-card" iconPos="right"
                         [loading]="submitting()"
                         [disabled]="contactForm.invalid"

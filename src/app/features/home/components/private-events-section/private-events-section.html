@@ -1,73 +1,82 @@
-<!-- Sección rosa -->
-<section class="relative bg-[#F2A7D8] overflow-hidden py-12 md:py-20">
+<section id="party-with-us" class="relative bg-[#F2A7D8] overflow-hidden py-12 md:py-20" style="scroll-margin-top: 6rem;">
 
-  <!-- Personaje nube: esquina superior izquierda -->
-  <img
-    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/nube.png"
-    alt=""
+  <!-- Personaje nube: esquina superior izquierda (Oculto en Móvil) -->
+  <img src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/nube.png" alt=""
     aria-hidden="true"
-    class="pointer-events-none absolute left-0 top-0 w-[306px] md:w-[460px] lg:w-[538px] object-contain"
-  />
+    class="hidden md:block pointer-events-none absolute left-0 top-0 md:w-[600px] lg:w-[700px] object-contain pixel-float" />
+
 
   <!-- Título -->
   <div class="relative z-10 text-center mb-10 md:mb-14">
-    <h2 class="font-display text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-wide drop-shadow-md">
+    <h2
+      class="font-bubblegum text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-wide drop-shadow-md">
       Party with us!
     </h2>
   </div>
 
+  <!-- Pitch Text -->
+  <div class="relative z-10 text-center mb-12 px-6 w-full max-w-3xl mx-auto">
+    <p class="font-body font-bold uppercase text-center text-lg md:text-xl text-white leading-relaxed drop-shadow-md">
+      <span class="underline-crayon">Reserva hoy</span> y deja que nos <span class="underline-crayon">encarguemos de todo</span>. Nuestro equipo te ayuda a crear el <span class="underline-crayon">evento inolvidable</span> que tus peques merecen.
+    </p>
+  </div>
+
   <!-- Tarjetas de paquetes -->
-  <div class="relative z-10 flex flex-wrap justify-center gap-6 md:gap-8 px-6 md:px-12 mb-12 md:mb-16">
+  <div class="relative z-10 grid grid-cols-2 md:flex md:flex-wrap justify-center gap-3 md:gap-8 px-4 md:px-12 mb-12 md:mb-16 w-full max-w-full">
     @for (pkg of packages(); track pkg.id) {
-      <div class="stamp-card flex flex-col bg-[#F5EDD8] w-[179px] md:w-[206px] shrink-0 rounded-2xl overflow-hidden">
-        <div class="stamp-card-inner flex flex-col items-center w-full flex-1">
-          <!-- Espaciado superior -->
-          <div class="h-3 w-full"></div>
+    <div class="stamp-card flex flex-col bg-[#F5EDD8] w-full md:w-[206px] shrink-0 rounded-2xl overflow-hidden">
+      <div class="stamp-card-inner flex flex-col items-center w-full flex-1">
+        <!-- Espaciado superior -->
+        <div class="h-3 w-full"></div>
 
-          <!-- Color badge con capacidad: tarjeta redondeada elevada -->
-          <div
-            class="w-[60%] aspect-square flex items-center justify-center rounded-2xl z-10 relative"
-            [style.background-color]="getColorHex(pkg)"
-          >
-            <div class="text-center">
-              <p class="font-display text-5xl md:text-6xl font-black text-white leading-none">
-                {{ pkg.max_guests }}
-              </p>
-              <p class="font-display text-lg font-black text-white uppercase tracking-widest">
-                Personas
-              </p>
-            </div>
+        <!-- Color badge con capacidad: tarjeta redondeada elevada -->
+        <div class="w-[65%] md:w-[60%] aspect-square flex items-center justify-center rounded-2xl z-10 relative"
+          [style.background-color]="getColorHex(pkg)">
+          <div class="text-center px-1">
+            <p class="font-display text-6xl md:text-7xl font-black text-white leading-none">
+              {{ pkg.max_guests }}
+            </p>
+            <p class="font-display text-sm md:text-xl font-black text-white uppercase tracking-widest mt-1 md:mt-0">
+              Personas
+            </p>
           </div>
-
-          <!-- Precio -->
-          <p class="font-display text-2xl md:text-3xl font-black text-gray-800 mt-3">
-            {{ pkg.price_cents | currencyMxn }}
-          </p>
-
-          <!-- Botón reservar -->
-          <a
-            routerLink="/reservar/fiesta-privada"
-            [queryParams]="{ package: pkg.id }"
-            class="mt-2 mb-3 px-6 py-1 text-sm font-bold uppercase tracking-widest text-gray-800 font-display"
-            style="background-color: #8ce9b0;"
-          >
-            Reservar
-          </a>
         </div>
+
+        <!-- Precio -->
+        <p class="font-display text-2xl md:text-4xl font-black text-gray-800 mt-3 break-words text-center px-2">
+          {{ pkg.price_cents | currencyMxn }}
+        </p>
+
+        <!-- Botón reservar -->
+        <a routerLink="/reservar/fiesta-privada" [queryParams]="{ package: pkg.id }"
+          class="mt-2 mb-3 px-6 py-1 text-sm font-bold uppercase tracking-widest text-gray-800 font-display"
+          style="background-color: #8ce9b0;">
+          Reservar
+        </a>
       </div>
+    </div>
     }
+    
+    <!-- Personaje Nube: Ocupando el espacio libre al final (SOLO MÓVIL) -->
+    <div class="flex md:hidden items-center justify-center relative w-full h-full min-h-[160px] col-span-1">
+      <img src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/nube.png" alt=""
+        aria-hidden="true"
+        class="pointer-events-none absolute w-[510px] max-w-none object-contain pixel-float z-0 top-[-6%] left-[67%] -translate-x-1/2" />
+    </div>
   </div>
 
   <!-- Todas las reservaciones incluyen -->
   <div class="relative z-10 flex flex-col items-center gap-4 px-6">
-    <p class="font-display text-sm md:text-base font-bold uppercase tracking-[0.2em] px-4 py-1.5 bg-[#F6F090] text-gray-800">
+    <p
+      class="font-display text-base md:text-lg font-bold uppercase tracking-[0.2em] px-4 py-1.5 bg-[#F6F090] text-gray-800">
       Todas las reservaciones incluyen:
     </p>
     <div class="flex flex-wrap justify-center gap-3 max-w-2xl">
       @for (item of inclusions; track item) {
-        <span class="font-display text-xs md:text-sm font-bold uppercase tracking-widest px-3 py-1 bg-[#F6F090] text-gray-800">
-          · {{ item }}
-        </span>
+      <span
+        class="font-display text-xs md:text-sm font-bold uppercase tracking-widest px-3 py-1 bg-[#F6F090] text-gray-800">
+        · {{ item }}
+      </span>
       }
     </div>
   </div>
@@ -75,8 +84,12 @@
 </section>
 
 <!-- Divisor inferior: ondas rosa → rojo -->
-<div class="w-full overflow-hidden leading-none mb-[-2px]" style="background-color: #E30D1C;" aria-hidden="true">
-  <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-24 block">
-    <path d="M0,0 Q100,90 220,45 Q340,0 480,60 Q620,100 760,40 Q900,0 1040,65 Q1180,100 1320,45 Q1380,20 1440,50 L1440,0 Z" fill="#F2A7D8"/>
+<div class="relative w-full overflow-visible leading-none mb-[-2px] z-20" style="background-color: #dc2c24;" aria-hidden="true">
+  <div class="absolute top-[-1px] inset-x-0 h-[3px] bg-[#F2A7D8] pointer-events-none z-10"></div>
+  <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"
+    class="relative z-20 w-full h-16 md:h-24 block">
+    <path
+      d="M0,0 Q100,90 220,45 Q340,0 480,60 Q620,100 760,40 Q900,0 1040,65 Q1180,100 1320,45 Q1380,20 1440,50 L1440,0 Z"
+      fill="#F2A7D8" />
   </svg>
 </div>

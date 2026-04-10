@@ -14,16 +14,31 @@
 
     <!-- Desktop nav -->
     <div class="hidden lg:flex items-center gap-1">
-      <a
-        routerLink="/conocenos"
-        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante"
-      >
-        Conócenos
-      </a>
       <button
         type="button"
         class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante cursor-pointer"
-        (click)="scrollToContact()"
+        (click)="scrollToSection('party-with-us')"
+      >
+        Party with us!
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante cursor-pointer"
+        (click)="scrollToSection('play-day')"
+      >
+        Play Day
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante cursor-pointer"
+        (click)="scrollToSection('conocenos')"
+      >
+        Sobre nosotros
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 text-sm font-semibold text-gray-700 rounded-lg transition-colors hover:bg-gray-100 hover:text-rojo-brillante cursor-pointer"
+        (click)="scrollToSection('contacto')"
       >
         Contacto
       </button>
@@ -113,34 +128,34 @@
   </ng-template>
 
   <div class="flex flex-col gap-1 py-2">
-    <a
-      routerLink="/reservar/fiesta-privada"
-      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
-      (click)="drawerVisible.set(false)"
-    >
-      <i class="pi pi-star" aria-hidden="true"></i>
-      Reservar fiesta
-    </a>
-    <a
-      routerLink="/reservar/play-day"
-      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
-      (click)="drawerVisible.set(false)"
-    >
-      <i class="pi pi-users" aria-hidden="true"></i>
-      Reservar Play Day
-    </a>
-    <a
-      routerLink="/conocenos"
-      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100"
-      (click)="drawerVisible.set(false)"
-    >
-      <i class="pi pi-images" aria-hidden="true"></i>
-      Conócenos
-    </a>
     <button
       type="button"
       class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
-      (click)="scrollToContact(); drawerVisible.set(false)"
+      (click)="scrollToSection('party-with-us'); drawerVisible.set(false)"
+    >
+      <i class="pi pi-star" aria-hidden="true"></i>
+      Party with us!
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
+      (click)="scrollToSection('play-day'); drawerVisible.set(false)"
+    >
+      <i class="pi pi-users" aria-hidden="true"></i>
+      Play Day
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
+      (click)="scrollToSection('conocenos'); drawerVisible.set(false)"
+    >
+      <i class="pi pi-images" aria-hidden="true"></i>
+      Sobre nosotros
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 text-gray-700 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
+      (click)="scrollToSection('contacto'); drawerVisible.set(false)"
     >
       <i class="pi pi-envelope" aria-hidden="true"></i>
       Contacto
@@ -191,4 +206,6 @@
   </ng-template>
 </p-drawer>
 
-<app-auth-dialog />
+@defer (when authDialogRequested(); prefetch on idle) {
+  <app-auth-dialog #authDialogRef />
+}

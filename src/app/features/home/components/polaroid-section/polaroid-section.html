@@ -1,8 +1,9 @@
 <!-- Divisor superior: ondas/montañas desde el hero hacia esta sección -->
-<div class="relative z-10 w-full overflow-hidden leading-none" aria-hidden="true">
+<div class="relative z-10 w-full overflow-visible leading-none" aria-hidden="true">
   <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-20 block">
     <path d="M0,80 L0,40 Q120,0 240,40 Q360,80 480,40 Q600,0 720,40 Q840,80 960,40 Q1080,0 1200,40 Q1320,80 1440,40 L1440,80 Z" fill="#F6F090"/>
   </svg>
+  <div class="absolute bottom-[-1px] inset-x-0 h-[3px] bg-[#F6F090] pointer-events-none"></div>
 </div>
 
 <!-- Sección amarilla -->
@@ -42,7 +43,7 @@
 
   <!-- CTA texto: visible solo en mobile, arriba de los polaroids -->
   <div class="relative z-10 flex justify-center mb-8 md:hidden">
-    <p class="font-display text-sm tracking-[0.2em] font-semibold px-6 py-2 uppercase"
+    <p class="font-display text-base tracking-[0.2em] font-semibold px-6 py-2 uppercase"
        style="background-color: #8ce9b0;">
       Conoce más del mundo Hula Hoop
     </p>
@@ -68,7 +69,7 @@
 
   <!-- CTA texto: visible solo en desktop, abajo de los polaroids -->
   <div class="relative z-10 hidden md:flex justify-center">
-    <p class="font-display text-sm md:text-base tracking-[0.2em] font-semibold px-6 py-2 uppercase"
+    <p class="font-display text-base md:text-lg tracking-[0.2em] font-semibold px-6 py-2 uppercase"
        style="background-color: #8ce9b0;">
       Conoce más del mundo Hula Hoop
     </p>
@@ -77,8 +78,9 @@
 </section>
 
 <!-- Divisor inferior: amarillo → rosa -->
-<div class="w-full overflow-hidden leading-none mb-[-2px]" style="background-color: #F2A7D8;" aria-hidden="true">
-  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16 md:h-20 block">
+<div class="relative z-20 w-full overflow-visible leading-none mb-[-2px]" style="background-color: #F2A7D8;" aria-hidden="true">
+  <div class="absolute top-[-1px] inset-x-0 h-[3px] bg-[#F6F090] pointer-events-none z-10"></div>
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="relative z-20 w-full h-16 md:h-20 block">
     <path d="M0,0 Q120,80 240,40 Q360,0 480,40 Q600,80 720,40 Q840,0 960,40 Q1080,80 1200,40 Q1320,0 1440,40 L1440,0 Z" fill="#F6F090"/>
   </svg>
 </div>

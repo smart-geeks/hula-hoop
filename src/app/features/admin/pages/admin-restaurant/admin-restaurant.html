@@ -1,0 +1,100 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold font-display">Menú Restaurante</h1>
+  <p-button label="Nuevo platillo" icon="pi pi-plus" (onClick)="openNew()" />
+</div>
+
+<p-table [value]="items()" [loading]="loading()" [rowHover]="true" breakpoint="768px">
+  <ng-template #header>
+    <tr>
+      <th>Categoría</th>
+      <th>Nombre</th>
+      <th>Precio</th>
+      <th>Estado</th>
+      <th>Orden</th>
+      <th style="width: 8rem">Acciones</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-item>
+    <tr>
+      <td>
+        <p-tag [value]="item.category" severity="secondary" />
+      </td>
+      <td>
+        <span class="font-semibold">{{ item.name }}</span>
+        @if (item.description) {
+          <br><span class="text-sm text-neutro-500">{{ item.description }}</span>
+        }
+      </td>
+      <td>
+        {{ item.price_cents | currencyMxn }}
+      </td>
+      <td>
+        <p-tag [value]="item.is_active ? 'Activo' : 'Inactivo'"
+               [severity]="item.is_active ? 'success' : 'warn'" />
+      </td>
+      <td>{{ item.sort_order }}</td>
+      <td>
+        <div class="flex gap-1">
+          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                    (onClick)="openEdit(item)" pTooltip="Editar" />
+          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                    (onClick)="confirmDelete(item)" pTooltip="Eliminar" />
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="6" class="text-center py-8 text-neutro-500">No hay platillos registrados en el restaurante.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<!-- Dialog crear/editar -->
+<p-dialog [header]="editingItem() ? 'Editar platillo' : 'Nuevo platillo'"
+          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '28rem' }"
+          [closable]="true" [draggable]="false">
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <p-floatlabel variant="on">
+      <input pInputText id="item-category" formControlName="category" class="w-full" />
+      <label for="item-category">Categoría (ej. Bebidas, Botanas) *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <input pInputText id="item-name" formControlName="name" class="w-full" />
+      <label for="item-name">Nombre *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <textarea pTextarea id="item-desc" formControlName="description" [rows]="3" class="w-full"></textarea>
+      <label for="item-desc">Descripción</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
+      <p-inputNumber id="item-price" formControlName="price_cents" [min]="0" [showButtons]="true"
+                     mode="currency" currency="MXN" locale="es-MX" class="w-full" />
+      <label for="item-price">Precio (MXN) *</label>
+    </p-floatlabel>
+
+    <div class="grid grid-cols-2 gap-4">
+      <p-floatlabel variant="on">
+        <p-inputNumber id="item-order" formControlName="sort_order" [showButtons]="true" class="w-full" />
+        <label for="item-order">Orden</label>
+      </p-floatlabel>
+      <div class="flex items-center gap-3">
+        <p-toggleSwitch formControlName="is_active" inputId="item-active" />
+        <label for="item-active" class="text-sm">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="dialogVisible.set(false)" type="button" />
+      <p-button [label]="editingItem() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+                type="submit" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

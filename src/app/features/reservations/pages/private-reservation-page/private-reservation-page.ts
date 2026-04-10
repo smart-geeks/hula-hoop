@@ -236,6 +236,11 @@ export class PrivateReservationPage {
   selectPackage(pkg: PartyPackage): void {
     this.selectedPackage.set(pkg);
     this.guestCount.set(pkg.max_guests);
+
+    // Auto-scroll a la sección de merienda que se acaba de habilitar
+    setTimeout(() => {
+      document.getElementById('merienda-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   }
 
   updateGuestCount(count: number): void {
@@ -288,16 +293,11 @@ export class PrivateReservationPage {
   }
 
   canGoToStep3(): boolean {
-    return this.selectedPackage() !== null;
+    return this.selectedPackage() !== null && (this.snackOptions().length === 0 || this.selectedSnackOption() !== null);
   }
 
   canGoToStep4(): boolean {
     return true; // extras are optional
-  }
-
-  canGoToStep5(): boolean {
-    // Merienda is required if there are options available
-    return this.snackOptions().length === 0 || this.selectedSnackOption() !== null;
   }
 
   // ── Step 5: Submit ──

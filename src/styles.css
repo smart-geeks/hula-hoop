@@ -5,6 +5,22 @@
 @plugin "tailwindcss-primeui";
 @layer theme, base, primeng;
 
+/* Custom self-hosted fonts */
+@font-face {
+  font-family: 'Muffolia';
+  src: url('./assets/fonts/ITMUFFOLIADEMO-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'CakeMono';
+  src: url('./assets/fonts/CakeMono-Light.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 /* Hula Hoop custom color palette and fonts for Tailwind utilities */
 @theme {
   --color-lima: #8CE9AF;
@@ -17,8 +33,9 @@
   --color-amarillo-merengue: #F6F090;
   --color-neutro: #F3ECE5;
 
-  --font-display: "Fredoka", sans-serif;
-  --font-body: "Nunito", sans-serif;
+  --font-bubblegum: "Muffolia", "Fredoka", sans-serif;
+  --font-display: "CakeMono", "Fredoka", sans-serif;
+  --font-body: "CakeMono", "Nunito", sans-serif;
 }
 
 body {
@@ -46,7 +63,7 @@ body {
 
 /* Hero planet responsive positioning */
 .hero-planet-wrap {
-  width: min(203vw, 2366px);
+  width: min(244vw, 2839px); /* Aumentado 20% respecto a 203vw */
   transform: translate(-65%, 53%);
 }
 
@@ -59,7 +76,7 @@ body {
 
 /* Personaje H position — mobile solo */
 .hero-h-pos {
-  right: -25%;
+  right: -35%;
 }
 
 @media (min-width: 768px) {
@@ -70,7 +87,7 @@ body {
 
 /* Hero logo mobile adjustments */
 .hero-logo-wrap {
-  transform: translateX(calc(-25% + 20%));
+  transform: translateX(calc(-25% + 30%)); /* +10% a la derecha */
 }
 
 @media (min-width: 768px) {
@@ -147,4 +164,23 @@ body {
 
 .pixel-bounce {
   animation: bounce-scale 2s ease-in-out infinite;
+}
+
+.underline-crayon {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+  z-index: 1;
+}
+.underline-crayon::after {
+  content: '';
+  position: absolute;
+  left: -2%;
+  bottom: -4px;
+  width: 104%;
+  height: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M2,15 Q30,5 60,12 T98,10' stroke='%23FFD700' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  pointer-events: none;
+  z-index: -1;
 }

@@ -57,4 +57,14 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
+  {
+    path: 'aviso-de-privacidad',
+    loadComponent: () =>
+      import('./features/legal/privacy-page').then((m) => m.PrivacyPage),
+  },
+  {
+    path: 'terminos-y-condiciones',
+    loadComponent: () =>
+      import('./features/legal/terms-page').then((m) => m.TermsPage),
+  },
 ];
