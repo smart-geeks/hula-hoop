@@ -352,13 +352,21 @@
               </div>
             </div>
 
-            <div class="flex justify-between pt-4">
-              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+            <div class="flex flex-col sm:flex-row sm:justify-between items-center gap-3 pt-4">
+              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary" class="w-full sm:w-auto [&>button]:w-full"
                         (onClick)="activateCallback(3)" />
-              <p-button [label]="hasPartialDeposit() ? 'Confirmar y pagar anticipo' : 'Confirmar y pagar'" icon="pi pi-credit-card" iconPos="right"
-                        [loading]="submitting()"
-                        [disabled]="contactForm.invalid"
-                        (onClick)="submitReservation()" />
+              <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                @if (isAdmin()) {
+                  <p-button label="Crear y Aplicar Pago en Local" icon="pi pi-money-bill" severity="success"
+                            [loading]="submitting()"
+                            [disabled]="contactForm.invalid"
+                            (onClick)="submitAdminLocalReservation()" class="w-full sm:w-auto [&>button]:w-full" />
+                }
+                <p-button [label]="hasPartialDeposit() ? 'Confirmar y pagar anticipo' : 'Confirmar y pagar'" icon="pi pi-credit-card" iconPos="right"
+                          [loading]="submitting()"
+                          [disabled]="contactForm.invalid"
+                          (onClick)="submitReservation()" class="w-full sm:w-auto [&>button]:w-full" />
+              </div>
             </div>
           </ng-template>
         </p-step-panel>

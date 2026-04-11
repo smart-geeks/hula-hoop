@@ -166,6 +166,8 @@ export class PrivateReservationPage {
     notes: [''],
   });
 
+  readonly isAdmin = computed(() => this.authService.isAdmin());
+
   constructor() {
     this.loadData();
   }
@@ -366,6 +368,64 @@ export class PrivateReservationPage {
     }
 
     this.submitting.set(false);
+  }
+
+  async submitAdminLocalReservation(): Promise<void> {
+    if (this.contactForm.invalid) {
+      this.contactForm.markAllAsTouched();
+      return;
+    }
+
+    const date = this.selectedDate();
+    const slot = this.selectedSlot();
+    const pkg = this.selectedPackage();
+    if (!date || !slot || !pkg) return;
+
+    this.submitting.set(true);
+
+    const contact = this.contactForm.getRawValue();
+    const user = this.authService.currentUser();
+    const snack = this.selectedSnackOption();
+
+    const reservation = await this.reservationService.createPrivateReservation({
+      profile_id: user?.id ?? null,
+      guest_name: contact.guest_name,
+      guest_email: contact.guest_email,
+      guest_phone: contact.guest_phone,
+      reservation_date: this.formatDateISO(date),
+      time_slot_id: slot.id,
+      package_id: pkg.id,
+      guest_count: this.guestCount(),
+      subtotal_cents: this.subtotalCents(),
+      total_cents: this.totalCents(),
+      deposit_cents: this.depositCents(),
+      notes: contact.notes || undefined,
+      snack_option_id: snack?.id,
+      extras: this.selectedExtras().map((se) => ({
+        extra_id: se.extra.id,
+        quantity: se.quantity,
+        unit_price_cents: se.extra.price_cents,
+      })),
+    });
+
+    if (!reservation) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al crear la reserva',
+        detail: 'Intenta de nuevo más tarde.',
+      });
+      this.submitting.set(false);
+      return;
+    }
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Reserva creada con éxito',
+    });
+
+    await this.router.navigate(['/admin/reservas'], {
+      state: { openPaymentFor: reservation.id }
+    });
   }
 
   // ── Helpers ──

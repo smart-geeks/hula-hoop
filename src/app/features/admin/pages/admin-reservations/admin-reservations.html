@@ -1,7 +1,12 @@
 <p-toast />
 <p-confirmDialog />
 
-<h1 class="text-2xl font-bold font-display mb-4">Reservas</h1>
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+  <h1 class="text-2xl font-bold font-display">Reservas</h1>
+  <a routerLink="/reservar/fiesta-privada" class="inline-block">
+    <p-button label="Nueva Reserva" icon="pi pi-plus" size="small" />
+  </a>
+</div>
 
 <!-- Stats cards -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

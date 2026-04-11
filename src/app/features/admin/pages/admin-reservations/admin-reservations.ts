@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -63,6 +64,7 @@ interface AdminReservationRow {
     TooltipModule,
     CurrencyMxnPipe,
     InputNumberModule,
+    RouterLink,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,10 +79,10 @@ export class AdminReservations {
   readonly allRows = signal<AdminReservationRow[]>([]);
   private slotsMap = new Map<string, TimeSlot>();
 
-  // Filters — defaults: confirmed + today
+  // Filters
   readonly filterType = signal<string | null>(null);
-  readonly filterStatus = signal<string | null>('confirmed');
-  readonly filterDate = signal<Date | null>(new Date());
+  readonly filterStatus = signal<string | null>(null);
+  readonly filterDate = signal<Date | null>(null);
   readonly filterLiquidation = signal<Date | null>(null);
 
   readonly typeOptions = [
@@ -182,6 +184,17 @@ export class AdminReservations {
 
     this.allRows.set(rows);
     this.loading.set(false);
+
+    // Auto-open payment dialog if redirected with state
+    const state = window.history.state;
+    if (state?.openPaymentFor) {
+      const row = rows.find(r => r.id === state.openPaymentFor);
+      if (row) {
+        // Prevent opening again on page reload
+        window.history.replaceState({}, '');
+        this.openPayment(row);
+      }
+    }
   }
 
   confirmStatusChange(row: AdminReservationRow, newStatus: ReservationStatus): void {
