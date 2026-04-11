@@ -72,6 +72,7 @@ export class AdminPackages {
     color: [null as string | null],
     deposit_type: ['full' as DepositType],
     deposit_value: [0],
+    days_to_liquidate: [0, [Validators.min(0)]],
     is_active: [true],
     sort_order: [0],
   });
@@ -99,6 +100,7 @@ export class AdminPackages {
       color: null,
       deposit_type: 'full' as DepositType,
       deposit_value: 0,
+      days_to_liquidate: 0,
       is_active: true,
       sort_order: 0,
     });
@@ -118,6 +120,7 @@ export class AdminPackages {
       color: pkg.color,
       deposit_type: pkg.deposit_type,
       deposit_value: pkg.deposit_type === 'fixed' ? pkg.deposit_value / 100 : pkg.deposit_value,
+      days_to_liquidate: pkg.days_to_liquidate ?? 0,
       is_active: pkg.is_active,
       sort_order: pkg.sort_order,
     });

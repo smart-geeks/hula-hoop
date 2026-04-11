@@ -36,8 +36,14 @@
               optionLabel="label" optionValue="value" placeholder="Todos" class="w-full" />
   </div>
   <div class="flex-1 min-w-[10rem]">
-    <label class="block text-sm font-medium text-neutro-600 mb-1">Fecha</label>
+    <label class="block text-sm font-medium text-neutro-600 mb-1">Fecha de Reserva</label>
     <p-datepicker [ngModel]="filterDate()" (ngModelChange)="filterDate.set($event)"
+                  [showClear]="true" dateFormat="dd/mm/yy" placeholder="Cualquier fecha"
+                  [showIcon]="true" class="w-full" />
+  </div>
+  <div class="flex-1 min-w-[10rem]">
+    <label class="block text-sm font-medium text-neutro-600 mb-1">Vencimiento pago</label>
+    <p-datepicker [ngModel]="filterLiquidation()" (ngModelChange)="filterLiquidation.set($event)"
                   [showClear]="true" dateFormat="dd/mm/yy" placeholder="Cualquier fecha"
                   [showIcon]="true" class="w-full" />
   </div>
@@ -58,6 +64,8 @@
       <th>Turno</th>
       <th>Detalle</th>
       <th pSortableColumn="total_cents">Total <p-sortIcon field="total_cents" /></th>
+      <th pSortableColumn="paid_deposit_cents">Anticipo Pagado <p-sortIcon field="paid_deposit_cents" /></th>
+      <th>Vencimiento para Liquidar</th>
       <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
       <th style="width: 5rem"></th>
       <th style="width: 12rem">Cambiar estado</th>
@@ -83,6 +91,12 @@
       </td>
       <td>
         <span class="font-medium">{{ row.total_cents | currencyMxn }}</span>
+      </td>
+      <td>
+        <span class="font-medium text-green-700">{{ row.paid_deposit_cents | currencyMxn }}</span>
+      </td>
+      <td>
+        <span class="text-sm">{{ row.liquidation_date || '—' }}</span>
       </td>
       <td>
         <p-tag [value]="getStatusConfig(row.status).label"
@@ -216,7 +230,12 @@
           <span>{{ row.deposit_cents | currencyMxn }}</span>
         </div>
         <div class="flex justify-between text-sm text-amber-600 font-medium">
-          <span>Pendiente por pagar</span>
+          <div class="flex flex-col">
+            <span>Pendiente por pagar</span>
+            @if (row.liquidation_date && row.status === 'pending_payment') {
+              <span class="text-xs">Máximo liquidar: {{ row.liquidation_date }}</span>
+            }
+          </div>
           <span>{{ row.total_cents - row.deposit_cents | currencyMxn }}</span>
         </div>
       }

@@ -161,7 +161,12 @@
           <span>{{ res.deposit_cents | currencyMxn }}</span>
         </div>
         <div class="flex justify-between text-sm text-amber-600 font-medium">
-          <span>Pendiente por pagar</span>
+          <div class="flex flex-col">
+            <span>Pendiente por pagar en Recepción</span>
+            @if (getLiquidationDateString(res) && res.status === 'pending_payment') {
+              <span class="text-xs">Máximo liquidar: {{ getLiquidationDateString(res) }}</span>
+            }
+          </div>
           <span>{{ res.total_cents - res.deposit_cents | currencyMxn }}</span>
         </div>
       }

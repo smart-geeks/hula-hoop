@@ -67,7 +67,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .eq('access_token', accessToken)
       .single();
 
@@ -85,7 +85,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .eq('profile_id', profileId)
       .order('reservation_date', { ascending: false });
 
@@ -103,7 +103,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .order('reservation_date', { ascending: false });
 
     if (error) {

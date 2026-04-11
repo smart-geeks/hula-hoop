@@ -176,6 +176,14 @@
       </p-floatlabel>
     }
 
+    @if (form.controls.deposit_type.value !== 'full') {
+      <p-floatlabel variant="on">
+        <p-inputNumber id="pkg-days-liquidate" formControlName="days_to_liquidate"
+                       [min]="0" [showButtons]="true" class="w-full" />
+        <label for="pkg-days-liquidate">Días antes para liquidar *</label>
+      </p-floatlabel>
+    }
+
     <div class="grid grid-cols-2 gap-4">
       <p-floatlabel variant="on">
         <p-inputNumber id="pkg-order" formControlName="sort_order" [showButtons]="true" class="w-full" />

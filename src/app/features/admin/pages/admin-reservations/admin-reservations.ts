@@ -41,6 +41,9 @@ interface AdminReservationRow {
   detail: string;
   created_at: string;
   snack_option_id: string | null;
+  paid_deposit_cents: number;
+  liquidation_date: string | null;
+  raw_liquidation_date: string | null;
 }
 
 @Component({
@@ -76,6 +79,7 @@ export class AdminReservations {
   readonly filterType = signal<string | null>(null);
   readonly filterStatus = signal<string | null>('confirmed');
   readonly filterDate = signal<Date | null>(new Date());
+  readonly filterLiquidation = signal<Date | null>(null);
 
   readonly typeOptions = [
     { label: 'Todos', value: null },
@@ -112,6 +116,7 @@ export class AdminReservations {
     const type = this.filterType();
     const status = this.filterStatus();
     const date = this.filterDate();
+    const liquidation = this.filterLiquidation();
 
     if (type) {
       rows = rows.filter((r) => r.type === type);
@@ -122,6 +127,10 @@ export class AdminReservations {
     if (date) {
       const dateStr = this.formatDateISO(date);
       rows = rows.filter((r) => r.reservation_date === dateStr);
+    }
+    if (liquidation) {
+      const liqStr = this.formatDateISO(liquidation);
+      rows = rows.filter((r) => r.raw_liquidation_date === liqStr);
     }
     return rows;
   });
@@ -218,6 +227,7 @@ export class AdminReservations {
     this.filterType.set(null);
     this.filterStatus.set(null);
     this.filterDate.set(null);
+    this.filterLiquidation.set(null);
   }
 
   getStatusConfig(status: ReservationStatus): { label: string; severity: string } {
@@ -267,6 +277,13 @@ export class AdminReservations {
     return `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`;
   }
 
+  private calculateRawLiquidationDate(reservationDate: string, daysToLiquidate: number): string | null {
+    if (!daysToLiquidate) return null;
+    const d = new Date(reservationDate + 'T12:00:00');
+    d.setDate(d.getDate() - daysToLiquidate);
+    return this.formatDateISO(d);
+  }
+
   private mapPrivate(r: PrivateReservation): AdminReservationRow {
     return {
       id: r.id,
@@ -286,6 +303,9 @@ export class AdminReservations {
       detail: `${r.guest_count} invitados`,
       created_at: r.created_at,
       snack_option_id: r.snack_option_id,
+      paid_deposit_cents: r.paid_deposit_cents ?? 0,
+      liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0) ? this.formatDate(this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0)!) : null,
+      raw_liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0),
     };
   }
 
@@ -309,6 +329,9 @@ export class AdminReservations {
       detail: `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
       created_at: r.created_at,
       snack_option_id: null,
+      paid_deposit_cents: r.paid_deposit_cents ?? 0,
+      liquidation_date: null,
+      raw_liquidation_date: null,
     };
   }
 }

@@ -133,6 +133,18 @@ export class ReservationDetailPage {
     });
   }
 
+  getLiquidationDateString(res: PrivateReservation): string | null {
+    const days = res.packages?.days_to_liquidate;
+    if (!days) return null;
+    const d = new Date(res.reservation_date + 'T12:00:00');
+    d.setDate(d.getDate() - days);
+    return d.toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
   private async launchConfetti(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) return;
 
