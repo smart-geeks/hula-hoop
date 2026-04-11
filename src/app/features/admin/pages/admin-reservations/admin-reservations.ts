@@ -14,6 +14,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { ReservationPrintService } from '../../../../core/services/reservation-print.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
@@ -74,6 +75,7 @@ export class AdminReservations {
   private readonly timeSlotService = inject(TimeSlotService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly printService = inject(ReservationPrintService);
 
   readonly loading = signal(true);
   readonly allRows = signal<AdminReservationRow[]>([]);
@@ -291,6 +293,53 @@ export class AdminReservations {
     this.filterStatus.set(null);
     this.filterDate.set(null);
     this.filterLiquidation.set(null);
+  }
+
+  printDetail(): void {
+    const row = this.detailRow();
+    if (!row) return;
+    this.printService.print({
+      type: row.type,
+      statusLabel: this.getStatusConfig(row.status).label,
+      guest_name: row.guest_name,
+      guest_email: row.guest_email,
+      guest_phone: row.guest_phone,
+      reservation_date: this.formatDate(row.reservation_date),
+      time_slot_label: row.time_slot_label,
+      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
+      snack_name: this.detailSnackName(),
+      notes: row.notes || null,
+      extras: this.detailExtras(),
+      subtotal_cents: row.subtotal_cents,
+      total_cents: row.total_cents,
+      paid_deposit_cents: row.paid_deposit_cents,
+      liquidation_date: row.liquidation_date,
+      access_token: row.access_token,
+    });
+  }
+
+  shareWhatsApp(): void {
+    const row = this.detailRow();
+    if (!row) return;
+    const url = this.printService.getWhatsAppUrl({
+      type: row.type,
+      statusLabel: this.getStatusConfig(row.status).label,
+      guest_name: row.guest_name,
+      guest_email: row.guest_email,
+      guest_phone: row.guest_phone,
+      reservation_date: this.formatDate(row.reservation_date),
+      time_slot_label: row.time_slot_label,
+      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
+      snack_name: this.detailSnackName(),
+      notes: row.notes || null,
+      extras: this.detailExtras(),
+      subtotal_cents: row.subtotal_cents,
+      total_cents: row.total_cents,
+      paid_deposit_cents: row.paid_deposit_cents,
+      liquidation_date: row.liquidation_date,
+      access_token: row.access_token,
+    });
+    window.open(url, '_blank');
   }
 
   getStatusConfig(status: ReservationStatus): { label: string; severity: string } {

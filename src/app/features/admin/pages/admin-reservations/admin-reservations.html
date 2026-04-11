@@ -249,6 +249,15 @@
         </div>
       }
     </div>
+
+    <ng-template #footer>
+      <div class="flex gap-2 justify-end mt-2">
+        <p-button label="Descargar PDF" icon="pi pi-file-pdf" [outlined]="true" severity="secondary"
+                  (onClick)="printDetail()" />
+        <p-button label="Enviar WhatsApp" icon="pi pi-whatsapp" severity="success"
+                  (onClick)="shareWhatsApp()" />
+      </div>
+    </ng-template>
   </p-dialog>
 }
 

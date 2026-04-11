@@ -8,6 +8,7 @@ import { MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { PaymentService } from '../../../../core/services/payment.service';
+import { ReservationPrintService } from '../../../../core/services/reservation-print.service';
 import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 
 type ReservationType = 'private' | 'playdate' | null;
@@ -23,6 +24,7 @@ export class ReservationDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly reservationService = inject(ReservationService);
   private readonly paymentService = inject(PaymentService);
+  private readonly printService = inject(ReservationPrintService);
   private readonly messageService = inject(MessageService);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -143,6 +145,67 @@ export class ReservationDetailPage {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  // ── Print / Share ─────────────────────────────────────────
+  printPdf(): void {
+    const res = this.reservation();
+    const type = this.reservationType();
+    if (!res || !type) return;
+    this.printService.print(this.buildPrintData(res, type));
+  }
+
+  shareWhatsApp(): void {
+    const res = this.reservation();
+    const type = this.reservationType();
+    if (!res || !type) return;
+    window.open(this.printService.getWhatsAppUrl(this.buildPrintData(res, type)), '_blank');
+  }
+
+  private buildPrintData(
+    res: PrivateReservation | PlaydateReservation,
+    type: 'private' | 'playdate',
+  ) {
+    const isPrivate = this.isPrivateReservation(res);
+    const timeLabel = isPrivate || 'time_slot_id' in res
+      ? '' // time_slot_label will be filled below
+      : '';
+
+    let guest_count_label = '';
+    let snack_name: string | null = null;
+    let notes: string | null = null;
+    let subtotal_cents = res.total_cents;
+    let liquidation_date: string | null = null;
+
+    if (isPrivate) {
+      guest_count_label = `${res.guest_count} invitados`;
+      snack_name = this.snackOptionName();
+      notes = res.notes;
+      subtotal_cents = res.subtotal_cents;
+      liquidation_date = this.getLiquidationDateString(res);
+    } else {
+      const p = res as PlaydateReservation;
+      guest_count_label = `${p.kids_count} niño(s), ${p.adults_count + p.extra_adults_count} adulto(s)`;
+    }
+
+    return {
+      type,
+      statusLabel: this.statusConfig().label,
+      guest_name: res.guest_name,
+      guest_email: res.guest_email,
+      guest_phone: res.guest_phone,
+      reservation_date: this.formatDate(res.reservation_date),
+      time_slot_label: '', // not available in client view without extra query
+      guest_count_label,
+      snack_name,
+      notes,
+      extras: isPrivate ? this.reservationExtras() : [],
+      subtotal_cents,
+      total_cents: res.total_cents,
+      paid_deposit_cents: res.paid_deposit_cents ?? 0,
+      liquidation_date,
+      access_token: res.access_token,
+    };
   }
 
   private async launchConfetti(): Promise<void> {
