@@ -10,6 +10,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
@@ -61,6 +62,7 @@ interface AdminReservationRow {
     ConfirmDialogModule,
     TooltipModule,
     CurrencyMxnPipe,
+    InputNumberModule,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -110,6 +112,12 @@ export class AdminReservations {
   readonly detailExtras = signal<ReservationExtra[]>([]);
   readonly detailSnackName = signal<string | null>(null);
   readonly detailLoading = signal(false);
+
+  // Payment dialog
+  readonly paymentVisible = signal(false);
+  readonly paymentRow = signal<AdminReservationRow | null>(null);
+  readonly paymentInput = signal<number>(0);
+  readonly paymentSubmitting = signal(false);
 
   readonly filteredRows = computed(() => {
     let rows = this.allRows();
@@ -221,6 +229,48 @@ export class AdminReservations {
       }
       this.detailLoading.set(false);
     }
+  }
+
+  openPayment(row: AdminReservationRow): void {
+    this.paymentRow.set(row);
+    const remaining = row.total_cents - row.paid_deposit_cents;
+    this.paymentInput.set(remaining > 0 ? remaining / 100 : 0); // Convert cents to whole currency for the input
+    this.paymentVisible.set(true);
+  }
+
+  async submitPayment(): Promise<void> {
+    const row = this.paymentRow();
+    if (!row) return;
+
+    const addedCents = Math.round(this.paymentInput() * 100);
+    if (addedCents <= 0) {
+      this.paymentVisible.set(false);
+      return;
+    }
+
+    this.paymentSubmitting.set(true);
+    const newPaidTotal = row.paid_deposit_cents + addedCents;
+
+    let newStatus = row.status;
+    if (row.status === 'pending_payment' && newPaidTotal >= row.deposit_cents) {
+      newStatus = 'confirmed';
+    }
+
+    let success = false;
+    if (row.type === 'private') {
+      success = await this.reservationService.updatePrivateReservationPaidAmount(row.id, newPaidTotal, newStatus);
+    } else {
+      success = await this.reservationService.updatePlaydateReservationPaidAmount(row.id, newPaidTotal, newStatus);
+    }
+
+    if (success) {
+      this.messageService.add({ severity: 'success', summary: 'Abono registrado con éxito' });
+      await this.loadReservations();
+      this.paymentVisible.set(false);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error al registrar abono' });
+    }
+    this.paymentSubmitting.set(false);
   }
 
   clearFilters(): void {

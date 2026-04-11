@@ -154,20 +154,20 @@
         <span class="text-rojo-brillante">{{ res.total_cents | currencyMxn }}</span>
       </div>
 
-      @if (isPrivateReservation(res) && res.deposit_cents > 0 && res.deposit_cents < res.total_cents) {
+      @if (isPrivateReservation(res) && (res.paid_deposit_cents ?? 0) > 0) {
         <hr class="border-neutro-200" />
         <div class="flex justify-between font-semibold text-green-700">
-          <span>Pagado (anticipo)</span>
-          <span>{{ res.deposit_cents | currencyMxn }}</span>
+          <span>Total Abonado</span>
+          <span>{{ res.paid_deposit_cents | currencyMxn }}</span>
         </div>
         <div class="flex justify-between text-sm text-amber-600 font-medium">
           <div class="flex flex-col">
-            <span>Pendiente por pagar en Recepción</span>
-            @if (getLiquidationDateString(res) && res.status === 'pending_payment') {
+            <span>Restante por pagar en Recepción</span>
+            @if (getLiquidationDateString(res)) {
               <span class="text-xs">Máximo liquidar: {{ getLiquidationDateString(res) }}</span>
             }
           </div>
-          <span>{{ res.total_cents - res.deposit_cents | currencyMxn }}</span>
+          <span>{{ (res.total_cents - (res.paid_deposit_cents ?? 0) > 0 ? res.total_cents - (res.paid_deposit_cents ?? 0) : 0) | currencyMxn }}</span>
         </div>
       }
     </div>
