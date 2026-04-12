@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -10,8 +11,10 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { ReservationPrintService } from '../../../../core/services/reservation-print.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
@@ -41,6 +44,9 @@ interface AdminReservationRow {
   detail: string;
   created_at: string;
   snack_option_id: string | null;
+  paid_deposit_cents: number;
+  liquidation_date: string | null;
+  raw_liquidation_date: string | null;
 }
 
 @Component({
@@ -58,6 +64,8 @@ interface AdminReservationRow {
     ConfirmDialogModule,
     TooltipModule,
     CurrencyMxnPipe,
+    InputNumberModule,
+    RouterLink,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,15 +75,17 @@ export class AdminReservations {
   private readonly timeSlotService = inject(TimeSlotService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly printService = inject(ReservationPrintService);
 
   readonly loading = signal(true);
   readonly allRows = signal<AdminReservationRow[]>([]);
   private slotsMap = new Map<string, TimeSlot>();
 
-  // Filters — defaults: confirmed + today
+  // Filters
   readonly filterType = signal<string | null>(null);
-  readonly filterStatus = signal<string | null>('confirmed');
-  readonly filterDate = signal<Date | null>(new Date());
+  readonly filterStatus = signal<string | null>(null);
+  readonly filterDate = signal<Date | null>(null);
+  readonly filterLiquidation = signal<Date | null>(null);
 
   readonly typeOptions = [
     { label: 'Todos', value: null },
@@ -107,11 +117,18 @@ export class AdminReservations {
   readonly detailSnackName = signal<string | null>(null);
   readonly detailLoading = signal(false);
 
+  // Payment dialog
+  readonly paymentVisible = signal(false);
+  readonly paymentRow = signal<AdminReservationRow | null>(null);
+  readonly paymentInput = signal<number>(0);
+  readonly paymentSubmitting = signal(false);
+
   readonly filteredRows = computed(() => {
     let rows = this.allRows();
     const type = this.filterType();
     const status = this.filterStatus();
     const date = this.filterDate();
+    const liquidation = this.filterLiquidation();
 
     if (type) {
       rows = rows.filter((r) => r.type === type);
@@ -122,6 +139,10 @@ export class AdminReservations {
     if (date) {
       const dateStr = this.formatDateISO(date);
       rows = rows.filter((r) => r.reservation_date === dateStr);
+    }
+    if (liquidation) {
+      const liqStr = this.formatDateISO(liquidation);
+      rows = rows.filter((r) => r.raw_liquidation_date === liqStr);
     }
     return rows;
   });
@@ -165,6 +186,17 @@ export class AdminReservations {
 
     this.allRows.set(rows);
     this.loading.set(false);
+
+    // Auto-open payment dialog if redirected with state
+    const state = window.history.state;
+    if (state?.openPaymentFor) {
+      const row = rows.find(r => r.id === state.openPaymentFor);
+      if (row) {
+        // Prevent opening again on page reload
+        window.history.replaceState({}, '');
+        this.openPayment(row);
+      }
+    }
   }
 
   confirmStatusChange(row: AdminReservationRow, newStatus: ReservationStatus): void {
@@ -214,10 +246,100 @@ export class AdminReservations {
     }
   }
 
+  openPayment(row: AdminReservationRow): void {
+    this.paymentRow.set(row);
+    const remaining = row.total_cents - row.paid_deposit_cents;
+    this.paymentInput.set(remaining > 0 ? remaining / 100 : 0); // Convert cents to whole currency for the input
+    this.paymentVisible.set(true);
+  }
+
+  async submitPayment(): Promise<void> {
+    const row = this.paymentRow();
+    if (!row) return;
+
+    const addedCents = Math.round(this.paymentInput() * 100);
+    if (addedCents <= 0) {
+      this.paymentVisible.set(false);
+      return;
+    }
+
+    this.paymentSubmitting.set(true);
+    const newPaidTotal = row.paid_deposit_cents + addedCents;
+
+    let newStatus = row.status;
+    if (row.status === 'pending_payment' && newPaidTotal >= row.deposit_cents) {
+      newStatus = 'confirmed';
+    }
+
+    let success = false;
+    if (row.type === 'private') {
+      success = await this.reservationService.updatePrivateReservationPaidAmount(row.id, newPaidTotal, newStatus);
+    } else {
+      success = await this.reservationService.updatePlaydateReservationPaidAmount(row.id, newPaidTotal, newStatus);
+    }
+
+    if (success) {
+      this.messageService.add({ severity: 'success', summary: 'Abono registrado con éxito' });
+      await this.loadReservations();
+      this.paymentVisible.set(false);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error al registrar abono' });
+    }
+    this.paymentSubmitting.set(false);
+  }
+
   clearFilters(): void {
     this.filterType.set(null);
     this.filterStatus.set(null);
     this.filterDate.set(null);
+    this.filterLiquidation.set(null);
+  }
+
+  printDetail(): void {
+    const row = this.detailRow();
+    if (!row) return;
+    this.printService.print({
+      type: row.type,
+      statusLabel: this.getStatusConfig(row.status).label,
+      guest_name: row.guest_name,
+      guest_email: row.guest_email,
+      guest_phone: row.guest_phone,
+      reservation_date: this.formatDate(row.reservation_date),
+      time_slot_label: row.time_slot_label,
+      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
+      snack_name: this.detailSnackName(),
+      notes: row.notes || null,
+      extras: this.detailExtras(),
+      subtotal_cents: row.subtotal_cents,
+      total_cents: row.total_cents,
+      paid_deposit_cents: row.paid_deposit_cents,
+      liquidation_date: row.liquidation_date,
+      access_token: row.access_token,
+    });
+  }
+
+  shareWhatsApp(): void {
+    const row = this.detailRow();
+    if (!row) return;
+    const url = this.printService.getWhatsAppUrl({
+      type: row.type,
+      statusLabel: this.getStatusConfig(row.status).label,
+      guest_name: row.guest_name,
+      guest_email: row.guest_email,
+      guest_phone: row.guest_phone,
+      reservation_date: this.formatDate(row.reservation_date),
+      time_slot_label: row.time_slot_label,
+      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
+      snack_name: this.detailSnackName(),
+      notes: row.notes || null,
+      extras: this.detailExtras(),
+      subtotal_cents: row.subtotal_cents,
+      total_cents: row.total_cents,
+      paid_deposit_cents: row.paid_deposit_cents,
+      liquidation_date: row.liquidation_date,
+      access_token: row.access_token,
+    });
+    window.open(url, '_blank');
   }
 
   getStatusConfig(status: ReservationStatus): { label: string; severity: string } {
@@ -267,6 +389,13 @@ export class AdminReservations {
     return `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`;
   }
 
+  private calculateRawLiquidationDate(reservationDate: string, daysToLiquidate: number): string | null {
+    if (!daysToLiquidate) return null;
+    const d = new Date(reservationDate + 'T12:00:00');
+    d.setDate(d.getDate() - daysToLiquidate);
+    return this.formatDateISO(d);
+  }
+
   private mapPrivate(r: PrivateReservation): AdminReservationRow {
     return {
       id: r.id,
@@ -286,6 +415,9 @@ export class AdminReservations {
       detail: `${r.guest_count} invitados`,
       created_at: r.created_at,
       snack_option_id: r.snack_option_id,
+      paid_deposit_cents: r.paid_deposit_cents ?? 0,
+      liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0) ? this.formatDate(this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0)!) : null,
+      raw_liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0),
     };
   }
 
@@ -309,6 +441,9 @@ export class AdminReservations {
       detail: `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
       created_at: r.created_at,
       snack_option_id: null,
+      paid_deposit_cents: r.paid_deposit_cents ?? 0,
+      liquidation_date: null,
+      raw_liquidation_date: null,
     };
   }
 }

@@ -38,6 +38,8 @@
     "canvas-confetti": "^1.9.4",
     "express": "^5.1.0",
     "gsap": "^3.14.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.1",
     "rxjs": "~7.8.0",

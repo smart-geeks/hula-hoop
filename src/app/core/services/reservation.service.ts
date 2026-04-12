@@ -67,7 +67,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .eq('access_token', accessToken)
       .single();
 
@@ -85,7 +85,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .eq('profile_id', profileId)
       .order('reservation_date', { ascending: false });
 
@@ -103,7 +103,7 @@ export class ReservationService {
 
     const { data, error } = await client
       .from('private_reservations')
-      .select('*')
+      .select('*, packages(days_to_liquidate)')
       .order('reservation_date', { ascending: false });
 
     if (error) {
@@ -125,6 +125,23 @@ export class ReservationService {
 
     if (error) {
       console.error('Error updating private reservation status:', error.message);
+      return false;
+    }
+
+    return true;
+  }
+
+  async updatePrivateReservationPaidAmount(id: string, paid_deposit_cents: number, status: ReservationStatus): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { error } = await client
+      .from('private_reservations')
+      .update({ paid_deposit_cents, status })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating private reservation payment:', error.message);
       return false;
     }
 
@@ -215,6 +232,23 @@ export class ReservationService {
 
     if (error) {
       console.error('Error updating playdate reservation status:', error.message);
+      return false;
+    }
+
+    return true;
+  }
+
+  async updatePlaydateReservationPaidAmount(id: string, paid_deposit_cents: number, status: ReservationStatus): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { error } = await client
+      .from('playdate_reservations')
+      .update({ paid_deposit_cents, status })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating playdate reservation payment:', error.message);
       return false;
     }
 

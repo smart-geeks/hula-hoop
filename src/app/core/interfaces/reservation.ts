@@ -21,9 +21,11 @@ export interface PrivateReservation {
   status: ReservationStatus;
   mp_preference_id: string | null;
   mp_payment_id: string | null;
+  paid_deposit_cents?: number;
   access_token: string;
   notes: string | null;
   snack_option_id: string | null;
+  packages?: { days_to_liquidate: number };
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +53,7 @@ export interface PlaydateReservation {
   status: ReservationStatus;
   mp_preference_id: string | null;
   mp_payment_id: string | null;
+  paid_deposit_cents?: number;
   access_token: string;
   created_at: string;
   updated_at: string;

@@ -154,15 +154,20 @@
         <span class="text-rojo-brillante">{{ res.total_cents | currencyMxn }}</span>
       </div>
 
-      @if (isPrivateReservation(res) && res.deposit_cents > 0 && res.deposit_cents < res.total_cents) {
+      @if (isPrivateReservation(res) && (res.paid_deposit_cents ?? 0) > 0) {
         <hr class="border-neutro-200" />
         <div class="flex justify-between font-semibold text-green-700">
-          <span>Pagado (anticipo)</span>
-          <span>{{ res.deposit_cents | currencyMxn }}</span>
+          <span>Total Abonado</span>
+          <span>{{ res.paid_deposit_cents | currencyMxn }}</span>
         </div>
         <div class="flex justify-between text-sm text-amber-600 font-medium">
-          <span>Pendiente por pagar</span>
-          <span>{{ res.total_cents - res.deposit_cents | currencyMxn }}</span>
+          <div class="flex flex-col">
+            <span>Restante por pagar en Recepción</span>
+            @if (getLiquidationDateString(res)) {
+              <span class="text-xs">Máximo liquidar: {{ getLiquidationDateString(res) }}</span>
+            }
+          </div>
+          <span>{{ (res.total_cents - (res.paid_deposit_cents ?? 0) > 0 ? res.total_cents - (res.paid_deposit_cents ?? 0) : 0) | currencyMxn }}</span>
         </div>
       }
     </div>
@@ -177,6 +182,10 @@
 
     <!-- Navigation -->
     <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
+      <p-button label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"
+                (onClick)="printPdf()" />
+      <p-button label="Enviar por WhatsApp" icon="pi pi-whatsapp" severity="success"
+                (onClick)="shareWhatsApp()" />
       <p-button label="Ir a mi cuenta" icon="pi pi-user" severity="secondary" [outlined]="true"
                 routerLink="/mi-cuenta" />
       <p-button label="Volver al inicio" icon="pi pi-home" severity="secondary" [outlined]="true"

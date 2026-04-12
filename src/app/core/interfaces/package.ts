@@ -34,6 +34,7 @@ export interface PartyPackage {
   color: PackageColor | null;
   deposit_type: DepositType;
   deposit_value: number;
+  days_to_liquidate: number;
   created_at: string;
   updated_at: string;
 }
