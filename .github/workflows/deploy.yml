@@ -1,0 +1,68 @@
+name: CI/CD → Producción
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.1.40'
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Build producción
+        run: bun run build
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Subir build al servidor
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            dist/hula-hoop/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/hula-hoop/
+
+          rsync -az \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ecosystem.config.cjs \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/hula-hoop/
+
+      - name: Reiniciar aplicación
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "pm2 reload /var/www/hula-hoop/ecosystem.config.cjs --update-env 2>/dev/null || pm2 start /var/www/hula-hoop/ecosystem.config.cjs; pm2 save"
+
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5; do
+            sleep 3
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.SSH_HOST }}/" || echo "000")
+            echo "Intento $i → HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "Deploy verificado."
+              exit 0
+            fi
+          done
+          echo "Health check falló."
+          exit 1
