@@ -1,0 +1,591 @@
+<div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Contratos</h1>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredContracts().length }} contrato{{ filteredContracts().length !== 1 ? 's' : '' }}</p>
+    </div>
+    <button
+      (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nuevo contrato
+    </button>
+  </div>
+
+  <!-- Status filter tabs -->
+  <div class="flex gap-2 flex-wrap">
+    @for (opt of statusOptions; track opt.value) {
+      <button
+        (click)="setStatusFilter(opt.value)"
+        [class]="'px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors '
+          + (statusFilter() === opt.value
+            ? 'bg-rojo-brillante text-white shadow-sm'
+            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')">
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    @if (loading()) {
+      <div class="divide-y divide-slate-100">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-100 animate-pulse rounded w-28"></div>
+              <div class="h-3 bg-slate-100 animate-pulse rounded w-44"></div>
+            </div>
+            <div class="w-32 space-y-1.5">
+              <div class="h-2 bg-slate-100 animate-pulse rounded-full"></div>
+              <div class="h-2.5 bg-slate-100 animate-pulse rounded w-16"></div>
+            </div>
+            <div class="h-6 bg-slate-100 animate-pulse rounded-full w-20"></div>
+          </div>
+        }
+      </div>
+
+    } @else if (filteredContracts().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-file-edit text-2xl text-slate-300"></i>
+        </div>
+        <p class="text-sm font-medium text-slate-500">Sin contratos</p>
+        <p class="text-xs mt-1">Crea uno nuevo o convierte una cotización aprobada</p>
+      </div>
+
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left px-6 py-3 font-medium">Folio / Cliente</th>
+              <th class="text-left px-6 py-3 font-medium hidden md:table-cell">Evento</th>
+              <th class="text-left px-6 py-3 font-medium hidden lg:table-cell">Cobro</th>
+              <th class="text-left px-6 py-3 font-medium">Estado</th>
+              <th class="text-right px-6 py-3 font-medium">Total</th>
+              <th class="text-right px-6 py-3 font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (contract of filteredContracts(); track contract.id) {
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <!-- Folio + cliente -->
+                <td class="px-6 py-4">
+                  <p class="font-semibold text-slate-800">{{ contract.folio }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">
+                    {{ contract.client?.nombre ?? 'Sin cliente' }}
+                  </p>
+                </td>
+                <!-- Fecha evento -->
+                <td class="px-6 py-4 hidden md:table-cell">
+                  <p class="text-slate-700 font-medium">{{ contract.fecha_evento }}</p>
+                  @if (contract.hora_inicio) {
+                    <p class="text-xs text-slate-400">{{ contract.hora_inicio }}{{ contract.hora_fin ? ' – ' + contract.hora_fin : '' }}</p>
+                  }
+                </td>
+                <!-- Progress bar de cobro -->
+                <td class="px-6 py-4 hidden lg:table-cell">
+                  <div class="w-36">
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                      <span>{{ contract.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                      <span class="text-slate-400">
+                        @if (contract.saldo_pendiente > 0) {
+                          falta {{ contract.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        } @else {
+                          <span class="text-emerald-600 font-medium">Pagado</span>
+                        }
+                      </span>
+                    </div>
+                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all"
+                        [class]="contract.saldo_pendiente === 0 ? 'bg-emerald-500' : 'bg-blue-500'"
+                        [style.width]="contract.total_contrato > 0
+                          ? (contract.deposito_pagado / contract.total_contrato * 100) + '%'
+                          : '0%'">
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <!-- Estado badge -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-1.5">
+                    <div [class]="'w-1.5 h-1.5 rounded-full ' + STATUS_CONFIG[contract.estado].dot"></div>
+                    <span [class]="'text-xs font-medium ' + (contract.estado === 'firmado' ? 'text-blue-700' : contract.estado === 'liquidado' ? 'text-emerald-700' : contract.estado === 'cancelado' ? 'text-red-600' : 'text-slate-600')">
+                      {{ STATUS_CONFIG[contract.estado].label }}
+                    </span>
+                  </div>
+                </td>
+                <!-- Total -->
+                <td class="px-6 py-4 text-right font-semibold text-slate-800">
+                  {{ contract.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                </td>
+                <!-- Acciones -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button
+                      (click)="openEdit(contract)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      aria-label="Editar contrato">
+                      <i class="pi pi-pencil text-sm"></i>
+                    </button>
+                    <button
+                      (click)="confirmDelete(contract)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Eliminar contrato">
+                      <i class="pi pi-trash text-sm"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── DRAWER CREAR / EDITAR ─────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div
+      class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm"
+      (click)="closeDrawer()"
+      aria-hidden="true"></div>
+
+    <aside
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nuevo contrato' : 'Editar contrato'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
+
+      <!-- Drawer header -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nuevo contrato' : selectedContract()?.folio }}
+          </h2>
+          @if (drawerMode() === 'edit' && selectedContract()) {
+            <p class="text-xs text-slate-400 mt-0.5">
+              {{ selectedContract()!.client?.nombre ?? 'Sin cliente' }} · {{ selectedContract()!.fecha_evento }}
+            </p>
+          }
+        </div>
+        <button
+          (click)="closeDrawer()"
+          class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+          aria-label="Cerrar panel">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <!-- Tabs (solo en modo edición) -->
+      @if (drawerMode() === 'edit') {
+        <div class="flex border-b border-slate-100 shrink-0">
+          <button
+            (click)="setActivePanel('detail')"
+            [class]="'flex-1 py-3 text-sm font-medium transition-colors '
+              + (activePanel() === 'detail'
+                ? 'text-rojo-brillante border-b-2 border-rojo-brillante'
+                : 'text-slate-500 hover:text-slate-700')">
+            Datos del contrato
+          </button>
+          <button
+            (click)="setActivePanel('payment')"
+            [class]="'flex-1 py-3 text-sm font-medium transition-colors '
+              + (activePanel() === 'payment'
+                ? 'text-rojo-brillante border-b-2 border-rojo-brillante'
+                : 'text-slate-500 hover:text-slate-700')">
+            Pagos
+            @if (selectedContract()?.payments?.length) {
+              <span class="ml-1.5 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                {{ selectedContract()!.payments!.length }}
+              </span>
+            }
+          </button>
+        </div>
+      }
+
+      <!-- ── PANEL: DATOS DEL CONTRATO ─── -->
+      @if (activePanel() === 'detail') {
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto">
+          <div class="px-6 py-6 space-y-5">
+
+            <!-- Prefill desde cotización (solo crear) -->
+            @if (drawerMode() === 'create' && approvedQuotes().length > 0) {
+              <div class="p-3.5 bg-blue-50 rounded-xl border border-blue-100">
+                <label for="c-quote" class="block text-xs font-semibold text-blue-700 mb-1.5">
+                  <i class="pi pi-file mr-1"></i>
+                  Crear desde cotización aprobada (opcional)
+                </label>
+                <select
+                  id="c-quote"
+                  formControlName="quote_id"
+                  (change)="onQuoteSelected($event)"
+                  class="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all">
+                  <option value="">Seleccionar cotización…</option>
+                  @for (q of approvedQuotes(); track q.id) {
+                    <option [value]="q.id">{{ q.folio }} — {{ q.client?.nombre ?? 'Sin cliente' }} — {{ q.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- Cliente -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Cliente</label>
+              @if (selectedClientName()) {
+                <div class="flex items-center gap-2 px-3.5 py-2.5 border border-emerald-200 rounded-xl bg-emerald-50">
+                  <div class="w-7 h-7 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+                    {{ selectedClientName().charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="flex-1 text-sm font-medium text-slate-800">{{ selectedClientName() }}</span>
+                  <button type="button" (click)="clearClient()" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Quitar cliente">
+                    <i class="pi pi-times text-xs"></i>
+                  </button>
+                </div>
+              } @else {
+                <div class="relative">
+                  <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente…"
+                    [value]="clientQuery()"
+                    (input)="onClientInput($event)"
+                    (focus)="clientDropdownOpen.set(true)"
+                    class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+                    autocomplete="off" />
+                  @if (clientDropdownOpen() && clientResults().length > 0) {
+                    <div class="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                      @for (c of clientResults(); track c.id) {
+                        <button
+                          type="button"
+                          (click)="selectClient(c)"
+                          class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left transition-colors">
+                          <div class="w-7 h-7 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+                            {{ c.nombre.charAt(0).toUpperCase() }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-medium text-slate-800">{{ c.nombre }}</p>
+                            @if (c.email) { <p class="text-xs text-slate-400">{{ c.email }}</p> }
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Fecha evento + horario -->
+            <div class="grid grid-cols-3 gap-4">
+              <div class="col-span-3 sm:col-span-1">
+                <label for="c-fecha" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Fecha evento <span class="text-rojo-brillante" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="c-fecha"
+                  type="date"
+                  formControlName="fecha_evento"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <div class="col-span-3 sm:col-span-1">
+                <label for="c-inicio" class="block text-sm font-medium text-slate-700 mb-1.5">Hora inicio</label>
+                <input
+                  id="c-inicio"
+                  type="time"
+                  formControlName="hora_inicio"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <div class="col-span-3 sm:col-span-1">
+                <label for="c-fin" class="block text-sm font-medium text-slate-700 mb-1.5">Hora fin</label>
+                <input
+                  id="c-fin"
+                  type="time"
+                  formControlName="hora_fin"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+            </div>
+
+            <!-- Montos -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label for="c-renta" class="block text-sm font-medium text-slate-700 mb-1.5">Renta del salón ($)</label>
+                <input
+                  id="c-renta"
+                  type="number"
+                  formControlName="salon_renta"
+                  min="0"
+                  step="0.01"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <div>
+                <label for="c-total" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Total contrato ($) <span class="text-rojo-brillante" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="c-total"
+                  type="number"
+                  formControlName="total_contrato"
+                  min="0"
+                  step="0.01"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <div>
+                <label for="c-deposito" class="block text-sm font-medium text-slate-700 mb-1.5">Anticipo pagado ($)</label>
+                <input
+                  id="c-deposito"
+                  type="number"
+                  formControlName="deposito_pagado"
+                  min="0"
+                  step="0.01"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+            </div>
+
+            <!-- Saldo pendiente calculado -->
+            @if (form.get('total_contrato')!.value) {
+              <div [class]="'flex items-center justify-between px-4 py-3 rounded-xl border '
+                + (saldoPendiente() === 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200')">
+                <div class="flex items-center gap-2">
+                  <i [class]="'pi text-sm ' + (saldoPendiente() === 0 ? 'pi-check-circle text-emerald-600' : 'pi-clock text-amber-600')"></i>
+                  <span [class]="'text-sm font-medium ' + (saldoPendiente() === 0 ? 'text-emerald-700' : 'text-amber-700')">
+                    {{ saldoPendiente() === 0 ? 'Contrato liquidado' : 'Saldo pendiente' }}
+                  </span>
+                </div>
+                <span [class]="'font-bold ' + (saldoPendiente() === 0 ? 'text-emerald-700' : 'text-amber-700')">
+                  {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                </span>
+              </div>
+            }
+
+            <!-- Estado -->
+            <div>
+              <label for="c-estado" class="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
+              <select
+                id="c-estado"
+                formControlName="estado"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                @for (opt of statusOptions; track opt.value) {
+                  @if (opt.value !== 'all') {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                }
+              </select>
+            </div>
+
+            <!-- Notas -->
+            <div>
+              <label for="c-notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+              <textarea
+                id="c-notas"
+                formControlName="notas"
+                rows="2"
+                placeholder="Condiciones especiales, observaciones…"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none"></textarea>
+            </div>
+
+          </div>
+        </form>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+          <button
+            type="button"
+            (click)="closeDrawer()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="onSubmit()"
+            [disabled]="form.invalid || saving()"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+            [class]="form.invalid || saving()
+              ? 'bg-slate-300 cursor-not-allowed'
+              : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+            @if (saving()) {
+              <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+            }
+            {{ drawerMode() === 'create' ? 'Crear contrato' : 'Guardar cambios' }}
+          </button>
+        </div>
+      }
+
+      <!-- ── PANEL: PAGOS ─── -->
+      @if (activePanel() === 'payment') {
+        <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+
+          <!-- Resumen de cobro -->
+          @if (selectedContract()) {
+            <div class="bg-slate-50 rounded-2xl p-5 space-y-3">
+              <div class="flex justify-between text-sm">
+                <span class="text-slate-500">Total contrato</span>
+                <span class="font-bold text-slate-800">{{ selectedContract()!.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-slate-500">Pagado</span>
+                <span class="font-semibold text-emerald-600">{{ selectedContract()!.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+              </div>
+              <!-- Progress bar -->
+              <div class="h-3 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all"
+                  [class]="selectedContract()!.saldo_pendiente === 0 ? 'bg-emerald-500' : 'bg-blue-500'"
+                  [style.width]="paymentProgress() + '%'">
+                </div>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span [class]="'font-bold ' + (selectedContract()!.saldo_pendiente === 0 ? 'text-emerald-600' : 'text-amber-600')">
+                  {{ selectedContract()!.saldo_pendiente === 0 ? '¡Liquidado!' : 'Saldo: ' + (selectedContract()!.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') }}
+                </span>
+                <span class="text-slate-400 text-xs">{{ paymentProgress() }}% cobrado</span>
+              </div>
+            </div>
+          }
+
+          <!-- Historial de pagos -->
+          @if (selectedContract()?.payments?.length) {
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Historial</h3>
+              <div class="space-y-2">
+                @for (payment of selectedContract()!.payments!; track payment.id) {
+                  <div class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <i class="pi pi-check text-xs text-emerald-600"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-slate-800">{{ payment.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+                      <p class="text-xs text-slate-400">{{ payment.fecha }} · {{ payment.metodo }}</p>
+                      @if (payment.notas) {
+                        <p class="text-xs text-slate-400 truncate">{{ payment.notas }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Formulario nuevo pago -->
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700 mb-3">Registrar pago</h3>
+            <form [formGroup]="paymentForm" (ngSubmit)="onAddPayment()" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="p-monto" class="block text-sm font-medium text-slate-700 mb-1.5">
+                    Monto ($) <span class="text-rojo-brillante" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="p-monto"
+                    type="number"
+                    formControlName="monto"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+                </div>
+                <div>
+                  <label for="p-fecha" class="block text-sm font-medium text-slate-700 mb-1.5">Fecha</label>
+                  <input
+                    id="p-fecha"
+                    type="date"
+                    formControlName="fecha"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+                </div>
+              </div>
+              <div>
+                <label for="p-metodo" class="block text-sm font-medium text-slate-700 mb-1.5">Método de pago</label>
+                <div class="grid grid-cols-3 gap-2">
+                  @for (m of [['efectivo','Efectivo','pi-money-bill'],['tarjeta','Tarjeta','pi-credit-card'],['transferencia','Transferencia','pi-send']] ; track m[0]) {
+                    <label [for]="'m-' + m[0]" class="cursor-pointer">
+                      <input type="radio" [id]="'m-' + m[0]" formControlName="metodo" [value]="m[0]" class="sr-only" />
+                      <div [class]="'flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all '
+                        + (paymentForm.get('metodo')!.value === m[0]
+                          ? 'border-rojo-brillante bg-rojo-brillante/5 text-rojo-brillante'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+                        <i [class]="'pi text-base ' + m[2]"></i>
+                        {{ m[1] }}
+                      </div>
+                    </label>
+                  }
+                </div>
+              </div>
+              <div>
+                <label for="p-notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+                <input
+                  id="p-notas"
+                  type="text"
+                  formControlName="notas"
+                  placeholder="Referencia, número de transferencia…"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <button
+                type="submit"
+                [disabled]="paymentForm.invalid || savingPayment()"
+                class="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+                [class]="paymentForm.invalid || savingPayment()
+                  ? 'bg-slate-300 cursor-not-allowed'
+                  : 'bg-emerald-500 hover:bg-emerald-600'">
+                @if (savingPayment()) {
+                  <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                }
+                <i class="pi pi-plus text-sm"></i>
+                Registrar pago
+              </button>
+            </form>
+          </div>
+
+        </div>
+      }
+
+    </aside>
+  }
+
+  <!-- ── MODAL CONFIRMAR BORRADO ────────────────────────────── -->
+  @if (deleteTarget()) {
+    <div
+      class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="del-contract-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-trash text-red-600"></i>
+          </div>
+          <div>
+            <h3 id="del-contract-title" class="font-bold text-slate-800">Eliminar contrato</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              ¿Eliminar <strong>{{ deleteTarget()!.folio }}</strong>? Se eliminarán también los pagos registrados.
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button
+            (click)="cancelDelete()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            (click)="executeDelete()"
+            class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

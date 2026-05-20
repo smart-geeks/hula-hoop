@@ -1,0 +1,287 @@
+<div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Clientes</h1>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }}</p>
+    </div>
+    <button
+      (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nuevo cliente
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="relative">
+    <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+    <input
+      type="search"
+      placeholder="Buscar por nombre, email o teléfono…"
+      (input)="onSearch($event)"
+      class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+      aria-label="Buscar clientes" />
+  </div>
+
+  <!-- Table card -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+
+    @if (loading()) {
+      <div class="divide-y divide-slate-100">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="w-10 h-10 rounded-full bg-slate-100 animate-pulse shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-100 animate-pulse rounded w-48"></div>
+              <div class="h-3 bg-slate-100 animate-pulse rounded w-64"></div>
+            </div>
+            <div class="h-3 bg-slate-100 animate-pulse rounded w-28"></div>
+          </div>
+        }
+      </div>
+
+    } @else if (filteredClients().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-users text-2xl text-slate-300"></i>
+        </div>
+        @if (searchQuery()) {
+          <p class="text-sm font-medium text-slate-500">Sin resultados para "{{ searchQuery() }}"</p>
+          <p class="text-xs mt-1">Intenta con otro término de búsqueda</p>
+        } @else {
+          <p class="text-sm font-medium text-slate-500">Aún no hay clientes</p>
+          <p class="text-xs mt-1">Crea el primero con el botón de arriba</p>
+        }
+      </div>
+
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left px-6 py-3 font-medium">Cliente</th>
+              <th class="text-left px-6 py-3 font-medium hidden md:table-cell">Teléfono</th>
+              <th class="text-left px-6 py-3 font-medium hidden lg:table-cell">RFC</th>
+              <th class="text-right px-6 py-3 font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (client of filteredClients(); track client.id) {
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0 select-none">
+                      {{ getInitials(client.nombre) }}
+                    </div>
+                    <div>
+                      <p class="font-semibold text-slate-800">{{ client.nombre }}</p>
+                      @if (client.email) {
+                        <p class="text-xs text-slate-400">{{ client.email }}</p>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-slate-600 hidden md:table-cell">
+                  {{ client.telefono ?? '—' }}
+                </td>
+                <td class="px-6 py-4 text-slate-500 text-xs hidden lg:table-cell">
+                  {{ client.rfc ?? '—' }}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      (click)="openEdit(client)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      aria-label="Editar cliente">
+                      <i class="pi pi-pencil text-sm"></i>
+                    </button>
+                    <button
+                      (click)="confirmDelete(client)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Eliminar cliente">
+                      <i class="pi pi-trash text-sm"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── DRAWER CREATE / EDIT ──────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div
+      class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm"
+      (click)="closeDrawer()"
+      aria-hidden="true"></div>
+
+    <aside
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nuevo cliente' : 'Editar cliente'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col">
+
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nuevo cliente' : 'Editar cliente' }}
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            {{ drawerMode() === 'create' ? 'Completa los datos del cliente' : 'Modifica los datos del cliente' }}
+          </p>
+        </div>
+        <button
+          (click)="closeDrawer()"
+          class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+          aria-label="Cerrar panel">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+
+        <div>
+          <label for="nombre" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Nombre <span class="text-rojo-brillante" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nombre"
+            type="text"
+            formControlName="nombre"
+            placeholder="Nombre completo o empresa"
+            autocomplete="name"
+            class="w-full px-3.5 py-2.5 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
+            [class]="form.get('nombre')!.invalid && form.get('nombre')!.touched
+              ? 'border-red-300 focus:border-red-400 bg-red-50'
+              : 'border-slate-200 focus:border-rojo-brillante bg-white'" />
+          @if (form.get('nombre')!.invalid && form.get('nombre')!.touched) {
+            <p class="text-xs text-red-500 mt-1" role="alert">El nombre es obligatorio (mínimo 2 caracteres)</p>
+          }
+        </div>
+
+        <div>
+          <label for="telefono" class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+          <input
+            id="telefono"
+            type="tel"
+            formControlName="telefono"
+            placeholder="Ej. 8112345678"
+            autocomplete="tel"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="correo@ejemplo.com"
+            autocomplete="email"
+            class="w-full px-3.5 py-2.5 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
+            [class]="form.get('email')!.invalid && form.get('email')!.touched
+              ? 'border-red-300 focus:border-red-400 bg-red-50'
+              : 'border-slate-200 focus:border-rojo-brillante bg-white'" />
+          @if (form.get('email')!.invalid && form.get('email')!.touched) {
+            <p class="text-xs text-red-500 mt-1" role="alert">El formato del correo no es válido</p>
+          }
+        </div>
+
+        <div>
+          <label for="rfc" class="block text-sm font-medium text-slate-700 mb-1.5">RFC</label>
+          <input
+            id="rfc"
+            type="text"
+            formControlName="rfc"
+            placeholder="Ej. XAXX010101000"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+            style="text-transform: uppercase" />
+        </div>
+
+        <div>
+          <label for="notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas internas</label>
+          <textarea
+            id="notas"
+            formControlName="notas"
+            rows="3"
+            placeholder="Preferencias, alergias, observaciones…"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none"></textarea>
+        </div>
+
+      </form>
+
+      <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+        <button
+          type="button"
+          (click)="closeDrawer()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          (click)="onSubmit()"
+          [disabled]="form.invalid || saving()"
+          class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+          [class]="form.invalid || saving()
+            ? 'bg-slate-300 cursor-not-allowed'
+            : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+          @if (saving()) {
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          }
+          {{ drawerMode() === 'create' ? 'Crear cliente' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </aside>
+  }
+
+  <!-- ── MODAL CONFIRMAR BORRADO ────────────────────────────── -->
+  @if (deleteTarget()) {
+    <div
+      class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-dialog-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-trash text-red-600"></i>
+          </div>
+          <div>
+            <h3 id="delete-dialog-title" class="font-bold text-slate-800">Eliminar cliente</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              ¿Estás seguro de eliminar a <strong>{{ deleteTarget()!.nombre }}</strong>?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button
+            (click)="cancelDelete()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            (click)="executeDelete()"
+            class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

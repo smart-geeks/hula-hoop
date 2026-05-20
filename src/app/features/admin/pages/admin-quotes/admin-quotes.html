@@ -1,0 +1,447 @@
+<div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Cotizaciones</h1>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredQuotes().length }} cotización{{ filteredQuotes().length !== 1 ? 'es' : '' }}</p>
+    </div>
+    <button
+      (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nueva cotización
+    </button>
+  </div>
+
+  <!-- Status filter tabs -->
+  <div class="flex gap-2 flex-wrap">
+    @for (opt of statusOptions; track opt.value) {
+      <button
+        (click)="setStatusFilter(opt.value)"
+        [class]="'px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors '
+          + (statusFilter() === opt.value
+            ? 'bg-rojo-brillante text-white shadow-sm'
+            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')">
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    @if (loading()) {
+      <div class="divide-y divide-slate-100">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-100 animate-pulse rounded w-32"></div>
+              <div class="h-3 bg-slate-100 animate-pulse rounded w-48"></div>
+            </div>
+            <div class="h-6 bg-slate-100 animate-pulse rounded-full w-20"></div>
+            <div class="h-3.5 bg-slate-100 animate-pulse rounded w-24"></div>
+          </div>
+        }
+      </div>
+
+    } @else if (filteredQuotes().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-file text-2xl text-slate-300"></i>
+        </div>
+        <p class="text-sm font-medium text-slate-500">Sin cotizaciones</p>
+        <p class="text-xs mt-1">Crea la primera con el botón de arriba</p>
+      </div>
+
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left px-6 py-3 font-medium">Folio / Cliente</th>
+              <th class="text-left px-6 py-3 font-medium hidden md:table-cell">Fecha evento</th>
+              <th class="text-left px-6 py-3 font-medium">Estado</th>
+              <th class="text-right px-6 py-3 font-medium">Total</th>
+              <th class="text-right px-6 py-3 font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (quote of filteredQuotes(); track quote.id) {
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="px-6 py-4">
+                  <p class="font-semibold text-slate-800">{{ quote.folio }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">
+                    {{ quote.client?.nombre ?? 'Sin cliente asignado' }}
+                  </p>
+                </td>
+                <td class="px-6 py-4 text-slate-500 hidden md:table-cell">
+                  {{ quote.fecha_evento ?? '—' }}
+                </td>
+                <td class="px-6 py-4">
+                  <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ' + STATUS_CONFIG[quote.estado].classes">
+                    {{ STATUS_CONFIG[quote.estado].label }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right font-semibold text-slate-800">
+                  {{ quote.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <!-- Convertir a contrato (solo aprobadas) -->
+                    @if (quote.estado === 'aprobada') {
+                      <button
+                        (click)="convertToContract(quote)"
+                        [disabled]="converting()"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
+                        title="Convertir a contrato">
+                        <i class="pi pi-file-edit text-xs"></i>
+                        <span class="hidden sm:inline">Contrato</span>
+                      </button>
+                    }
+                    <!-- Editar -->
+                    <button
+                      (click)="openEdit(quote)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      aria-label="Editar cotización">
+                      <i class="pi pi-pencil text-sm"></i>
+                    </button>
+                    <!-- Eliminar -->
+                    <button
+                      (click)="confirmDelete(quote)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Eliminar cotización">
+                      <i class="pi pi-trash text-sm"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── DRAWER CREAR / EDITAR ─────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div
+      class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm"
+      (click)="closeDrawer()"
+      aria-hidden="true"></div>
+
+    <aside
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nueva cotización' : 'Editar cotización'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
+
+      <!-- Drawer header -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nueva cotización' : 'Editar ' + selectedQuote()?.folio }}
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            {{ drawerMode() === 'create' ? 'Completa los datos y agrega los conceptos' : 'Modifica los datos de la cotización' }}
+          </p>
+        </div>
+        <button
+          (click)="closeDrawer()"
+          class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+          aria-label="Cerrar panel">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <!-- Drawer body -->
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto">
+        <div class="px-6 py-6 space-y-6">
+
+          <!-- Row: Cliente + Estado -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <!-- Cliente (custom autocomplete) -->
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Cliente</label>
+              @if (selectedClientName()) {
+                <!-- Selected chip -->
+                <div class="flex items-center gap-2 px-3.5 py-2.5 border border-emerald-200 rounded-xl bg-emerald-50">
+                  <div class="w-7 h-7 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+                    {{ selectedClientName().charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="flex-1 text-sm font-medium text-slate-800">{{ selectedClientName() }}</span>
+                  <button type="button" (click)="clearClient()" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Quitar cliente">
+                    <i class="pi pi-times text-xs"></i>
+                  </button>
+                </div>
+              } @else {
+                <!-- Search input -->
+                <div class="relative">
+                  <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente…"
+                    [value]="clientQuery()"
+                    (input)="onClientInput($event)"
+                    (focus)="clientDropdownOpen.set(true)"
+                    class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+                    autocomplete="off" />
+                  @if (clientDropdownOpen() && clientResults().length > 0) {
+                    <div class="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                      @for (c of clientResults(); track c.id) {
+                        <button
+                          type="button"
+                          (click)="selectClient(c)"
+                          class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left transition-colors">
+                          <div class="w-7 h-7 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+                            {{ c.nombre.charAt(0).toUpperCase() }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-medium text-slate-800">{{ c.nombre }}</p>
+                            @if (c.email) {
+                              <p class="text-xs text-slate-400">{{ c.email }}</p>
+                            }
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Fecha cotización -->
+            <div>
+              <label for="q-fecha" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Fecha <span class="text-rojo-brillante" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="q-fecha"
+                type="date"
+                formControlName="fecha"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+
+            <!-- Fecha del evento -->
+            <div>
+              <label for="q-fecha-evento" class="block text-sm font-medium text-slate-700 mb-1.5">Fecha del evento</label>
+              <input
+                id="q-fecha-evento"
+                type="date"
+                formControlName="fecha_evento"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label for="q-estado" class="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
+              <select
+                id="q-estado"
+                formControlName="estado"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                @for (opt of statusOptions; track opt.value) {
+                  @if (opt.value !== 'all') {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                }
+              </select>
+            </div>
+
+            <!-- Descuento -->
+            <div>
+              <label for="q-descuento" class="block text-sm font-medium text-slate-700 mb-1.5">Descuento ($)</label>
+              <input
+                id="q-descuento"
+                type="number"
+                formControlName="descuento"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+          </div>
+
+          <!-- Items / Conceptos -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-slate-700">Conceptos</h3>
+              <button
+                type="button"
+                (click)="addItem()"
+                class="flex items-center gap-1.5 text-xs font-medium text-rojo-brillante hover:bg-rojo-brillante/5 px-2.5 py-1.5 rounded-lg transition-colors">
+                <i class="pi pi-plus text-xs"></i>
+                Agregar concepto
+              </button>
+            </div>
+
+            <!-- Items header -->
+            <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-3 pb-1.5 text-xs text-slate-400 font-medium uppercase tracking-wide">
+              <div class="col-span-6">Descripción</div>
+              <div class="col-span-2 text-center">Cantidad</div>
+              <div class="col-span-3 text-right">Precio unit.</div>
+              <div class="col-span-1"></div>
+            </div>
+
+            <!-- Force re-render on item add/remove by referencing itemCount() -->
+            <div [attr.data-items]="itemCount()" formArrayName="items" class="space-y-2">
+              @for (ctrl of items.controls; track $index; let i = $index) {
+                <div [formGroupName]="i"
+                  class="grid grid-cols-12 gap-2 items-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                  <!-- Descripción -->
+                  <div class="col-span-12 sm:col-span-6">
+                    <input
+                      type="text"
+                      formControlName="descripcion"
+                      placeholder="Descripción del concepto"
+                      [class]="'w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all '
+                        + (ctrl.get('descripcion')!.invalid && ctrl.get('descripcion')!.touched
+                          ? 'border-red-300 bg-red-50'
+                          : 'border-slate-200 bg-white focus:border-rojo-brillante')" />
+                  </div>
+                  <!-- Cantidad -->
+                  <div class="col-span-4 sm:col-span-2">
+                    <input
+                      type="number"
+                      formControlName="cantidad"
+                      min="0.01"
+                      step="1"
+                      placeholder="1"
+                      class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all text-center" />
+                  </div>
+                  <!-- Precio unitario -->
+                  <div class="col-span-6 sm:col-span-3">
+                    <div class="relative">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        formControlName="precio_unitario"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all text-right" />
+                    </div>
+                  </div>
+                  <!-- Subtotal + delete -->
+                  <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
+                    <span class="hidden sm:block text-xs text-slate-400 font-medium">
+                      {{ getItemSubtotal(i) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </span>
+                    <button
+                      type="button"
+                      (click)="removeItem(i)"
+                      [disabled]="items.length === 1"
+                      class="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Eliminar concepto">
+                      <i class="pi pi-trash text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Notas -->
+          <div>
+            <label for="q-notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+            <textarea
+              id="q-notas"
+              formControlName="notas"
+              rows="2"
+              placeholder="Condiciones, vigencia, observaciones…"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none"></textarea>
+          </div>
+
+        </div>
+      </form>
+
+      <!-- Drawer footer: totals + actions -->
+      <div class="border-t border-slate-100 shrink-0">
+        <!-- Totals summary -->
+        <div class="px-6 py-3 bg-slate-50 flex items-center justify-end gap-8 text-sm">
+          <div class="text-right">
+            <p class="text-xs text-slate-400">Subtotal</p>
+            <p class="font-semibold text-slate-700">{{ subtotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          </div>
+          @if (form.get('descuento')!.value) {
+            <div class="text-right">
+              <p class="text-xs text-slate-400">Descuento</p>
+              <p class="font-semibold text-red-500">- {{ form.get('descuento')!.value | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            </div>
+          }
+          <div class="text-right">
+            <p class="text-xs text-slate-400">Total</p>
+            <p class="text-lg font-bold text-slate-800">{{ total() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          </div>
+        </div>
+        <!-- Buttons -->
+        <div class="px-6 py-4 flex gap-3">
+          <button
+            type="button"
+            (click)="closeDrawer()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="onSubmit()"
+            [disabled]="form.invalid || saving()"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+            [class]="form.invalid || saving()
+              ? 'bg-slate-300 cursor-not-allowed'
+              : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+            @if (saving()) {
+              <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+            }
+            {{ drawerMode() === 'create' ? 'Crear cotización' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </div>
+    </aside>
+  }
+
+  <!-- ── MODAL CONFIRMAR BORRADO ────────────────────────────── -->
+  @if (deleteTarget()) {
+    <div
+      class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="del-quote-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-trash text-red-600"></i>
+          </div>
+          <div>
+            <h3 id="del-quote-title" class="font-bold text-slate-800">Eliminar cotización</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              ¿Eliminar <strong>{{ deleteTarget()!.folio }}</strong>?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button
+            (click)="cancelDelete()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            (click)="executeDelete()"
+            class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

@@ -1,0 +1,77 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Calendario</h1>
+      <p class="text-slate-500 text-sm mt-0.5">Vista de todos los eventos del salón</p>
+    </div>
+    <a routerLink="../contratos"
+       class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nuevo evento
+    </a>
+  </div>
+
+  <!-- Month nav -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <button (click)="prevMonth()" class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-600">
+        <i class="pi pi-chevron-left text-sm"></i>
+      </button>
+      <h2 class="font-semibold text-slate-800 capitalize">{{ currentMonthLabel() }}</h2>
+      <button (click)="nextMonth()" class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-600">
+        <i class="pi pi-chevron-right text-sm"></i>
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="p-8 flex items-center justify-center">
+        <div class="w-8 h-8 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    } @else {
+      <div class="p-6">
+        @if (getEventsForMonth().length === 0) {
+          <div class="flex flex-col items-center justify-center py-10 text-slate-400">
+            <i class="pi pi-calendar text-4xl mb-3"></i>
+            <p class="text-sm">Sin eventos para este mes</p>
+          </div>
+        } @else {
+          <div class="space-y-3">
+            @for (event of getEventsForMonth(); track event.id) {
+              <div class="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 flex flex-col items-center justify-center shrink-0">
+                  <span class="text-xs font-bold text-slate-500 uppercase">
+                    {{ event.fecha_evento | date:'MMM':'':'es' }}
+                  </span>
+                  <span class="text-lg font-bold text-slate-800 leading-none">
+                    {{ event.fecha_evento | date:'d' }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">
+                    {{ event.client?.nombre ?? 'Sin cliente' }}
+                  </p>
+                  <p class="text-xs text-slate-400">
+                    {{ event.folio }} · {{ event.hora_inicio ?? '—' }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <div [class]="'w-2 h-2 rounded-full ' + getStatusColor(event.estado)"></div>
+                  <span class="text-xs text-slate-500 capitalize hidden sm:inline">{{ event.estado }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-4 text-xs text-slate-500">
+    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-slate-400"></div>Borrador</div>
+    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-blue-500"></div>Contratado</div>
+    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-emerald-500"></div>Liquidado</div>
+    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-red-400"></div>Cancelado</div>
+  </div>
+</div>

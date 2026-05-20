@@ -20,7 +20,16 @@ export class AuthService {
   readonly currentUser = signal<User | null>(null);
   readonly userProfile = signal<UserProfile | null>(null);
   readonly isLoggedIn = computed(() => this.currentUser() !== null);
-  readonly isAdmin = computed(() => this.userProfile()?.role === 'admin');
+  readonly isOwner = computed(() => this.userProfile()?.role === 'owner');
+  readonly isAdmin = computed(() => {
+    const role = this.userProfile()?.role;
+    return role === 'admin' || role === 'owner';
+  });
+  readonly isStaff = computed(() => this.userProfile()?.role === 'staff');
+  readonly canManage = computed(() => {
+    const role = this.userProfile()?.role;
+    return role === 'owner' || role === 'admin';
+  });
   readonly isPasswordRecovery = signal(false);
 
   /** Tracks the user ID for which we already have a profile loaded */

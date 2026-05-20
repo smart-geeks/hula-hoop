@@ -1,82 +1,229 @@
-<div class="min-h-screen bg-neutro-50">
-  <!-- Mobile nav -->
-  <nav class="md:hidden flex gap-2 overflow-x-auto p-3 bg-white border-b border-neutro-200 sticky top-24 z-40">
-    <a routerLink="reservas" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Reservas
-    </a>
-    <a routerLink="paquetes" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Paquetes
-    </a>
-    <a routerLink="extras" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Extras
-    </a>
-    <a routerLink="meriendas" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Meriendas
-    </a>
-    <a routerLink="horarios" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Horarios
-    </a>
-    <a routerLink="restaurante" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Restaurante
-    </a>
-    <a routerLink="galeria" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Galería
-    </a>
-    <a routerLink="configuracion" routerLinkActive="bg-rojo-brillante text-white"
-       class="px-3 py-1.5 rounded-full text-sm whitespace-nowrap bg-neutro-100 text-neutro-700">
-      Config
-    </a>
-  </nav>
+<!-- ═══════════════════════════════════════════════════
+     MOBILE DRAWER (< md)
+════════════════════════════════════════════════════ -->
+<p-drawer
+  [(visible)]="mobileSidebarVisible"
+  position="left"
+  [style]="{ width: '280px', padding: '0' }"
+  [showCloseIcon]="false"
+>
+  <ng-template #header>
+    <div class="flex items-center justify-between w-full px-4 pt-3 pb-1">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-rojo-brillante flex items-center justify-center">
+          <i class="pi pi-star text-white text-sm"></i>
+        </div>
+        <span class="font-display text-lg font-bold text-slate-800">Gestión</span>
+      </div>
+      <button
+        (click)="closeMobileSidebar()"
+        class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        aria-label="Cerrar menú"
+      >
+        <i class="pi pi-times text-sm"></i>
+      </button>
+    </div>
+  </ng-template>
 
-  <div class="flex">
-    <!-- Sidebar (desktop) -->
-    <aside class="hidden md:block w-64 min-h-screen bg-white border-r border-neutro-200 p-4 sticky top-24 self-start h-[calc(100vh-6rem)]">
-      <h2 class="text-lg font-bold font-display text-rojo-brillante mb-6">Admin Panel</h2>
-      <nav class="flex flex-col gap-1">
-        <a routerLink="reservas" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Reservas
-        </a>
-        <a routerLink="paquetes" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Paquetes
-        </a>
-        <a routerLink="extras" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Extras
-        </a>
-        <a routerLink="meriendas" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Meriendas
-        </a>
-        <a routerLink="horarios" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Horarios
-        </a>
-        <a routerLink="restaurante" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Restaurante
-        </a>
-        <a routerLink="galeria" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Galería
-        </a>
-        <a routerLink="configuracion" routerLinkActive="bg-rojo-brillante/10 text-rojo-brillante font-semibold"
-           class="px-3 py-2 rounded-lg text-neutro-700 hover:bg-neutro-100 transition-colors">
-          Configuración
-        </a>
-      </nav>
-    </aside>
+  <div class="flex flex-col h-full">
+    <!-- Nav -->
+    <nav class="flex-1 overflow-y-auto px-3 py-2">
+      @for (section of navSections; track section.label) {
+        <div class="mb-4">
+          <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            {{ section.label }}
+          </p>
+          @for (item of section.items; track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="bg-rojo-brillante text-white shadow-sm"
+              [routerLinkActiveOptions]="{ exact: false }"
+              (click)="closeMobileSidebar()"
+              class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all mb-0.5 group"
+            >
+              <i [class]="'pi ' + item.icon + ' text-base w-5 text-center'"></i>
+              <span class="text-sm font-medium">{{ item.label }}</span>
+            </a>
+          }
+        </div>
+      }
+    </nav>
 
-    <!-- Content -->
-    <main class="flex-1 p-4 md:p-6 min-w-0">
+    <!-- User footer -->
+    <div class="border-t border-slate-200 p-4">
+      <div class="flex items-center gap-3 mb-3">
+        <p-avatar
+          [label]="userInitials()"
+          class="bg-rojo-brillante text-white font-semibold"
+          size="normal"
+          shape="circle"
+        />
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-slate-800 truncate">
+            {{ userProfile()?.full_name ?? 'Usuario' }}
+          </p>
+          <p class="text-xs text-slate-400 truncate">{{ userProfile()?.role }}</p>
+        </div>
+      </div>
+      <button
+        (click)="logout()"
+        class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-rojo-brillante transition-colors text-sm"
+      >
+        <i class="pi pi-sign-out"></i>
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
+  </div>
+</p-drawer>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN LAYOUT
+════════════════════════════════════════════════════ -->
+<div class="flex min-h-screen bg-slate-50">
+
+  <!-- ─── DESKTOP SIDEBAR ─── -->
+  <aside
+    [class]="sidebarCollapsed() ? 'w-[72px]' : 'w-64'"
+    class="hidden md:flex flex-col bg-white border-r border-slate-200 sticky top-0 h-screen transition-all duration-300 ease-in-out shrink-0 z-40"
+  >
+    <!-- Brand -->
+    <div class="flex items-center gap-3 px-4 py-5 border-b border-slate-100 min-h-[72px]">
+      <div class="w-9 h-9 rounded-xl bg-rojo-brillante flex items-center justify-center shrink-0">
+        <i class="pi pi-star text-white"></i>
+      </div>
+      @if (!sidebarCollapsed()) {
+        <div class="overflow-hidden">
+          <p class="font-display font-bold text-slate-800 leading-tight whitespace-nowrap">Gestión</p>
+          <p class="text-[10px] text-slate-400 whitespace-nowrap">Panel de control</p>
+        </div>
+      }
+    </div>
+
+    <!-- Nav sections -->
+    <nav class="flex-1 overflow-y-auto py-3 px-2">
+      @for (section of navSections; track section.label) {
+        <div class="mb-4">
+          @if (!sidebarCollapsed()) {
+            <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              {{ section.label }}
+            </p>
+          } @else {
+            <div class="border-t border-slate-100 mb-3 mx-2"></div>
+          }
+
+          @for (item of section.items; track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="!bg-rojo-brillante !text-white shadow-sm"
+              [routerLinkActiveOptions]="{ exact: false }"
+              [pTooltip]="sidebarCollapsed() ? item.label : ''"
+              tooltipPosition="right"
+              [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-3'"
+              class="flex items-center py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 mb-0.5 w-full"
+            >
+              <i [class]="'pi ' + item.icon + ' text-base shrink-0 ' + (sidebarCollapsed() ? '' : 'w-5 text-center')"></i>
+              @if (!sidebarCollapsed()) {
+                <span class="text-sm font-medium whitespace-nowrap">{{ item.label }}</span>
+              }
+            </a>
+          }
+        </div>
+      }
+    </nav>
+
+    <!-- Collapse toggle + config -->
+    <div class="border-t border-slate-100 p-2">
+      <a
+        routerLink="configuracion"
+        routerLinkActive="!bg-rojo-brillante !text-white"
+        [pTooltip]="sidebarCollapsed() ? 'Configuración' : ''"
+        tooltipPosition="right"
+        [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-3'"
+        class="flex items-center py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all mb-1 w-full"
+      >
+        <i class="pi pi-cog text-base shrink-0"></i>
+        @if (!sidebarCollapsed()) {
+          <span class="text-sm font-medium">Configuración</span>
+        }
+      </a>
+      <button
+        (click)="toggleSidebar()"
+        [pTooltip]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
+        tooltipPosition="right"
+        [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-3'"
+        class="flex items-center py-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all w-full"
+        [attr.aria-label]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
+      >
+        <i [class]="'pi text-sm shrink-0 ' + (sidebarCollapsed() ? 'pi-angle-right' : 'pi-angle-left')"></i>
+        @if (!sidebarCollapsed()) {
+          <span class="text-xs">Colapsar</span>
+        }
+      </button>
+    </div>
+
+    <!-- User footer -->
+    <div class="border-t border-slate-200 p-3">
+      @if (!sidebarCollapsed()) {
+        <div class="flex items-center gap-2 mb-2 px-1">
+          <p-avatar
+            [label]="userInitials()"
+            class="bg-rojo-brillante text-white text-xs font-semibold shrink-0"
+            size="normal"
+            shape="circle"
+          />
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-slate-800 truncate">
+              {{ userProfile()?.full_name ?? 'Usuario' }}
+            </p>
+            <p class="text-[10px] text-slate-400 capitalize">{{ userProfile()?.role }}</p>
+          </div>
+        </div>
+      }
+      <button
+        (click)="logout()"
+        [pTooltip]="sidebarCollapsed() ? 'Cerrar sesión' : ''"
+        tooltipPosition="right"
+        [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-2'"
+        class="flex items-center py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-rojo-brillante transition-all w-full text-sm"
+        aria-label="Cerrar sesión"
+      >
+        <i class="pi pi-sign-out text-sm shrink-0"></i>
+        @if (!sidebarCollapsed()) {
+          <span class="text-xs">Cerrar sesión</span>
+        }
+      </button>
+    </div>
+  </aside>
+
+  <!-- ─── CONTENT AREA ─── -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Mobile topbar -->
+    <header class="md:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
+      <button
+        (click)="openMobileSidebar()"
+        class="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+        aria-label="Abrir menú"
+      >
+        <i class="pi pi-bars text-lg"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-rojo-brillante flex items-center justify-center">
+          <i class="pi pi-star text-white text-xs"></i>
+        </div>
+        <span class="font-display font-bold text-slate-800">Gestión</span>
+      </div>
+      <div class="flex-1"></div>
+      <p-avatar
+        [label]="userInitials()"
+        class="bg-rojo-brillante text-white text-xs font-semibold"
+        size="normal"
+        shape="circle"
+      />
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 p-4 md:p-6 min-w-0 max-w-[1600px] w-full mx-auto">
       <router-outlet />
     </main>
   </div>
