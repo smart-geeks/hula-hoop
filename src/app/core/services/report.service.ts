@@ -80,9 +80,94 @@ export interface FlujoCajaRow {
   saldo_acumulado?: number;
 }
 
+export interface MonthChartPoint {
+  label: string;
+  ingresos: number;
+  gastos: number;
+  ingresosPct: number;
+  gastosPct: number;
+}
+
+export interface DashboardData {
+  ingresos_mes: number;
+  eventos_confirmados: number;
+  por_cobrar: number;
+  gastos_mes: number;
+  low_stock_count: number;
+  chart: MonthChartPoint[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private readonly supabase = inject(SupabaseService);
+
+  async getDashboard(): Promise<DashboardData> {
+    const client = this.supabase.client;
+    if (!client) {
+      return { ingresos_mes: 0, eventos_confirmados: 0, por_cobrar: 0, gastos_mes: 0, low_stock_count: 0, chart: [] };
+    }
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const monthFrom = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+    const monthTo = new Date(y, m + 1, 0).toISOString().split('T')[0];
+
+    const [paymentsRes, contractsRes, expensesRes, inventoryRes, chartData] = await Promise.all([
+      client.from('contract_payments').select('monto').gte('fecha', monthFrom).lte('fecha', monthTo),
+      client.from('contracts').select('estado, saldo_pendiente, fecha_evento')
+        .neq('estado', 'cancelado').gte('fecha_evento', monthFrom).lte('fecha_evento', monthTo),
+      client.from('admin_expenses').select('monto').gte('fecha', monthFrom).lte('fecha', monthTo),
+      client.from('inventory_items').select('stock_actual, stock_minimo').eq('activo', true),
+      this.getMonthlyChart(6),
+    ]);
+
+    const ingresos_mes = (paymentsRes.data ?? []).reduce((s: number, r: any) => s + (r.monto ?? 0), 0);
+    const gastos_mes = (expensesRes.data ?? []).reduce((s: number, r: any) => s + (r.monto ?? 0), 0);
+    const eventos_confirmados = (contractsRes.data ?? []).filter(
+      (c: any) => c.estado === 'firmado' || c.estado === 'liquidado',
+    ).length;
+    const por_cobrar = (contractsRes.data ?? []).reduce((s: number, c: any) => s + (c.saldo_pendiente ?? 0), 0);
+    const low_stock_count = (inventoryRes.data ?? []).filter(
+      (i: any) => i.stock_minimo > 0 && i.stock_actual <= i.stock_minimo,
+    ).length;
+
+    return { ingresos_mes, eventos_confirmados, por_cobrar, gastos_mes, low_stock_count, chart: chartData };
+  }
+
+  async getMonthlyChart(monthsBack = 6): Promise<MonthChartPoint[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const months: { label: string; from: string; to: string }[] = [];
+    const now = new Date();
+    for (let i = monthsBack - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const from = d.toISOString().split('T')[0];
+      const to = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+      const label = d.toLocaleDateString('es-MX', { month: 'short' });
+      months.push({ label: label.charAt(0).toUpperCase() + label.slice(1), from, to });
+    }
+
+    const points = await Promise.all(
+      months.map(async ({ label, from, to }) => {
+        const [ing, gas] = await Promise.all([
+          client.from('contract_payments').select('monto').gte('fecha', from).lte('fecha', to),
+          client.from('admin_expenses').select('monto').gte('fecha', from).lte('fecha', to),
+        ]);
+        const ingresos = (ing.data ?? []).reduce((s: number, r: any) => s + (r.monto ?? 0), 0);
+        const gastos = (gas.data ?? []).reduce((s: number, r: any) => s + (r.monto ?? 0), 0);
+        return { label, ingresos, gastos, ingresosPct: 0, gastosPct: 0 };
+      }),
+    );
+
+    const maxVal = Math.max(...points.map((p) => Math.max(p.ingresos, p.gastos)), 1);
+    return points.map((p) => ({
+      ...p,
+      ingresosPct: Math.round((p.ingresos / maxVal) * 100),
+      gastosPct: Math.round((p.gastos / maxVal) * 100),
+    }));
+  }
 
   async getEventos(from: string, to: string, estado?: string): Promise<EventoRow[]> {
     const client = this.supabase.client;

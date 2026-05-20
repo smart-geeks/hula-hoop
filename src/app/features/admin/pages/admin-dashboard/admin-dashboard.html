@@ -1,142 +1,401 @@
 <div class="space-y-6">
-  <!-- Page header -->
-  <div>
-    <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
-    <p class="text-slate-500 text-sm mt-0.5">Resumen operativo y financiero del mes</p>
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
+      <p class="text-slate-500 text-sm mt-0.5">Resumen financiero y operativo del mes</p>
+    </div>
+    <a routerLink="../contratos"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nuevo evento
+    </a>
   </div>
 
-  <!-- KPI Cards -->
+  <!-- ── KPI Cards ── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    @for (kpi of kpis(); track kpi.label) {
-      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <div class="flex items-start justify-between mb-3">
-          <p class="text-xs font-medium text-slate-500 leading-tight">{{ kpi.label }}</p>
-          <div [class]="'w-9 h-9 rounded-xl flex items-center justify-center ' + kpi.bg">
-            <i [class]="'pi ' + kpi.icon + ' text-base ' + kpi.color"></i>
-          </div>
+
+    <!-- Ingresos del mes -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm group hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+          <i class="pi pi-dollar text-emerald-600 text-base"></i>
         </div>
-        @if (loading()) {
-          <div class="h-7 w-24 bg-slate-100 rounded-lg animate-pulse mb-1"></div>
-          <div class="h-3 w-16 bg-slate-100 rounded animate-pulse"></div>
-        } @else {
-          <p class="text-2xl font-bold text-slate-800">{{ kpi.value }}</p>
-          <p class="text-xs text-slate-400 mt-0.5">{{ kpi.sub }}</p>
-        }
+        <span class="text-xs text-slate-400 font-medium">Este mes</span>
       </div>
-    }
-  </div>
-
-  <!-- Content grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <!-- Próximos eventos -->
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <h2 class="font-semibold text-slate-800">Próximos eventos (30 días)</h2>
-        <a routerLink="../contratos" class="text-xs text-rojo-brillante font-medium hover:underline">
-          Ver todos
-        </a>
-      </div>
-
       @if (loading()) {
-        <div class="p-6 space-y-3">
-          @for (i of [1,2,3]; track i) {
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-slate-100 rounded-xl animate-pulse shrink-0"></div>
-              <div class="flex-1 space-y-2">
-                <div class="h-4 bg-slate-100 rounded animate-pulse w-48"></div>
-                <div class="h-3 bg-slate-100 rounded animate-pulse w-32"></div>
-              </div>
-            </div>
-          }
-        </div>
-      } @else if (upcomingEvents().length === 0) {
-        <div class="flex flex-col items-center justify-center py-12 text-slate-400">
-          <i class="pi pi-calendar text-4xl mb-3"></i>
-          <p class="text-sm">Sin eventos en los próximos 30 días</p>
-          <a routerLink="../contratos" class="mt-3 text-xs text-rojo-brillante font-medium hover:underline">
-            Crear contrato
-          </a>
-        </div>
+        <div class="h-8 w-28 bg-slate-100 rounded-lg animate-pulse mb-2"></div>
+        <div class="h-3 w-20 bg-slate-100 rounded animate-pulse"></div>
       } @else {
-        <div class="divide-y divide-slate-100">
-          @for (event of upcomingEvents(); track event.id) {
-            <div class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
-              <!-- Date badge -->
-              <div class="w-12 h-12 rounded-xl bg-slate-100 flex flex-col items-center justify-center shrink-0">
-                <span class="text-xs font-bold text-slate-600 uppercase leading-none">
-                  {{ event.fecha_evento | date:'MMM':'':'es' }}
-                </span>
-                <span class="text-lg font-bold text-slate-800 leading-none">
-                  {{ event.fecha_evento | date:'d' }}
-                </span>
-              </div>
-              <!-- Info -->
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-slate-800 truncate">
-                  {{ event.client?.nombre ?? 'Cliente sin nombre' }}
-                </p>
-                <p class="text-xs text-slate-400">{{ event.folio }}</p>
-              </div>
-              <!-- Status + amount -->
-              <div class="text-right shrink-0">
-                <span [class]="'inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mb-1 ' + getStatusClass(event.estado)">
-                  {{ getStatusLabel(event.estado) }}
-                </span>
-                <p class="text-sm font-semibold text-slate-700">
-                  {{ event.total_contrato | currency:'MXN':'symbol':'1.0-0':'es' }}
-                </p>
-              </div>
-            </div>
-          }
-        </div>
+        <p class="text-2xl font-bold text-slate-800">
+          {{ dashData()?.ingresos_mes | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Ingresos del mes</p>
       }
     </div>
 
-    <!-- Quick actions -->
-    <div class="space-y-4">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <h2 class="font-semibold text-slate-800 mb-4">Acciones rápidas</h2>
-        <div class="space-y-2">
-          <a routerLink="../clientes"
-             class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-            <i class="pi pi-user-plus text-blue-500"></i>
-            <span class="text-sm font-medium text-slate-700">Nuevo cliente</span>
-          </a>
-          <a routerLink="../cotizaciones"
-             class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-            <i class="pi pi-file-plus text-violet-500"></i>
-            <span class="text-sm font-medium text-slate-700">Nueva cotización</span>
-          </a>
-          <a routerLink="../contratos"
-             class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-            <i class="pi pi-file-edit text-emerald-500"></i>
-            <span class="text-sm font-medium text-slate-700">Nuevo contrato</span>
-          </a>
-          <a routerLink="../gastos"
-             class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-            <i class="pi pi-wallet text-amber-500"></i>
-            <span class="text-sm font-medium text-slate-700">Registrar gasto</span>
-          </a>
-          <a routerLink="../punto-de-venta"
-             class="flex items-center gap-3 p-3 rounded-xl bg-rojo-brillante/5 hover:bg-rojo-brillante/10 transition-colors border border-rojo-brillante/20">
-            <i class="pi pi-shopping-cart text-rojo-brillante"></i>
-            <span class="text-sm font-medium text-rojo-brillante">Punto de Venta</span>
-          </a>
+    <!-- Eventos confirmados -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+          <i class="pi pi-star text-blue-600 text-base"></i>
         </div>
+        <span class="text-xs text-slate-400 font-medium">Este mes</span>
+      </div>
+      @if (loading()) {
+        <div class="h-8 w-16 bg-slate-100 rounded-lg animate-pulse mb-2"></div>
+        <div class="h-3 w-24 bg-slate-100 rounded animate-pulse"></div>
+      } @else {
+        <p class="text-2xl font-bold text-slate-800">{{ dashData()?.eventos_confirmados ?? 0 }}</p>
+        <p class="text-xs text-slate-400 mt-1">Eventos confirmados</p>
+      }
+    </div>
+
+    <!-- Por cobrar -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+          <i class="pi pi-clock text-amber-600 text-base"></i>
+        </div>
+        <span class="text-xs text-slate-400 font-medium">Pendiente</span>
+      </div>
+      @if (loading()) {
+        <div class="h-8 w-28 bg-slate-100 rounded-lg animate-pulse mb-2"></div>
+        <div class="h-3 w-20 bg-slate-100 rounded animate-pulse"></div>
+      } @else {
+        <p class="text-2xl font-bold"
+          [class]="(dashData()?.por_cobrar ?? 0) > 0 ? 'text-amber-700' : 'text-slate-800'">
+          {{ dashData()?.por_cobrar | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Saldo por cobrar</p>
+      }
+    </div>
+
+    <!-- Gastos del mes -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
+          <i class="pi pi-wallet text-rose-600 text-base"></i>
+        </div>
+        <span class="text-xs text-slate-400 font-medium">Este mes</span>
+      </div>
+      @if (loading()) {
+        <div class="h-8 w-28 bg-slate-100 rounded-lg animate-pulse mb-2"></div>
+        <div class="h-3 w-20 bg-slate-100 rounded animate-pulse"></div>
+      } @else {
+        <p class="text-2xl font-bold text-slate-800">
+          {{ dashData()?.gastos_mes | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Gastos administrativos</p>
+      }
+    </div>
+  </div>
+
+  <!-- ── Main content grid ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ── LEFT: Chart + upcoming events ── -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Gráfica ingresos vs gastos -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="font-semibold text-slate-800">Ingresos vs. Gastos</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Últimos 6 meses</p>
+          </div>
+          <div class="flex items-center gap-4 text-xs">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-emerald-400"></div>
+              <span class="text-slate-500">Ingresos</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-rose-300"></div>
+              <span class="text-slate-500">Gastos</span>
+            </div>
+          </div>
+        </div>
+
+        @if (loading()) {
+          <div class="h-40 flex items-end gap-4 px-2">
+            @for (i of [1,2,3,4,5,6]; track i) {
+              <div class="flex-1 flex gap-1 items-end">
+                <div class="flex-1 bg-slate-100 rounded-t animate-pulse" [style.height.px]="40 + i * 12"></div>
+                <div class="flex-1 bg-slate-100 rounded-t animate-pulse" [style.height.px]="20 + i * 8"></div>
+              </div>
+            }
+          </div>
+        } @else if (!dashData()?.chart?.length) {
+          <div class="h-40 flex items-center justify-center text-slate-300">
+            <div class="text-center">
+              <i class="pi pi-chart-bar text-4xl block mb-2"></i>
+              <p class="text-sm text-slate-400">Sin datos históricos aún</p>
+            </div>
+          </div>
+        } @else {
+          <!-- Y-axis labels + bars -->
+          <div class="flex gap-3">
+            <!-- Y labels -->
+            <div class="flex flex-col justify-between text-right shrink-0 pb-6" style="height: 160px">
+              <span class="text-[10px] text-slate-400">{{ formatCurrencyShort(chartMax()) }}</span>
+              <span class="text-[10px] text-slate-400">{{ formatCurrencyShort(chartMax() / 2) }}</span>
+              <span class="text-[10px] text-slate-400">$0</span>
+            </div>
+            <!-- Bars -->
+            <div class="flex-1 relative">
+              <!-- Grid lines -->
+              <div class="absolute inset-x-0 top-0 border-b border-dashed border-slate-100" style="bottom: 24px; top: 0; pointer-events:none">
+                <div class="absolute w-full border-t border-dashed border-slate-100" style="top: 50%"></div>
+                <div class="absolute w-full border-t border-dashed border-slate-100" style="top: 0%"></div>
+              </div>
+              <div class="flex items-end gap-2 pb-6" style="height: 160px">
+                @for (point of dashData()!.chart; track point.label) {
+                  <div class="flex-1 flex flex-col items-center gap-1 min-w-0">
+                    <div class="w-full flex gap-0.5 items-end" style="height: 120px">
+                      <!-- Ingresos bar -->
+                      <div class="flex-1 rounded-t-md bg-emerald-400 hover:bg-emerald-500 transition-colors cursor-default relative group"
+                        [style.height.%]="point.ingresosPct || 2"
+                        title="Ingresos {{ point.label }}">
+                        <div class="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+                          {{ point.ingresos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        </div>
+                      </div>
+                      <!-- Gastos bar -->
+                      <div class="flex-1 rounded-t-md bg-rose-300 hover:bg-rose-400 transition-colors cursor-default relative group"
+                        [style.height.%]="point.gastosPct || 2"
+                        title="Gastos {{ point.label }}">
+                        <div class="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+                          {{ point.gastos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        </div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-medium truncate w-full text-center">{{ point.label }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
       </div>
 
-      <!-- Alerts placeholder -->
-      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="pi pi-bell text-amber-600"></i>
-          <h3 class="text-sm font-semibold text-amber-800">Alertas</h3>
+      <!-- Próximos eventos -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 class="font-semibold text-slate-800">Próximos eventos</h2>
+          <a routerLink="../calendario" class="text-xs text-rojo-brillante font-medium hover:underline flex items-center gap-1">
+            <i class="pi pi-calendar text-xs"></i>
+            Ver calendario
+          </a>
         </div>
-        <p class="text-xs text-amber-600">
-          Las alertas de stock mínimo y saldos vencidos aparecerán aquí conforme registres datos.
-        </p>
+
+        @if (loading()) {
+          <div class="p-6 space-y-4">
+            @for (i of [1,2,3]; track i) {
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-slate-100 rounded-xl animate-pulse shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="h-4 bg-slate-100 rounded animate-pulse w-48"></div>
+                  <div class="h-3 bg-slate-100 rounded animate-pulse w-32"></div>
+                </div>
+                <div class="w-16 h-6 bg-slate-100 rounded-full animate-pulse"></div>
+              </div>
+            }
+          </div>
+        } @else if (upcomingEvents().length === 0) {
+          <div class="flex flex-col items-center justify-center py-14 text-slate-400">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+              <i class="pi pi-calendar text-2xl text-slate-300"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-500">Sin eventos en los próximos 30 días</p>
+            <a routerLink="../contratos" class="mt-3 text-xs text-rojo-brillante font-semibold hover:underline">
+              + Crear contrato
+            </a>
+          </div>
+        } @else {
+          <div class="divide-y divide-slate-50">
+            @for (event of upcomingEvents(); track event.id; let i = $index) {
+              @if (i < 7) {
+                <div class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors">
+                  <!-- Date badge -->
+                  <div class="w-12 h-12 rounded-xl bg-rojo-brillante/8 flex flex-col items-center justify-center shrink-0 border border-rojo-brillante/15">
+                    <span class="text-[10px] font-bold text-rojo-brillante uppercase leading-none">
+                      {{ event.fecha_evento | date:'MMM':'':'es-MX' }}
+                    </span>
+                    <span class="text-lg font-bold text-rojo-brillante leading-none">
+                      {{ event.fecha_evento | date:'d' }}
+                    </span>
+                  </div>
+                  <!-- Info -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-800 truncate">
+                      {{ event.client?.nombre ?? 'Sin cliente' }}
+                    </p>
+                    <p class="text-xs text-slate-400">
+                      {{ event.folio }}
+                      @if (event.hora_inicio) { · {{ event.hora_inicio }} }
+                    </p>
+                  </div>
+                  <!-- Status + amount -->
+                  <div class="text-right shrink-0 space-y-1">
+                    <div>
+                      <span [class]="'inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ' + getStatusClass(event.estado)">
+                        {{ getStatusLabel(event.estado) }}
+                      </span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-700">
+                      {{ event.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </p>
+                    @if (event.saldo_pendiente > 0) {
+                      <p class="text-[10px] text-amber-600 font-medium">
+                        Debe {{ event.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </p>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+          @if (upcomingEvents().length > 7) {
+            <div class="px-6 py-3 border-t border-slate-100 text-center">
+              <a routerLink="../contratos" class="text-xs text-slate-400 hover:text-rojo-brillante transition-colors">
+                + {{ upcomingEvents().length - 7 }} evento{{ upcomingEvents().length - 7 !== 1 ? 's' : '' }} más
+              </a>
+            </div>
+          }
+        }
       </div>
     </div>
 
+    <!-- ── RIGHT: Alerts + Quick actions ── -->
+    <div class="space-y-5">
+
+      <!-- Alertas activas -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+            <i class="pi pi-bell text-amber-600 text-sm"></i>
+          </div>
+          <h3 class="font-semibold text-slate-800">Alertas</h3>
+          @if (!loading() && alerts().length > 0) {
+            <span class="ml-auto px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">
+              {{ alerts().length }}
+            </span>
+          }
+        </div>
+
+        @if (loading()) {
+          <div class="space-y-3">
+            @for (i of [1,2]; track i) {
+              <div class="h-10 bg-slate-100 rounded-xl animate-pulse"></div>
+            }
+          </div>
+        } @else if (alerts().length === 0) {
+          <div class="flex flex-col items-center py-4 text-center">
+            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
+              <i class="pi pi-check-circle text-emerald-500"></i>
+            </div>
+            <p class="text-xs text-slate-400">Todo en orden</p>
+          </div>
+        } @else {
+          <div class="space-y-2">
+            @for (alert of alerts(); track alert.text) {
+              <a [routerLink]="alert.link"
+                class="flex items-start gap-3 p-3 rounded-xl bg-amber-50/60 border border-amber-100 hover:bg-amber-50 transition-colors group">
+                <i [class]="'pi ' + alert.icon + ' text-sm mt-0.5 ' + alert.color"></i>
+                <p class="text-xs text-slate-700 leading-snug flex-1">{{ alert.text }}</p>
+                <i class="pi pi-chevron-right text-xs text-slate-400 group-hover:text-slate-600 mt-0.5 shrink-0"></i>
+              </a>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Métricas de inventario -->
+      @if (!loading() && (dashData()?.low_stock_count ?? 0) > 0) {
+        <a routerLink="../inventario"
+          class="flex items-center gap-4 bg-red-50 border border-red-200 rounded-2xl p-4 hover:bg-red-100/60 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-box text-red-600"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-red-800">Stock crítico</p>
+            <p class="text-xs text-red-600">
+              {{ dashData()!.low_stock_count }} artículo{{ dashData()!.low_stock_count !== 1 ? 's' : '' }} bajo mínimo
+            </p>
+          </div>
+          <i class="pi pi-chevron-right text-red-400 shrink-0"></i>
+        </a>
+      }
+
+      <!-- Acciones rápidas -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-4">Acciones rápidas</h3>
+        <div class="space-y-1.5">
+          <a routerLink="../clientes"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <i class="pi pi-user-plus text-blue-500 text-sm"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">Nuevo cliente</span>
+            <i class="pi pi-chevron-right text-xs text-slate-300 ml-auto group-hover:text-slate-400"></i>
+          </a>
+          <a routerLink="../cotizaciones"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+              <i class="pi pi-file-plus text-violet-500 text-sm"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">Nueva cotización</span>
+            <i class="pi pi-chevron-right text-xs text-slate-300 ml-auto group-hover:text-slate-400"></i>
+          </a>
+          <a routerLink="../contratos"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <i class="pi pi-file-edit text-emerald-500 text-sm"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">Nuevo contrato</span>
+            <i class="pi pi-chevron-right text-xs text-slate-300 ml-auto group-hover:text-slate-400"></i>
+          </a>
+          <a routerLink="../gastos"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <i class="pi pi-wallet text-amber-500 text-sm"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">Registrar gasto</span>
+            <i class="pi pi-chevron-right text-xs text-slate-300 ml-auto group-hover:text-slate-400"></i>
+          </a>
+          <a routerLink="../compras"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <i class="pi pi-shopping-bag text-orange-500 text-sm"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">Nueva compra</span>
+            <i class="pi pi-chevron-right text-xs text-slate-300 ml-auto group-hover:text-slate-400"></i>
+          </a>
+          <a routerLink="../punto-de-venta"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-rojo-brillante/5 hover:bg-rojo-brillante/10 transition-colors border border-rojo-brillante/15 group">
+            <div class="w-8 h-8 rounded-lg bg-rojo-brillante/10 flex items-center justify-center">
+              <i class="pi pi-shopping-cart text-rojo-brillante text-sm"></i>
+            </div>
+            <span class="text-sm font-semibold text-rojo-brillante">Punto de Venta</span>
+            <i class="pi pi-chevron-right text-xs text-rojo-brillante/40 ml-auto group-hover:text-rojo-brillante/70"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Acceso a reportes -->
+      <a routerLink="../reportes"
+        class="flex items-center gap-4 bg-slate-800 rounded-2xl p-5 hover:bg-slate-700 transition-colors">
+        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+          <i class="pi pi-chart-bar text-white"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-white">Ver reportes completos</p>
+          <p class="text-xs text-slate-400">P&L, flujo de caja, pipeline</p>
+        </div>
+        <i class="pi pi-arrow-right text-slate-400 shrink-0"></i>
+      </a>
+
+    </div>
   </div>
 </div>
