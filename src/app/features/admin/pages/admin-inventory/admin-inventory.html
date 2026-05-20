@@ -1,22 +1,395 @@
 <div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Inventario</h1>
-      <p class="text-slate-500 text-sm mt-0.5">Control de existencias — entradas, salidas y ajustes</p>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredItems().length }} artículo{{ filteredItems().length !== 1 ? 's' : '' }}</p>
     </div>
-    <button class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+    <button (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
       <i class="pi pi-plus"></i>
       Nuevo artículo
     </button>
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-        <i class="pi pi-box text-3xl text-slate-300"></i>
+  <!-- Alerta stock bajo -->
+  @if (lowStockCount() > 0) {
+    <div class="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+      <i class="pi pi-exclamation-triangle text-amber-600 text-lg shrink-0"></i>
+      <div>
+        <p class="text-sm font-semibold text-amber-800">
+          {{ lowStockCount() }} artículo{{ lowStockCount() !== 1 ? 's' : '' }} con stock bajo o agotado
+        </p>
+        <p class="text-xs text-amber-600 mt-0.5">Revisa las filas marcadas en rojo para reponer existencias</p>
       </div>
-      <p class="text-base font-medium text-slate-600 mb-1">Módulo en construcción</p>
-      <p class="text-sm text-center max-w-sm">Registra tus artículos para llevar control de existencias y conectarlos al Punto de Venta.</p>
     </div>
+  }
+
+  <!-- Toolbar -->
+  <div class="flex gap-3 flex-col sm:flex-row">
+    <div class="relative flex-1">
+      <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+      <input type="search" placeholder="Buscar por nombre o SKU…" (input)="onSearch($event)"
+        class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+        aria-label="Buscar artículos" />
+    </div>
+    <select (change)="categoryFilter.set($any($event.target).value)"
+      class="px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all appearance-none cursor-pointer">
+      <option value="all">Todas las categorías</option>
+      @for (cat of categories; track cat) {
+        <option [value]="cat">{{ cat }}</option>
+      }
+    </select>
+    <button (click)="toggleShowInactive()"
+      [class]="'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors '
+        + (showInactive() ? 'border-rojo-brillante bg-rojo-brillante/5 text-rojo-brillante' : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+      <i class="pi pi-eye text-sm"></i>
+      Inactivos
+    </button>
   </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    @if (loading()) {
+      <div class="divide-y divide-slate-100">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-100 animate-pulse rounded w-40"></div>
+              <div class="h-3 bg-slate-100 animate-pulse rounded w-24"></div>
+            </div>
+            <div class="h-6 bg-slate-100 animate-pulse rounded w-16"></div>
+            <div class="h-6 bg-slate-100 animate-pulse rounded w-16"></div>
+          </div>
+        }
+      </div>
+    } @else if (filteredItems().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-box text-2xl text-slate-300"></i>
+        </div>
+        <p class="text-sm font-medium text-slate-500">Sin artículos en inventario</p>
+        <p class="text-xs mt-1">Agrega el primero con el botón de arriba</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left px-6 py-3 font-medium">Artículo</th>
+              <th class="text-left px-6 py-3 font-medium hidden md:table-cell">Categoría</th>
+              <th class="text-center px-6 py-3 font-medium">Stock</th>
+              <th class="text-right px-6 py-3 font-medium hidden lg:table-cell">Costo</th>
+              <th class="text-right px-6 py-3 font-medium hidden lg:table-cell">Venta</th>
+              <th class="text-right px-6 py-3 font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (item of filteredItems(); track item.id) {
+              <tr [class]="'transition-colors ' + (isLowStock(item) ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-slate-50/60')">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    @if (isLowStock(item)) {
+                      <i class="pi pi-exclamation-circle text-red-500 text-sm shrink-0" title="Stock bajo"></i>
+                    }
+                    <div>
+                      <p class="font-semibold text-slate-800">{{ item.nombre }}</p>
+                      @if (item.sku) {
+                        <p class="text-xs text-slate-400 font-mono">{{ item.sku }}</p>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 hidden md:table-cell">
+                  @if (item.categoria) {
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                      {{ item.categoria }}
+                    </span>
+                  } @else {
+                    <span class="text-slate-300 text-xs">—</span>
+                  }
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <div>
+                    <span [class]="getStockClass(item)">
+                      {{ item.stock_actual }}
+                    </span>
+                    <span class="text-slate-400 text-xs ml-1">{{ item.unidad }}</span>
+                    @if (item.stock_minimo > 0) {
+                      <p class="text-xs text-slate-400">mín. {{ item.stock_minimo }}</p>
+                    }
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-right hidden lg:table-cell text-slate-600">
+                  {{ item.precio_costo | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                </td>
+                <td class="px-6 py-4 text-right hidden lg:table-cell font-medium text-slate-800">
+                  {{ item.precio_venta | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button (click)="openEdit(item)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      aria-label="Editar artículo">
+                      <i class="pi pi-pencil text-sm"></i>
+                    </button>
+                    <button (click)="confirmDelete(item)"
+                      class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Desactivar artículo">
+                      <i class="pi pi-trash text-sm"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── DRAWER CREAR / EDITAR ─────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm" (click)="closeDrawer()" aria-hidden="true"></div>
+
+    <aside role="dialog" aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nuevo artículo' : 'Editar artículo'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nuevo artículo' : selectedItem()?.nombre }}
+          </h2>
+          @if (drawerMode() === 'edit' && selectedItem()) {
+            <p class="text-xs text-slate-400 mt-0.5">
+              Stock: <span [class]="getStockClass(selectedItem()!)">{{ selectedItem()!.stock_actual }} {{ selectedItem()!.unidad }}</span>
+            </p>
+          }
+        </div>
+        <button (click)="closeDrawer()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500" aria-label="Cerrar">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <!-- Tabs en modo edición -->
+      @if (drawerMode() === 'edit') {
+        <div class="flex border-b border-slate-100 shrink-0">
+          <button (click)="setActivePanel('items')"
+            [class]="'flex-1 py-3 text-sm font-medium transition-colors '
+              + (activePanel() === 'items' ? 'text-rojo-brillante border-b-2 border-rojo-brillante' : 'text-slate-500 hover:text-slate-700')">
+            Datos del artículo
+          </button>
+          <button (click)="setActivePanel('movement')"
+            [class]="'flex-1 py-3 text-sm font-medium transition-colors '
+              + (activePanel() === 'movement' ? 'text-rojo-brillante border-b-2 border-rojo-brillante' : 'text-slate-500 hover:text-slate-700')">
+            Registrar movimiento
+          </button>
+        </div>
+      }
+
+      <!-- Panel: Datos del artículo -->
+      @if (activePanel() === 'items') {
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+
+          <div>
+            <label for="inv-nombre" class="block text-sm font-medium text-slate-700 mb-1.5">
+              Nombre <span class="text-rojo-brillante" aria-hidden="true">*</span>
+            </label>
+            <input id="inv-nombre" type="text" formControlName="nombre" placeholder="Nombre del artículo"
+              class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all"
+              [class]="form.get('nombre')!.invalid && form.get('nombre')!.touched ? 'border-red-300 bg-red-50' : 'border-slate-200 focus:border-rojo-brillante bg-white'" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="inv-sku" class="block text-sm font-medium text-slate-700 mb-1.5">SKU</label>
+              <input id="inv-sku" type="text" formControlName="sku" placeholder="Clave única"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all font-mono" />
+            </div>
+            <div>
+              <label for="inv-unidad" class="block text-sm font-medium text-slate-700 mb-1.5">Unidad</label>
+              <select id="inv-unidad" formControlName="unidad"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                @for (u of unitOptions; track u) {
+                  <option [value]="u">{{ u }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="inv-categoria" class="block text-sm font-medium text-slate-700 mb-1.5">Categoría</label>
+            <select id="inv-categoria" formControlName="categoria"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+              <option value="">Sin categoría</option>
+              @for (cat of categories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="inv-stock" class="block text-sm font-medium text-slate-700 mb-1.5">Stock inicial</label>
+              <input id="inv-stock" type="number" formControlName="stock_actual" min="0" step="1"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+            <div>
+              <label for="inv-minimo" class="block text-sm font-medium text-slate-700 mb-1.5">Stock mínimo</label>
+              <input id="inv-minimo" type="number" formControlName="stock_minimo" min="0" step="1"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="inv-costo" class="block text-sm font-medium text-slate-700 mb-1.5">Precio costo ($)</label>
+              <input id="inv-costo" type="number" formControlName="precio_costo" min="0" step="0.01"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+            <div>
+              <label for="inv-venta" class="block text-sm font-medium text-slate-700 mb-1.5">Precio venta ($)</label>
+              <input id="inv-venta" type="number" formControlName="precio_venta" min="0" step="0.01"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+          </div>
+
+          @if (drawerMode() === 'edit') {
+            <div class="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl">
+              <span class="text-sm font-medium text-slate-700">Artículo activo</span>
+              <label class="relative cursor-pointer">
+                <input type="checkbox" formControlName="activo" class="sr-only" />
+                <div [class]="'w-9 h-5 rounded-full transition-colors ' + (form.get('activo')!.value ? 'bg-emerald-500' : 'bg-slate-200')">
+                  <span [class]="'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ' + (form.get('activo')!.value ? 'translate-x-4' : 'translate-x-0.5')"></span>
+                </div>
+              </label>
+            </div>
+          }
+
+        </form>
+
+        <div class="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+          <button type="button" (click)="closeDrawer()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button type="button" (click)="onSubmit()" [disabled]="form.invalid || saving()"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors"
+            [class]="form.invalid || saving() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+            @if (saving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+            {{ drawerMode() === 'create' ? 'Crear artículo' : 'Guardar cambios' }}
+          </button>
+        </div>
+      }
+
+      <!-- Panel: Registrar movimiento -->
+      @if (activePanel() === 'movement') {
+        <div class="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+
+          <!-- Resumen de stock -->
+          @if (selectedItem()) {
+            <div class="bg-slate-50 rounded-2xl p-4 flex items-center gap-4">
+              <div class="flex-1">
+                <p class="text-xs text-slate-400 mb-0.5">Stock actual</p>
+                <p [class]="'text-2xl font-bold ' + getStockClass(selectedItem()!)">
+                  {{ selectedItem()!.stock_actual }}
+                  <span class="text-base font-normal text-slate-500">{{ selectedItem()!.unidad }}</span>
+                </p>
+              </div>
+              @if (isLowStock(selectedItem()!)) {
+                <div class="px-3 py-1.5 bg-red-100 rounded-lg text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  Stock bajo
+                </div>
+              }
+            </div>
+          }
+
+          <form [formGroup]="movementForm" (ngSubmit)="onRegisterMovement()" class="space-y-4">
+
+            <!-- Tipo de movimiento -->
+            <div>
+              <p class="text-sm font-medium text-slate-700 mb-2">Tipo de movimiento</p>
+              <div class="grid grid-cols-3 gap-2">
+                @for (t of [['entrada','Entrada','pi-arrow-down-left','emerald'],['salida','Salida','pi-arrow-up-right','red'],['ajuste','Ajuste','pi-pencil','blue']] ; track t[0]) {
+                  <label [for]="'mv-' + t[0]" class="cursor-pointer">
+                    <input type="radio" [id]="'mv-' + t[0]" formControlName="tipo" [value]="t[0]" class="sr-only" />
+                    <div [class]="'flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-semibold transition-all '
+                      + (movementForm.get('tipo')!.value === t[0]
+                        ? 'border-rojo-brillante bg-rojo-brillante/5 text-rojo-brillante'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+                      <i [class]="'pi text-lg ' + t[2]"></i>
+                      {{ t[1] }}
+                    </div>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="mv-cantidad" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Cantidad <span class="text-rojo-brillante" aria-hidden="true">*</span>
+                </label>
+                <input id="mv-cantidad" type="number" formControlName="cantidad" min="0.01" step="1"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+              <div>
+                <label for="mv-motivo" class="block text-sm font-medium text-slate-700 mb-1.5">Motivo</label>
+                <input id="mv-motivo" type="text" formControlName="motivo" placeholder="Compra, venta, merma…"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+            </div>
+
+            <button type="submit" [disabled]="movementForm.invalid || savingMovement()"
+              class="w-full py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors"
+              [class]="movementForm.invalid || savingMovement() ? 'bg-slate-300 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'">
+              @if (savingMovement()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+              <i class="pi pi-check text-sm"></i>
+              Registrar movimiento
+            </button>
+          </form>
+
+        </div>
+      }
+
+    </aside>
+  }
+
+  <!-- Modal confirmar desactivar -->
+  @if (deleteTarget()) {
+    <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-labelledby="del-inv-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-eye-slash text-amber-600"></i>
+          </div>
+          <div>
+            <h3 id="del-inv-title" class="font-bold text-slate-800">Desactivar artículo</h3>
+            <p class="text-sm text-slate-500 mt-1">
+              ¿Desactivar <strong>{{ deleteTarget()!.nombre }}</strong>? El artículo dejará de aparecer en el inventario activo.
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button (click)="cancelDelete()" class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+          <button (click)="deleteItem(deleteTarget()!)" class="flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600">Desactivar</button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

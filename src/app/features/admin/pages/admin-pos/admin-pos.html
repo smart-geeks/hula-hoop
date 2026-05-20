@@ -1,22 +1,307 @@
 <div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Punto de Venta</h1>
-      <p class="text-slate-500 text-sm mt-0.5">Ventas del día del evento conectadas al inventario</p>
+      <p class="text-slate-500 text-sm mt-0.5">
+        @if (activeSession()) {
+          Sesión activa
+          @if (activeSession()!.contract) {
+            · Evento {{ activeSession()!.contract!.folio }}
+          }
+        } @else {
+          Sin sesión activa
+        }
+      </p>
     </div>
-    <button class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
-      <i class="pi pi-plus"></i>
-      Abrir sesión
-    </button>
+    @if (activeSession()) {
+      <button (click)="closeSession()" [disabled]="processing()"
+        class="flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors">
+        <i class="pi pi-power-off text-red-500"></i>
+        Cerrar sesión
+      </button>
+    }
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-        <i class="pi pi-shopping-cart text-3xl text-slate-300"></i>
-      </div>
-      <p class="text-base font-medium text-slate-600 mb-1">Módulo en construcción</p>
-      <p class="text-sm text-center max-w-sm">Aquí realizarás ventas durante el evento. Las ventas descuentan automáticamente el inventario y se suman al estado de resultados del evento.</p>
+  @if (loading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="w-8 h-8 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
     </div>
-  </div>
+
+  } @else if (!activeSession()) {
+    <!-- ── SIN SESIÓN: pantalla de inicio ─── -->
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div class="w-20 h-20 rounded-2xl bg-rojo-brillante/10 flex items-center justify-center mb-6">
+          <i class="pi pi-shopping-cart text-3xl text-rojo-brillante"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">Iniciar sesión de venta</h2>
+        <p class="text-slate-500 text-sm max-w-sm mb-8">
+          Abre una nueva sesión para comenzar a registrar ventas. Puedes vincularla a un evento para que aparezca en el P&L.
+        </p>
+
+        @if (!showNewSession()) {
+          <button (click)="showNewSession.set(true)"
+            class="flex items-center gap-2 bg-rojo-brillante text-white px-6 py-3 rounded-xl font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+            <i class="pi pi-play-circle"></i>
+            Abrir nueva sesión
+          </button>
+        } @else {
+          <div class="w-full max-w-sm space-y-4">
+            <div>
+              <label for="pos-contract" class="block text-sm font-medium text-slate-700 mb-1.5 text-left">
+                Vincular a evento (opcional)
+              </label>
+              <select id="pos-contract"
+                (change)="selectedContractId.set($any($event.target).value)"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                <option value="">Sin evento — venta general</option>
+                @for (c of contracts(); track c.id) {
+                  <option [value]="c.id">{{ c.folio }} — {{ c.client?.nombre ?? c.fecha_evento }}</option>
+                }
+              </select>
+            </div>
+            <div class="flex gap-3">
+              <button (click)="showNewSession.set(false)"
+                class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancelar
+              </button>
+              <button (click)="openSession()" [disabled]="processing()"
+                class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 flex items-center justify-center gap-2 transition-colors">
+                @if (processing()) {
+                  <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                }
+                Iniciar sesión
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Historial de sesiones recientes si existen ventas -->
+        @if (salesHistory().length > 0) {
+          <div class="mt-8 w-full max-w-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 text-left">Ventas de esta sesión</p>
+            <div class="space-y-2">
+              @for (sale of salesHistory(); track sale.id) {
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl text-sm">
+                  <span class="text-slate-600 font-mono text-xs">{{ sale.folio }}</span>
+                  <span class="text-slate-500 text-xs capitalize">{{ sale.pagado_con }}</span>
+                  <span class="font-semibold text-slate-800">{{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+  } @else {
+    <!-- ── SESIÓN ACTIVA: layout POS ─── -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+      <!-- ── Izquierda: catálogo de productos ──────────────────── -->
+      <div class="lg:col-span-2 space-y-4">
+
+        <!-- Búsqueda y filtro de categoría -->
+        <div class="flex gap-3 flex-col sm:flex-row">
+          <div class="relative flex-1">
+            <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+            <input type="search" placeholder="Buscar producto…" (input)="onSearch($event)"
+              class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+          </div>
+          <select (change)="categoryFilter.set($any($event.target).value)"
+            class="px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all appearance-none cursor-pointer">
+            <option value="all">Todas</option>
+            @for (cat of categories(); track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Grid de productos -->
+        @if (filteredInventory().length === 0) {
+          <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400">
+            <i class="pi pi-box text-3xl mb-3 block text-slate-300"></i>
+            <p class="text-sm font-medium text-slate-500">Sin productos disponibles</p>
+            <p class="text-xs mt-1">Verifica que los artículos tengan precio de venta y stock disponible</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @for (item of filteredInventory(); track item.id) {
+              <button (click)="addToCart(item)"
+                [class]="'relative bg-white border rounded-2xl p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-rojo-brillante/30 active:scale-95 '
+                  + (getCartQty(item.id) > 0 ? 'border-rojo-brillante/40 bg-rojo-brillante/3' : 'border-slate-200')">
+
+                <!-- Badge cantidad en carrito -->
+                @if (getCartQty(item.id) > 0) {
+                  <div class="absolute -top-2 -right-2 w-6 h-6 bg-rojo-brillante text-white rounded-full text-xs font-bold flex items-center justify-center shadow-sm">
+                    {{ getCartQty(item.id) }}
+                  </div>
+                }
+
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+                  <i class="pi pi-box text-slate-400"></i>
+                </div>
+                <p class="font-semibold text-slate-800 text-sm leading-tight mb-1">{{ item.nombre }}</p>
+                @if (item.sku) {
+                  <p class="text-xs text-slate-400 font-mono mb-2">{{ item.sku }}</p>
+                }
+                <div class="flex items-center justify-between">
+                  <p class="font-bold text-rojo-brillante text-sm">
+                    {{ item.precio_venta | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                  <p class="text-xs text-slate-400">
+                    <span [class]="item.stock_actual <= 3 ? 'text-amber-600 font-semibold' : ''">{{ item.stock_actual }}</span>
+                    {{ item.unidad }}
+                  </p>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ── Derecha: carrito y cobro ──────────────────────────── -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm sticky top-4">
+
+        <!-- Carrito header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="pi pi-shopping-cart text-rojo-brillante"></i>
+            Carrito
+            @if (cartItemCount() > 0) {
+              <span class="px-2 py-0.5 bg-rojo-brillante text-white text-xs rounded-full font-bold">
+                {{ cartItemCount() }}
+              </span>
+            }
+          </h2>
+          @if (cart().length > 0) {
+            <button (click)="clearCart()" class="text-xs text-slate-400 hover:text-red-500 transition-colors">
+              Vaciar
+            </button>
+          }
+        </div>
+
+        <!-- Items del carrito -->
+        @if (cart().length === 0) {
+          <div class="px-5 py-10 text-center text-slate-400">
+            <i class="pi pi-shopping-cart text-3xl text-slate-200 block mb-2"></i>
+            <p class="text-sm">Toca un producto para agregarlo</p>
+          </div>
+        } @else {
+          <div class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+            @for (cartItem of cart(); track cartItem.item_id) {
+              <div class="flex items-center gap-3 px-5 py-3">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-800 truncate">{{ cartItem.nombre }}</p>
+                  <p class="text-xs text-slate-400">
+                    {{ cartItem.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }} c/u
+                  </p>
+                </div>
+                <!-- Qty controls -->
+                <div class="flex items-center gap-1">
+                  <button (click)="updateQty(cartItem.item_id, -1)"
+                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors text-sm">
+                    <i class="pi pi-minus" style="font-size: 0.6rem"></i>
+                  </button>
+                  <span class="w-8 text-center text-sm font-semibold text-slate-800">{{ cartItem.cantidad }}</span>
+                  <button (click)="updateQty(cartItem.item_id, 1)"
+                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors text-sm">
+                    <i class="pi pi-plus" style="font-size: 0.6rem"></i>
+                  </button>
+                </div>
+                <!-- Subtotal + remove -->
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold text-slate-800">
+                    {{ cartItem.subtotal | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                  <button (click)="removeFromCart(cartItem.item_id)"
+                    class="text-xs text-slate-300 hover:text-red-500 transition-colors">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Total -->
+          <div class="px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm text-slate-500 font-medium">Total</span>
+              <span class="text-2xl font-bold text-slate-800">
+                {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </span>
+            </div>
+
+            <!-- Método de pago -->
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              @for (m of [['efectivo','Efectivo','pi-money-bill'],['tarjeta','Tarjeta','pi-credit-card'],['transferencia','Transfer.','pi-send']]; track m[0]) {
+                <button (click)="paymentMethod.set($any(m[0]))"
+                  [class]="'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border text-xs font-medium transition-all '
+                    + (paymentMethod() === m[0]
+                      ? 'border-rojo-brillante bg-rojo-brillante text-white'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-100')">
+                  <i [class]="'pi text-base ' + m[2]"></i>
+                  {{ m[1] }}
+                </button>
+              }
+            </div>
+
+            <!-- Cobrar -->
+            <button (click)="checkout()" [disabled]="processing()"
+              class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all"
+              [class]="processing() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90 active:scale-95 shadow-sm'">
+              @if (processing()) {
+                <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+              } @else {
+                <i class="pi pi-check-circle"></i>
+              }
+              Cobrar {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+            </button>
+          </div>
+        }
+
+        <!-- Resumen de ventas de la sesión -->
+        @if (salesHistory().length > 0) {
+          <div class="border-t border-slate-100">
+            <div class="px-5 py-3 flex items-center justify-between">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Ventas de hoy</p>
+              <p class="text-xs font-bold text-emerald-600">
+                {{ salesHistory().length }} venta{{ salesHistory().length !== 1 ? 's' : '' }}
+              </p>
+            </div>
+            <div class="divide-y divide-slate-50 max-h-40 overflow-y-auto">
+              @for (sale of salesHistory(); track sale.id) {
+                <div class="flex items-center justify-between px-5 py-2.5 text-xs">
+                  <span class="text-slate-400 font-mono">{{ sale.folio }}</span>
+                  <span class="text-slate-500 capitalize">{{ sale.pagado_con }}</span>
+                  <span class="font-bold text-slate-700">
+                    {{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+              }
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex justify-between text-sm">
+              <span class="text-slate-500 font-medium">Total sesión</span>
+              <span class="font-bold text-slate-800">
+                {{ sessionTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+
 </div>
