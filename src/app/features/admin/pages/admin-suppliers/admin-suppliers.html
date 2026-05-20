@@ -1,22 +1,274 @@
 <div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Proveedores</h1>
-      <p class="text-slate-500 text-sm mt-0.5">Directorio de proveedores del salón</p>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredSuppliers().length }} proveedor{{ filteredSuppliers().length !== 1 ? 'es' : '' }}</p>
     </div>
-    <button class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+    <button
+      (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
       <i class="pi pi-plus"></i>
       Nuevo proveedor
     </button>
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-        <i class="pi pi-truck text-3xl text-slate-300"></i>
-      </div>
-      <p class="text-base font-medium text-slate-600 mb-1">Módulo en construcción</p>
-      <p class="text-sm text-center max-w-sm">Agrega tus proveedores para vincularlos a compras y gastos de forma ordenada.</p>
+  <!-- Toolbar -->
+  <div class="flex gap-3 flex-col sm:flex-row">
+    <div class="relative flex-1">
+      <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+      <input
+        type="search"
+        placeholder="Buscar por nombre o categoría…"
+        (input)="onSearch($event)"
+        class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+        aria-label="Buscar proveedores" />
     </div>
+    <button
+      (click)="toggleShowInactive()"
+      [class]="'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors '
+        + (showInactive() ? 'border-rojo-brillante bg-rojo-brillante/5 text-rojo-brillante' : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+      <i class="pi pi-eye text-sm"></i>
+      {{ showInactive() ? 'Mostrando inactivos' : 'Mostrar inactivos' }}
+    </button>
   </div>
+
+  <!-- Grid de proveedores -->
+  @if (loading()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+          <div class="h-4 bg-slate-100 animate-pulse rounded w-3/4"></div>
+          <div class="h-3 bg-slate-100 animate-pulse rounded w-1/2"></div>
+          <div class="h-3 bg-slate-100 animate-pulse rounded w-2/3"></div>
+        </div>
+      }
+    </div>
+
+  } @else if (filteredSuppliers().length === 0) {
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-truck text-2xl text-slate-300"></i>
+        </div>
+        <p class="text-sm font-medium text-slate-500">Sin proveedores</p>
+        <p class="text-xs mt-1">Agrega el primero con el botón de arriba</p>
+      </div>
+    </div>
+
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (supplier of filteredSuppliers(); track supplier.id) {
+        <div [class]="'bg-white border rounded-2xl p-5 shadow-sm transition-all '
+          + (supplier.activo ? 'border-slate-200 hover:border-slate-300' : 'border-slate-100 opacity-60')">
+
+          <!-- Card header -->
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-rojo-brillante/10 flex items-center justify-center shrink-0">
+                <i class="pi pi-truck text-rojo-brillante text-sm"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="font-semibold text-slate-800 truncate">{{ supplier.nombre }}</p>
+                @if (supplier.categoria) {
+                  <span [class]="'inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium ' + getCategoryClass(supplier.categoria)">
+                    {{ supplier.categoria }}
+                  </span>
+                }
+              </div>
+            </div>
+            <!-- Actions menu -->
+            <div class="flex items-center gap-1 shrink-0 ml-2">
+              <button
+                (click)="openEdit(supplier)"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                aria-label="Editar proveedor">
+                <i class="pi pi-pencil text-sm"></i>
+              </button>
+              <button
+                (click)="confirmDelete(supplier)"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                aria-label="Eliminar proveedor">
+                <i class="pi pi-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Contact info -->
+          <div class="space-y-1.5 text-xs text-slate-500">
+            @if (supplier.contacto) {
+              <div class="flex items-center gap-2">
+                <i class="pi pi-user w-3.5 text-slate-300"></i>
+                <span>{{ supplier.contacto }}</span>
+              </div>
+            }
+            @if (supplier.telefono) {
+              <div class="flex items-center gap-2">
+                <i class="pi pi-phone w-3.5 text-slate-300"></i>
+                <span>{{ supplier.telefono }}</span>
+              </div>
+            }
+            @if (supplier.email) {
+              <div class="flex items-center gap-2">
+                <i class="pi pi-envelope w-3.5 text-slate-300"></i>
+                <span class="truncate">{{ supplier.email }}</span>
+              </div>
+            }
+            @if (!supplier.contacto && !supplier.telefono && !supplier.email) {
+              <p class="text-slate-300 italic">Sin datos de contacto</p>
+            }
+          </div>
+
+          <!-- Toggle activo -->
+          <div class="mt-4 pt-3 border-t border-slate-50 flex items-center justify-between">
+            <span [class]="'text-xs font-medium ' + (supplier.activo ? 'text-emerald-600' : 'text-slate-400')">
+              {{ supplier.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+            <button
+              (click)="toggleActive(supplier)"
+              [class]="'relative w-9 h-5 rounded-full transition-colors '
+                + (supplier.activo ? 'bg-emerald-500' : 'bg-slate-200')"
+              [attr.aria-label]="supplier.activo ? 'Desactivar' : 'Activar'"
+              role="switch"
+              [attr.aria-checked]="supplier.activo">
+              <span [class]="'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform '
+                + (supplier.activo ? 'translate-x-4' : 'translate-x-0.5')"></span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── DRAWER CREATE / EDIT ──────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm" (click)="closeDrawer()" aria-hidden="true"></div>
+
+    <aside
+      role="dialog" aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nuevo proveedor' : 'Editar proveedor'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col">
+
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nuevo proveedor' : 'Editar proveedor' }}
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Completa los datos del proveedor</p>
+        </div>
+        <button (click)="closeDrawer()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500" aria-label="Cerrar">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+
+        <div>
+          <label for="s-nombre" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Nombre <span class="text-rojo-brillante" aria-hidden="true">*</span>
+          </label>
+          <input id="s-nombre" type="text" formControlName="nombre" placeholder="Nombre del proveedor o empresa"
+            class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all"
+            [class]="form.get('nombre')!.invalid && form.get('nombre')!.touched ? 'border-red-300 bg-red-50' : 'border-slate-200 focus:border-rojo-brillante bg-white'" />
+        </div>
+
+        <div>
+          <label for="s-categoria" class="block text-sm font-medium text-slate-700 mb-1.5">Categoría</label>
+          <select id="s-categoria" formControlName="categoria"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+            <option value="">Sin categoría</option>
+            @for (cat of categories; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="s-contacto" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre de contacto</label>
+          <input id="s-contacto" type="text" formControlName="contacto" placeholder="Nombre de la persona de contacto"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="s-telefono" class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+            <input id="s-telefono" type="tel" formControlName="telefono" placeholder="8112345678"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+          </div>
+          <div>
+            <label for="s-email" class="block text-sm font-medium text-slate-700 mb-1.5">Correo</label>
+            <input id="s-email" type="email" formControlName="email" placeholder="correo@proveedor.com"
+              class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all"
+              [class]="form.get('email')!.invalid && form.get('email')!.touched ? 'border-red-300 bg-red-50' : 'border-slate-200 focus:border-rojo-brillante bg-white'" />
+          </div>
+        </div>
+
+        <div>
+          <label for="s-notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+          <textarea id="s-notas" formControlName="notas" rows="2" placeholder="Condiciones, tiempo de entrega, observaciones…"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none"></textarea>
+        </div>
+
+        <!-- Toggle activo en edit -->
+        @if (drawerMode() === 'edit') {
+          <div class="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl">
+            <span class="text-sm font-medium text-slate-700">Proveedor activo</span>
+            <label class="relative cursor-pointer">
+              <input type="checkbox" formControlName="activo" class="sr-only" />
+              <div [class]="'w-9 h-5 rounded-full transition-colors ' + (form.get('activo')!.value ? 'bg-emerald-500' : 'bg-slate-200')">
+                <span [class]="'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ' + (form.get('activo')!.value ? 'translate-x-4' : 'translate-x-0.5')"></span>
+              </div>
+            </label>
+          </div>
+        }
+
+      </form>
+
+      <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+        <button type="button" (click)="closeDrawer()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button" (click)="onSubmit()" [disabled]="form.invalid || saving()"
+          class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors"
+          [class]="form.invalid || saving() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+          @if (saving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+          {{ drawerMode() === 'create' ? 'Crear proveedor' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </aside>
+  }
+
+  <!-- Modal confirmar borrado -->
+  @if (deleteTarget()) {
+    <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-labelledby="del-supplier-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-trash text-red-600"></i>
+          </div>
+          <div>
+            <h3 id="del-supplier-title" class="font-bold text-slate-800">Eliminar proveedor</h3>
+            <p class="text-sm text-slate-500 mt-1">¿Eliminar a <strong>{{ deleteTarget()!.nombre }}</strong>?</p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button (click)="cancelDelete()" class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+          <button (click)="executeDelete()" class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

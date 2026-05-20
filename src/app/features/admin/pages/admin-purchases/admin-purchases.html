@@ -1,22 +1,290 @@
 <div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Compras</h1>
-      <p class="text-slate-500 text-sm mt-0.5">Órdenes de compra por proveedor o evento</p>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredPurchases().length }} orden{{ filteredPurchases().length !== 1 ? 'es' : '' }} de compra</p>
     </div>
-    <button class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+    <button (click)="openCreate()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
       <i class="pi pi-plus"></i>
       Nueva compra
     </button>
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-        <i class="pi pi-shopping-bag text-3xl text-slate-300"></i>
-      </div>
-      <p class="text-base font-medium text-slate-600 mb-1">Módulo en construcción</p>
-      <p class="text-sm text-center max-w-sm">Registra las compras realizadas para cada evento o gastos generales. Se integran automáticamente al estado de resultados.</p>
-    </div>
+  <!-- Status filter tabs -->
+  <div class="flex gap-2 flex-wrap">
+    @for (opt of statusOptions; track opt.value) {
+      <button (click)="setStatusFilter(opt.value)"
+        [class]="'px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors '
+          + (statusFilter() === opt.value ? 'bg-rojo-brillante text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')">
+        {{ opt.label }}
+      </button>
+    }
   </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    @if (loading()) {
+      <div class="divide-y divide-slate-100">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-100 animate-pulse rounded w-28"></div>
+              <div class="h-3 bg-slate-100 animate-pulse rounded w-44"></div>
+            </div>
+            <div class="h-6 bg-slate-100 animate-pulse rounded-full w-20"></div>
+            <div class="h-3.5 bg-slate-100 animate-pulse rounded w-20"></div>
+          </div>
+        }
+      </div>
+    } @else if (filteredPurchases().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <i class="pi pi-shopping-bag text-2xl text-slate-300"></i>
+        </div>
+        <p class="text-sm font-medium text-slate-500">Sin órdenes de compra</p>
+        <p class="text-xs mt-1">Registra una nueva compra con el botón de arriba</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left px-6 py-3 font-medium">Folio / Proveedor</th>
+              <th class="text-left px-6 py-3 font-medium hidden md:table-cell">Fecha</th>
+              <th class="text-left px-6 py-3 font-medium hidden lg:table-cell">Evento</th>
+              <th class="text-left px-6 py-3 font-medium">Estado</th>
+              <th class="text-right px-6 py-3 font-medium">Total</th>
+              <th class="text-right px-6 py-3 font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (purchase of filteredPurchases(); track purchase.id) {
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="px-6 py-4">
+                  <p class="font-semibold text-slate-800">{{ purchase.folio }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ purchase.supplier?.nombre ?? 'Sin proveedor' }}</p>
+                </td>
+                <td class="px-6 py-4 text-slate-600 hidden md:table-cell">{{ purchase.fecha }}</td>
+                <td class="px-6 py-4 hidden lg:table-cell">
+                  @if (purchase.contract) {
+                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                      {{ purchase.contract.folio }}
+                    </span>
+                  } @else {
+                    <span class="text-slate-400 text-xs">General</span>
+                  }
+                </td>
+                <td class="px-6 py-4">
+                  <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ' + STATUS_CONFIG[purchase.estado].classes">
+                    {{ STATUS_CONFIG[purchase.estado].label }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right font-semibold text-slate-800">
+                  {{ purchase.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button (click)="openEdit(purchase)" class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" aria-label="Editar">
+                      <i class="pi pi-pencil text-sm"></i>
+                    </button>
+                    <button (click)="confirmDelete(purchase)" class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" aria-label="Eliminar">
+                      <i class="pi pi-trash text-sm"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── DRAWER CREATE / EDIT ──────────────────────────────── -->
+  @if (drawerOpen()) {
+    <div class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm" (click)="closeDrawer()" aria-hidden="true"></div>
+
+    <aside role="dialog" aria-modal="true"
+      [attr.aria-label]="drawerMode() === 'create' ? 'Nueva compra' : 'Editar compra'"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            {{ drawerMode() === 'create' ? 'Nueva orden de compra' : 'Editar ' + selectedPurchase()?.folio }}
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Completa los datos y agrega los conceptos comprados</p>
+        </div>
+        <button (click)="closeDrawer()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500" aria-label="Cerrar">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto">
+        <div class="px-6 py-6 space-y-5">
+
+          <!-- Proveedor + Contrato -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="oc-supplier" class="block text-sm font-medium text-slate-700 mb-1.5">Proveedor</label>
+              <select id="oc-supplier" formControlName="supplier_id"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                <option value="">Sin proveedor</option>
+                @for (s of suppliers(); track s.id) {
+                  <option [value]="s.id">{{ s.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="oc-contract" class="block text-sm font-medium text-slate-700 mb-1.5">Evento / Contrato</label>
+              <select id="oc-contract" formControlName="contract_id"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                <option value="">Gasto general (sin evento)</option>
+                @for (c of contracts(); track c.id) {
+                  <option [value]="c.id">{{ c.folio }} — {{ c.client?.nombre ?? 'Sin cliente' }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- Fecha + Estado -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="oc-fecha" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Fecha <span class="text-rojo-brillante" aria-hidden="true">*</span>
+              </label>
+              <input id="oc-fecha" type="date" formControlName="fecha"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+            </div>
+            <div>
+              <label for="oc-estado" class="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
+              <select id="oc-estado" formControlName="estado"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none">
+                @for (opt of statusOptions; track opt.value) {
+                  @if (opt.value !== 'all') {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- Items -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-slate-700">Conceptos</h3>
+              <button type="button" (click)="addItem()"
+                class="flex items-center gap-1.5 text-xs font-medium text-rojo-brillante hover:bg-rojo-brillante/5 px-2.5 py-1.5 rounded-lg transition-colors">
+                <i class="pi pi-plus text-xs"></i>
+                Agregar concepto
+              </button>
+            </div>
+            <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-3 pb-1.5 text-xs text-slate-400 font-medium uppercase tracking-wide">
+              <div class="col-span-6">Descripción</div>
+              <div class="col-span-2 text-center">Cantidad</div>
+              <div class="col-span-3 text-right">Precio unit.</div>
+              <div class="col-span-1"></div>
+            </div>
+            <div [attr.data-items]="itemCount()" formArrayName="items" class="space-y-2">
+              @for (ctrl of items.controls; track $index; let i = $index) {
+                <div [formGroupName]="i" class="grid grid-cols-12 gap-2 items-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                  <div class="col-span-12 sm:col-span-6">
+                    <input type="text" formControlName="descripcion" placeholder="Descripción"
+                      class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+                  </div>
+                  <div class="col-span-4 sm:col-span-2">
+                    <input type="number" formControlName="cantidad" min="0.01" step="1" placeholder="1"
+                      class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all text-center" />
+                  </div>
+                  <div class="col-span-6 sm:col-span-3">
+                    <div class="relative">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <input type="number" formControlName="precio_unitario" min="0" step="0.01" placeholder="0.00"
+                        class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all text-right" />
+                    </div>
+                  </div>
+                  <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
+                    <span class="hidden sm:block text-xs text-slate-400">
+                      {{ getItemSubtotal(i) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </span>
+                    <button type="button" (click)="removeItem(i)" [disabled]="items.length === 1"
+                      class="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Eliminar concepto">
+                      <i class="pi pi-trash text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Notas -->
+          <div>
+            <label for="oc-notas" class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+            <textarea id="oc-notas" formControlName="notas" rows="2" placeholder="Observaciones, número de factura…"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none"></textarea>
+          </div>
+
+        </div>
+      </form>
+
+      <!-- Footer con total -->
+      <div class="border-t border-slate-100 shrink-0">
+        <div class="px-6 py-3 bg-slate-50 flex justify-end">
+          <div class="text-right">
+            <p class="text-xs text-slate-400">Total de la compra</p>
+            <p class="text-lg font-bold text-slate-800">{{ total() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          </div>
+        </div>
+        <div class="px-6 py-4 flex gap-3">
+          <button type="button" (click)="closeDrawer()"
+            class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="button" (click)="onSubmit()" [disabled]="form.invalid || saving()"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors"
+            [class]="form.invalid || saving() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90'">
+            @if (saving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+            {{ drawerMode() === 'create' ? 'Crear compra' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </div>
+    </aside>
+  }
+
+  <!-- Modal confirmar borrado -->
+  @if (deleteTarget()) {
+    <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-labelledby="del-purchase-title">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-trash text-red-600"></i>
+          </div>
+          <div>
+            <h3 id="del-purchase-title" class="font-bold text-slate-800">Eliminar compra</h3>
+            <p class="text-sm text-slate-500 mt-1">¿Eliminar <strong>{{ deleteTarget()!.folio }}</strong>? Esta acción no se puede deshacer.</p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button (click)="cancelDelete()" class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+          <button (click)="executeDelete()" class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

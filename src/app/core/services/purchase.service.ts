@@ -117,6 +117,37 @@ export class PurchaseService {
     return true;
   }
 
+  async updateFull(id: string, data: CreatePurchaseData): Promise<Purchase | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { items, ...purchaseData } = data;
+    const { error } = await client.from('purchases').update(purchaseData).eq('id', id);
+    if (error) {
+      console.error('Error updating purchase:', error.message);
+      return null;
+    }
+
+    await client.from('purchase_items').delete().eq('purchase_id', id);
+    if (items.length > 0) {
+      await client.from('purchase_items').insert(
+        items.map((item) => ({ ...item, purchase_id: id })),
+      );
+    }
+    return this.getById(id);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+    const { error } = await client.from('purchases').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting purchase:', error.message);
+      return false;
+    }
+    return true;
+  }
+
   private async generateFolio(): Promise<string> {
     const year = new Date().getFullYear();
     const client = this.supabase.client;

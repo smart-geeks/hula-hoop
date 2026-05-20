@@ -77,6 +77,17 @@ export class SupplierService {
     return updated;
   }
 
+  async delete(id: string): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+    const { error } = await client.from('suppliers').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting supplier:', error.message);
+      return false;
+    }
+    return true;
+  }
+
   async toggleActive(id: string, activo: boolean): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;
