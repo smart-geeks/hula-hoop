@@ -1,19 +1,646 @@
 <div class="space-y-6">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+      + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+      <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Reportes</h1>
       <p class="text-slate-500 text-sm mt-0.5">Análisis financiero y operativo exportable</p>
     </div>
-    <div class="w-px"></div>
-  </div>
-
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-        <i class="pi pi-chart-line text-3xl text-slate-300"></i>
-      </div>
-      <p class="text-base font-medium text-slate-600 mb-1">Módulo en construcción</p>
-      <p class="text-sm text-center max-w-sm">Los reportes financieros estarán disponibles conforme registres eventos, gastos y ventas. Incluyen exportación a PDF y Excel.</p>
+    <div class="flex gap-2">
+      <button (click)="exportExcel()" [disabled]="loading()"
+        class="flex items-center gap-2 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50">
+        <i class="pi pi-file-excel text-emerald-600"></i>
+        Excel
+      </button>
+      <button (click)="exportPdf()" [disabled]="loading()"
+        class="flex items-center gap-2 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50">
+        <i class="pi pi-file-pdf text-red-500"></i>
+        PDF
+      </button>
     </div>
   </div>
+
+  <!-- Tabs + filters + content card -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm">
+
+    <!-- Report tabs -->
+    <div class="flex overflow-x-auto border-b border-slate-100 px-4 gap-1 pt-3">
+      @for (tab of tabs; track tab.id) {
+        <button (click)="setTab(tab.id)"
+          [class]="'flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium whitespace-nowrap transition-colors '
+            + (activeTab() === tab.id
+              ? 'bg-rojo-brillante text-white'
+              : 'text-slate-600 hover:bg-slate-50')">
+          <i [class]="'pi ' + tab.icon + ' text-sm'"></i>
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- Filters -->
+    <div [formGroup]="filterForm" class="flex flex-wrap items-end gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+      @if (activeTab() !== 'inventario') {
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Desde</label>
+          <input type="date" formControlName="from"
+            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+          <input type="date" formControlName="to"
+            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30" />
+        </div>
+      }
+
+      @if (activeTab() === 'eventos') {
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Estado</label>
+          <select formControlName="estado"
+            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 appearance-none cursor-pointer">
+            <option value="">Todos</option>
+            <option value="borrador">Borrador</option>
+            <option value="firmado">Firmado</option>
+            <option value="liquidado">Liquidado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+      }
+
+      @if (activeTab() === 'gastos' || activeTab() === 'inventario') {
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Categoría</label>
+          <select formControlName="categoria"
+            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 appearance-none cursor-pointer">
+            <option value="">Todas</option>
+            @if (activeTab() === 'gastos') {
+              @for (cat of expenseCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            } @else {
+              @for (cat of inventoryCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            }
+          </select>
+        </div>
+      }
+
+      <button (click)="loadActiveReport()" [disabled]="loading()"
+        class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors disabled:opacity-50">
+        @if (loading()) {
+          <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+        } @else {
+          <i class="pi pi-refresh"></i>
+        }
+        Actualizar
+      </button>
+    </div>
+
+    <!-- Report content -->
+    <div id="report-print-area" class="p-5">
+
+      @if (loading()) {
+        <div class="flex items-center justify-center py-20">
+          <div class="w-8 h-8 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+      <!-- ════════ EVENTOS ════════ -->
+      } @else if (activeTab() === 'eventos') {
+        <div class="space-y-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-slate-50 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Eventos en período</p>
+              <p class="text-2xl font-bold text-slate-800">{{ eventosData().length }}</p>
+            </div>
+            <div class="bg-emerald-50 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Total Contratado</p>
+              <p class="text-xl font-bold text-emerald-700">
+                {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Saldo Pendiente</p>
+              <p class="text-xl font-bold text-amber-700">
+                {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+          </div>
+
+          @if (eventosData().length === 0) {
+            <div class="text-center py-12 text-slate-400">
+              <i class="pi pi-calendar text-3xl block mb-2 text-slate-300"></i>
+              <p class="text-sm">Sin eventos en el período seleccionado</p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold">Folio</th>
+                    <th class="text-left px-4 py-3 font-semibold">Cliente</th>
+                    <th class="text-left px-4 py-3 font-semibold">Fecha</th>
+                    <th class="text-left px-4 py-3 font-semibold">Estado</th>
+                    <th class="text-right px-4 py-3 font-semibold">Total</th>
+                    <th class="text-right px-4 py-3 font-semibold">Depósito</th>
+                    <th class="text-right px-4 py-3 font-semibold">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (row of eventosData(); track row.folio) {
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                      <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ row.folio }}</td>
+                      <td class="px-4 py-3 font-medium text-slate-800">{{ row.cliente }}</td>
+                      <td class="px-4 py-3 text-slate-600">{{ row.fecha_evento | date:'dd/MM/yyyy':'':'es-MX' }}</td>
+                      <td class="px-4 py-3">
+                        <span [class]="'px-2 py-1 rounded-full text-xs font-semibold capitalize ' + getEstadoClass(row.estado)">
+                          {{ row.estado }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-right font-semibold text-slate-800">
+                        {{ row.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-right text-emerald-700 font-medium">
+                        {{ row.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-right font-semibold"
+                        [class]="row.saldo_pendiente > 0 ? 'text-amber-700' : 'text-slate-400'">
+                        {{ row.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="bg-slate-50 border-t-2 border-slate-200">
+                  <tr>
+                    <td colspan="4" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-800">
+                      {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                    <td></td>
+                    <td class="px-4 py-3 text-right font-bold text-amber-700">
+                      {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        </div>
+
+      <!-- ════════ P&L GLOBAL ════════ -->
+      } @else if (activeTab() === 'pl_global') {
+        @if (!plData()) {
+          <div class="text-center py-12 text-slate-400">
+            <i class="pi pi-chart-bar text-3xl block mb-2 text-slate-300"></i>
+            <p class="text-sm">Selecciona un período y haz clic en Actualizar</p>
+          </div>
+        } @else {
+          <div class="max-w-2xl mx-auto space-y-3">
+            <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+              <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3">Ingresos</p>
+              <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-600">Pagos de contratos</span>
+                  <span class="font-semibold text-slate-800">
+                    {{ plData()!.ingresos_contratos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-600">Ventas POS</span>
+                  <span class="font-semibold text-slate-800">
+                    {{ plData()!.ventas_pos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm font-bold border-t border-emerald-200 pt-2 mt-2">
+                  <span class="text-emerald-700">Total Ingresos</span>
+                  <span class="text-emerald-700 text-base">
+                    {{ plData()!.total_ingresos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-5">
+              <p class="text-xs font-bold text-red-600 uppercase tracking-wider mb-3">Egresos</p>
+              <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-600">Compras recibidas</span>
+                  <span class="font-semibold text-slate-800">
+                    {{ plData()!.compras | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-600">Gastos administrativos</span>
+                  <span class="font-semibold text-slate-800">
+                    {{ plData()!.gastos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm font-bold border-t border-red-200 pt-2 mt-2">
+                  <span class="text-red-700">Total Egresos</span>
+                  <span class="text-red-700 text-base">
+                    {{ plData()!.total_egresos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div [class]="'border-2 rounded-2xl p-5 '
+              + (plData()!.utilidad_neta >= 0 ? 'bg-blue-50 border-blue-300' : 'bg-red-100 border-red-400')">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-wider mb-1"
+                    [class]="plData()!.utilidad_neta >= 0 ? 'text-blue-600' : 'text-red-700'">
+                    Utilidad Neta del Período
+                  </p>
+                  <p class="text-3xl font-bold"
+                    [class]="plData()!.utilidad_neta >= 0 ? 'text-blue-700' : 'text-red-700'">
+                    {{ plData()!.utilidad_neta | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                </div>
+                @if (plData()!.total_ingresos > 0) {
+                  <div class="text-right">
+                    <p class="text-xs text-slate-500 mb-1">Margen</p>
+                    <p class="text-2xl font-bold"
+                      [class]="plData()!.utilidad_neta >= 0 ? 'text-blue-700' : 'text-red-700'">
+                      {{ plData()!.utilidad_neta / plData()!.total_ingresos | percent:'1.0-1' }}
+                    </p>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+      <!-- ════════ PIPELINE ════════ -->
+      } @else if (activeTab() === 'pipeline') {
+        @if (pipelineData().length === 0) {
+          <div class="text-center py-12 text-slate-400">
+            <i class="pi pi-filter text-3xl block mb-2 text-slate-300"></i>
+            <p class="text-sm">Sin cotizaciones en el período</p>
+          </div>
+        } @else {
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              @for (row of pipelineData(); track row.estado) {
+                <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                  <span [class]="'inline-block px-2 py-0.5 rounded-full text-xs font-semibold capitalize mb-2 ' + getPipelineClass(row.estado)">
+                    {{ row.estado }}
+                  </span>
+                  <p class="text-2xl font-bold text-slate-800">{{ row.cantidad }}</p>
+                  <p class="text-xs text-slate-400 mt-1">
+                    {{ row.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                </div>
+              }
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Distribución por monto</p>
+              @for (row of pipelineData(); track row.estado) {
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs text-slate-600">
+                    <span class="capitalize font-medium">{{ row.estado }}</span>
+                    <span class="font-semibold">{{ row.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                  </div>
+                  <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div class="h-3 rounded-full bg-rojo-brillante transition-all"
+                      [style.width.%]="getPipelineBar(row)"></div>
+                  </div>
+                </div>
+              }
+              <div class="flex justify-between text-sm font-bold border-t border-slate-100 pt-3">
+                <span class="text-slate-700">{{ pipelineTotalItems() }} cotizaciones — Total</span>
+                <span class="text-slate-800">{{ pipelineTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+      <!-- ════════ CLIENTES ════════ -->
+      } @else if (activeTab() === 'clientes') {
+        @if (clientesData().length === 0) {
+          <div class="text-center py-12 text-slate-400">
+            <i class="pi pi-users text-3xl block mb-2 text-slate-300"></i>
+            <p class="text-sm">Sin datos de clientes en el período</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr>
+                  <th class="text-left px-4 py-3 font-semibold">Cliente</th>
+                  <th class="text-left px-4 py-3 font-semibold">Email</th>
+                  <th class="text-left px-4 py-3 font-semibold">Teléfono</th>
+                  <th class="text-center px-4 py-3 font-semibold">Eventos</th>
+                  <th class="text-right px-4 py-3 font-semibold">Total Facturado</th>
+                  <th class="text-right px-4 py-3 font-semibold">Ticket Promedio</th>
+                  <th class="text-right px-4 py-3 font-semibold">Último Evento</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (row of clientesData(); track row.nombre) {
+                  <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-4 py-3 font-semibold text-slate-800">{{ row.nombre }}</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs">{{ row.email }}</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs">{{ row.telefono }}</td>
+                    <td class="px-4 py-3 text-center">
+                      <span class="px-2.5 py-1 bg-rojo-brillante/10 text-rojo-brillante text-xs font-bold rounded-full">
+                        {{ row.num_eventos }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-800">
+                      {{ row.total_facturado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-slate-600">
+                      {{ row.num_eventos > 0 ? (row.total_facturado / row.num_eventos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : '—' }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-slate-500 text-xs">
+                      {{ row.ultimo_evento | date:'dd/MM/yyyy':'':'es-MX' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      <!-- ════════ PROVEEDORES ════════ -->
+      } @else if (activeTab() === 'proveedores') {
+        @if (proveedoresData().length === 0) {
+          <div class="text-center py-12 text-slate-400">
+            <i class="pi pi-truck text-3xl block mb-2 text-slate-300"></i>
+            <p class="text-sm">Sin compras a proveedores en el período</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr>
+                  <th class="text-left px-4 py-3 font-semibold">Proveedor</th>
+                  <th class="text-left px-4 py-3 font-semibold">Categoría</th>
+                  <th class="text-center px-4 py-3 font-semibold">Compras</th>
+                  <th class="text-right px-4 py-3 font-semibold">Total Comprado</th>
+                  <th class="text-right px-4 py-3 font-semibold">Última Compra</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (row of proveedoresData(); track row.nombre) {
+                  <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-4 py-3 font-semibold text-slate-800">{{ row.nombre }}</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs capitalize">{{ row.categoria }}</td>
+                    <td class="px-4 py-3 text-center">
+                      <span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
+                        {{ row.num_compras }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-800">
+                      {{ row.total_compras | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-slate-500 text-xs">
+                      {{ row.ultima_compra | date:'dd/MM/yyyy':'':'es-MX' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      <!-- ════════ INVENTARIO ════════ -->
+      } @else if (activeTab() === 'inventario') {
+        <div class="space-y-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-slate-50 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Artículos activos</p>
+              <p class="text-2xl font-bold text-slate-800">{{ inventarioData().length }}</p>
+            </div>
+            <div class="bg-emerald-50 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Valor en inventario</p>
+              <p class="text-xl font-bold text-emerald-700">
+                {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+            <div [class]="'rounded-xl p-4 text-center ' + (inventarioAlertas() > 0 ? 'bg-red-50' : 'bg-slate-50')">
+              <p class="text-xs text-slate-500 mb-1">Alertas stock mínimo</p>
+              <p class="text-2xl font-bold" [class]="inventarioAlertas() > 0 ? 'text-red-600' : 'text-slate-800'">
+                {{ inventarioAlertas() }}
+              </p>
+            </div>
+          </div>
+
+          @if (inventarioData().length === 0) {
+            <div class="text-center py-12 text-slate-400">
+              <i class="pi pi-box text-3xl block mb-2 text-slate-300"></i>
+              <p class="text-sm">Sin artículos de inventario</p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold">Artículo</th>
+                    <th class="text-left px-4 py-3 font-semibold">SKU</th>
+                    <th class="text-left px-4 py-3 font-semibold">Categoría</th>
+                    <th class="text-center px-4 py-3 font-semibold">Stock</th>
+                    <th class="text-center px-4 py-3 font-semibold">Mínimo</th>
+                    <th class="text-right px-4 py-3 font-semibold">P. Costo</th>
+                    <th class="text-right px-4 py-3 font-semibold">P. Venta</th>
+                    <th class="text-right px-4 py-3 font-semibold">Valor Total</th>
+                    <th class="text-center px-4 py-3 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (row of inventarioData(); track row.nombre) {
+                    <tr [class]="'transition-colors ' + (row.alerta ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-slate-50/50')">
+                      <td class="px-4 py-3 font-medium text-slate-800">{{ row.nombre }}</td>
+                      <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ row.sku }}</td>
+                      <td class="px-4 py-3 text-slate-500 text-xs capitalize">{{ row.categoria }}</td>
+                      <td class="px-4 py-3 text-center font-bold"
+                        [class]="row.alerta ? 'text-red-600' : 'text-emerald-600'">
+                        {{ row.stock_actual | number:'1.0-2' }} <span class="text-slate-400 font-normal">{{ row.unidad }}</span>
+                      </td>
+                      <td class="px-4 py-3 text-center text-slate-500 text-xs">{{ row.stock_minimo | number:'1.0-2' }}</td>
+                      <td class="px-4 py-3 text-right text-slate-600 text-xs">
+                        {{ row.precio_costo | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-right text-slate-600 text-xs">
+                        {{ row.precio_venta | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-right font-semibold text-slate-800">
+                        {{ row.valor_inventario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        @if (row.alerta) {
+                          <i class="pi pi-exclamation-triangle text-red-500 text-xs" title="Stock bajo mínimo"></i>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="bg-slate-50 border-t-2 border-slate-200">
+                  <tr>
+                    <td colspan="7" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Valor total inventario</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-800">
+                      {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        </div>
+
+      <!-- ════════ GASTOS ════════ -->
+      } @else if (activeTab() === 'gastos') {
+        <div class="space-y-5">
+          @if (gastosCat().length > 0) {
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              @for (cat of gastosCat(); track cat.categoria) {
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <p class="text-xs text-slate-500 mb-1 truncate">{{ cat.categoria }}</p>
+                  <p class="text-lg font-bold text-slate-800">
+                    {{ cat.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ cat.cantidad }} gasto{{ cat.cantidad !== 1 ? 's' : '' }}</p>
+                </div>
+              }
+            </div>
+          }
+
+          @if (gastosRows().length === 0) {
+            <div class="text-center py-12 text-slate-400">
+              <i class="pi pi-wallet text-3xl block mb-2 text-slate-300"></i>
+              <p class="text-sm">Sin gastos en el período</p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold">Fecha</th>
+                    <th class="text-left px-4 py-3 font-semibold">Categoría</th>
+                    <th class="text-left px-4 py-3 font-semibold">Descripción</th>
+                    <th class="text-left px-4 py-3 font-semibold">Evento</th>
+                    <th class="text-left px-4 py-3 font-semibold">Proveedor</th>
+                    <th class="text-right px-4 py-3 font-semibold">Monto</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (row of gastosRows(); track $index) {
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                      <td class="px-4 py-3 text-slate-500 text-xs">
+                        {{ row.fecha | date:'dd/MM/yyyy':'':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">{{ row.categoria }}</span>
+                      </td>
+                      <td class="px-4 py-3 text-slate-700">{{ row.descripcion }}</td>
+                      <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ row.evento }}</td>
+                      <td class="px-4 py-3 text-slate-500 text-xs">{{ row.proveedor }}</td>
+                      <td class="px-4 py-3 text-right font-semibold text-slate-800">
+                        {{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="bg-slate-50 border-t-2 border-slate-200">
+                  <tr>
+                    <td colspan="5" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total gastos</td>
+                    <td class="px-4 py-3 text-right font-bold text-red-700">
+                      {{ gastosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        </div>
+
+      <!-- ════════ FLUJO DE CAJA ════════ -->
+      } @else if (activeTab() === 'flujo_caja') {
+        <div class="space-y-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Total Entradas</p>
+              <p class="text-xl font-bold text-emerald-700">
+                {{ flujoCajaTotalEntradas() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+              <p class="text-xs text-slate-500 mb-1">Total Salidas</p>
+              <p class="text-xl font-bold text-red-700">
+                {{ flujoCajaTotalSalidas() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+            <div [class]="'border-2 rounded-xl p-4 text-center '
+              + ((flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) >= 0
+                ? 'bg-blue-50 border-blue-300'
+                : 'bg-red-100 border-red-400')">
+              <p class="text-xs text-slate-500 mb-1">Flujo Neto</p>
+              <p class="text-xl font-bold"
+                [class]="(flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) >= 0 ? 'text-blue-700' : 'text-red-700'">
+                {{ (flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              </p>
+            </div>
+          </div>
+
+          @if (flujoCajaData().length === 0) {
+            <div class="text-center py-12 text-slate-400">
+              <i class="pi pi-arrow-right-arrow-left text-3xl block mb-2 text-slate-300"></i>
+              <p class="text-sm">Sin movimientos en el período</p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold">Fecha</th>
+                    <th class="text-left px-4 py-3 font-semibold">Concepto</th>
+                    <th class="text-center px-4 py-3 font-semibold">Tipo</th>
+                    <th class="text-right px-4 py-3 font-semibold">Monto</th>
+                    <th class="text-right px-4 py-3 font-semibold">Saldo Acumulado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (row of flujoCajaData(); track $index) {
+                    <tr [class]="'transition-colors ' + (row.tipo === 'entrada' ? 'hover:bg-emerald-50/30' : 'hover:bg-red-50/30')">
+                      <td class="px-4 py-3 text-slate-500 text-xs">
+                        {{ row.fecha | date:'dd/MM/yyyy':'':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-slate-700">{{ row.concepto }}</td>
+                      <td class="px-4 py-3 text-center">
+                        <span [class]="'px-2.5 py-1 rounded-full text-xs font-semibold '
+                          + (row.tipo === 'entrada' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')">
+                          {{ row.tipo === 'entrada' ? 'Entrada' : 'Salida' }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-right font-semibold"
+                        [class]="row.tipo === 'entrada' ? 'text-emerald-700' : 'text-red-700'">
+                        {{ row.tipo === 'entrada' ? '+' : '-' }}{{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                      <td class="px-4 py-3 text-right font-bold"
+                        [class]="(row.saldo_acumulado ?? 0) >= 0 ? 'text-slate-800' : 'text-red-600'">
+                        {{ row.saldo_acumulado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  </div>
+
 </div>
