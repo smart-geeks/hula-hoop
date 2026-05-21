@@ -82,6 +82,7 @@ export class AdminReservations {
   private slotsMap = new Map<string, TimeSlot>();
 
   // Filters
+  readonly filterSearch = signal('');
   readonly filterType = signal<string | null>(null);
   readonly filterStatus = signal<string | null>(null);
   readonly filterDate = signal<Date | null>(null);
@@ -125,11 +126,17 @@ export class AdminReservations {
 
   readonly filteredRows = computed(() => {
     let rows = this.allRows();
+    const q = this.filterSearch().toLowerCase().trim();
     const type = this.filterType();
     const status = this.filterStatus();
     const date = this.filterDate();
     const liquidation = this.filterLiquidation();
 
+    if (q) {
+      rows = rows.filter((r) =>
+        `${r.guest_name} ${r.guest_email} ${r.guest_phone}`.toLowerCase().includes(q),
+      );
+    }
     if (type) {
       rows = rows.filter((r) => r.type === type);
     }
@@ -289,6 +296,7 @@ export class AdminReservations {
   }
 
   clearFilters(): void {
+    this.filterSearch.set('');
     this.filterType.set(null);
     this.filterStatus.set(null);
     this.filterDate.set(null);

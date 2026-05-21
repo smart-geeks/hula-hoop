@@ -294,9 +294,50 @@
           </button>
         </div>
 
+        <!-- Tab navigation -->
+        <div class="flex border-b border-slate-100">
+          <button
+            (click)="setDetailTab('info')"
+            [class]="detailTab() === 'info'
+              ? 'flex-1 py-2.5 text-xs font-semibold text-rojo-brillante border-b-2 border-rojo-brillante transition-colors'
+              : 'flex-1 py-2.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors'"
+          >
+            <i class="pi pi-info-circle mr-1 text-xs"></i>
+            Info
+          </button>
+          @if (selectedEvent()!.type === 'contract') {
+            <button
+              (click)="setDetailTab('tareas')"
+              [class]="detailTab() === 'tareas'
+                ? 'flex-1 py-2.5 text-xs font-semibold text-rojo-brillante border-b-2 border-rojo-brillante transition-colors'
+                : 'flex-1 py-2.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors'"
+            >
+              <i class="pi pi-check-square mr-1 text-xs"></i>
+              Tareas
+              @if (completedTaskCount() > 0 || tasks().length > 0) {
+                <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
+                  {{ completedTaskCount() }}/{{ tasks().length }}
+                </span>
+              }
+            </button>
+          }
+          @if (selectedEvent()!.type === 'reservation') {
+            <button
+              (click)="setDetailTab('pagos')"
+              [class]="detailTab() === 'pagos'
+                ? 'flex-1 py-2.5 text-xs font-semibold text-rojo-brillante border-b-2 border-rojo-brillante transition-colors'
+                : 'flex-1 py-2.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors'"
+            >
+              <i class="pi pi-credit-card mr-1 text-xs"></i>
+              Pagos
+            </button>
+          }
+        </div>
+
         <!-- Panel body -->
         <div class="px-5 py-4 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
 
+          @if (detailTab() === 'info') {
           <!-- Estado -->
           <div class="flex items-center justify-between">
             <span class="text-slate-500 text-xs uppercase tracking-wide font-medium">Estado</span>
@@ -416,24 +457,197 @@
             </dl>
           }
 
+          } @else if (detailTab() === 'pagos') {
+            <!-- PAGOS TAB (reservations) -->
+            <div class="space-y-3">
+              <div class="bg-slate-50 rounded-xl p-4 space-y-3">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-500">Total reserva</span>
+                  <span class="font-bold text-slate-800">
+                    {{ (asReservation(selectedEvent()!.raw).total_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-500">Anticipo requerido</span>
+                  <span class="font-medium text-slate-700">
+                    {{ (asReservation(selectedEvent()!.raw).deposit_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <hr class="border-slate-200" />
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-500">Pagado</span>
+                  <span class="font-semibold text-emerald-600">
+                    {{ ((asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0) / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-500">Saldo pendiente</span>
+                  @if ((selectedEvent()!.saldo ?? 0) > 0) {
+                    <span class="font-bold text-amber-600">
+                      {{ selectedEvent()!.saldo! | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </span>
+                  } @else {
+                    <span class="font-semibold text-emerald-600 text-xs">Liquidado ✓</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Progress bar -->
+              @if (asReservation(selectedEvent()!.raw).total_cents > 0) {
+                @let paid = asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0;
+                @let total = asReservation(selectedEvent()!.raw).total_cents;
+                <div>
+                  <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                    <span>Progreso de pago</span>
+                    <span>{{ paid * 100 / total | number:'1.0-0' }}%</span>
+                  </div>
+                  <div class="w-full bg-slate-100 rounded-full h-2">
+                    <div
+                      class="h-2 rounded-full transition-all duration-300"
+                      [class]="paid >= total ? 'bg-emerald-400' : 'bg-amber-400'"
+                      [style.width.%]="paid * 100 / total > 100 ? 100 : paid * 100 / total"
+                    ></div>
+                  </div>
+                </div>
+              }
+
+              <a
+                routerLink="/admin/reservas"
+                class="flex items-center justify-center gap-2 w-full py-2 border border-violet-200 text-violet-700 rounded-xl text-xs font-semibold hover:bg-violet-50 transition-colors">
+                <i class="pi pi-money-bill text-xs"></i>
+                Registrar pago
+              </a>
+            </div>
+
+          } @else if (detailTab() === 'tareas') {
+            <!-- TAREAS TAB -->
+            @if (tasksLoading()) {
+              <div class="space-y-2">
+                @for (i of [1,2,3]; track i) {
+                  <div class="h-12 bg-slate-100 rounded-xl animate-pulse"></div>
+                }
+              </div>
+            } @else if (tasks().length === 0) {
+              <div class="flex flex-col items-center justify-center py-8 text-center">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+                  <i class="pi pi-check-square text-slate-300"></i>
+                </div>
+                <p class="text-xs text-slate-400">Sin tareas asignadas</p>
+                <a routerLink="/admin/eventos" class="mt-1.5 text-xs text-rojo-brillante font-semibold hover:underline">
+                  Agregar tareas →
+                </a>
+              </div>
+            } @else {
+              <!-- Progress -->
+              <div class="mb-3">
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-500">Progreso</span>
+                  <span class="font-semibold text-slate-700">{{ completedTaskCount() }}/{{ tasks().length }}</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300"
+                    [class]="completedTaskCount() === tasks().length ? 'bg-emerald-400' : 'bg-rojo-brillante'"
+                    [style.width.%]="tasks().length > 0 ? (completedTaskCount() / tasks().length) * 100 : 0"
+                  ></div>
+                </div>
+              </div>
+              <!-- Task list -->
+              <div class="space-y-2">
+                @for (task of tasks(); track task.id) {
+                  <button
+                    type="button"
+                    (click)="toggleTask(task)"
+                    [disabled]="taskSaving() === task.id"
+                    class="w-full text-left flex items-start gap-3 p-3 rounded-xl border transition-all"
+                    [class]="task.estado === 'completado'
+                      ? 'bg-emerald-50 border-emerald-100'
+                      : 'bg-white border-slate-200 hover:border-slate-300'"
+                  >
+                    <div
+                      class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all"
+                      [class]="task.estado === 'completado' ? 'bg-emerald-400 border-emerald-400' : 'border-slate-300'"
+                    >
+                      @if (taskSaving() === task.id) {
+                        <i class="pi pi-spin pi-spinner text-[9px] text-slate-400"></i>
+                      } @else if (task.estado === 'completado') {
+                        <i class="pi pi-check text-[9px] text-white"></i>
+                      }
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold leading-tight"
+                        [class]="task.estado === 'completado' ? 'text-slate-400 line-through' : 'text-slate-700'"
+                      >{{ task.titulo }}</p>
+                      @if (task.hora_inicio) {
+                        <p class="text-[10px] text-slate-400 mt-0.5">
+                          {{ formatTime(task.hora_inicio) }}
+                        </p>
+                      }
+                    </div>
+                  </button>
+                }
+              </div>
+              <!-- Full checklist link -->
+              <a
+                [routerLink]="['/admin/evento', selectedEvent()!.id, 'checklist']"
+                class="flex items-center justify-center gap-2 w-full mt-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <i class="pi pi-expand text-xs"></i>
+                Abrir checklist completo
+              </a>
+            }
+          }
+
         </div>
 
-        <!-- Panel footer -->
-        <div class="px-5 py-4 border-t border-slate-100">
+        <!-- Panel footer — contextual primary action -->
+        <div class="px-5 py-4 border-t border-slate-100 space-y-2">
           @if (selectedEvent()!.type === 'contract') {
-            <a
-              routerLink="/admin/contratos"
-              class="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">
-              <i class="pi pi-external-link text-xs"></i>
-              Ir a Contratos
+            @let contract = asContract(selectedEvent()!.raw);
+            @if (contract.estado === 'borrador') {
+              <a routerLink="/admin/contratos"
+                 class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">
+                <i class="pi pi-pencil text-xs"></i>
+                Registrar firma del contrato
+              </a>
+            } @else if (contract.estado === 'firmado' && contract.saldo_pendiente > 0) {
+              <a routerLink="/admin/contratos"
+                 class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors">
+                <i class="pi pi-money-bill text-xs"></i>
+                Registrar pago pendiente
+              </a>
+            } @else {
+              <a [routerLink]="['/admin/evento', selectedEvent()!.id, 'checklist']"
+                 class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-rojo-brillante text-white rounded-xl text-xs font-semibold hover:bg-rojo-brillante/90 transition-colors">
+                <i class="pi pi-check-square text-xs"></i>
+                Abrir checklist del evento
+              </a>
+            }
+            <a routerLink="/admin/contratos"
+               class="flex items-center justify-center gap-1.5 w-full py-2 text-slate-500 text-xs font-medium hover:text-slate-700 transition-colors">
+              Ver en módulo de contratos →
             </a>
           } @else {
-            <a
-              routerLink="/admin/reservas"
-              class="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 text-white rounded-xl text-xs font-semibold hover:bg-violet-700 transition-colors">
-              <i class="pi pi-external-link text-xs"></i>
-              Ir a Reservaciones
-            </a>
+            @let resv = asReservation(selectedEvent()!.raw);
+            @if (resv.status === 'pending_payment') {
+              <a routerLink="/admin/reservas"
+                 class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-amber-500 text-white rounded-xl text-xs font-semibold hover:bg-amber-600 transition-colors">
+                <i class="pi pi-money-bill text-xs"></i>
+                Registrar anticipo
+              </a>
+            } @else if (resv.status === 'confirmed') {
+              <a routerLink="/admin/reservas"
+                 class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors">
+                <i class="pi pi-check text-xs"></i>
+                Reserva confirmada — ver detalle
+              </a>
+            } @else {
+              <a routerLink="/admin/reservas"
+                 class="flex items-center justify-center gap-2 w-full py-2.5 bg-violet-600 text-white rounded-xl text-xs font-semibold hover:bg-violet-700 transition-colors">
+                <i class="pi pi-external-link text-xs"></i>
+                Ver en módulo de reservas
+              </a>
+            }
           }
         </div>
 

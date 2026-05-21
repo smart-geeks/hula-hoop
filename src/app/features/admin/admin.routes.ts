@@ -8,11 +8,16 @@ export const adminRoutes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'hoy',
         pathMatch: 'full',
       },
 
       // ── GENERAL ──────────────────────────────────────────────
+      {
+        path: 'hoy',
+        loadComponent: () =>
+          import('./pages/admin-today/admin-today').then((m) => m.AdminToday),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -45,6 +50,14 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./pages/admin-reservations/admin-reservations').then(
             (m) => m.AdminReservations,
+          ),
+      },
+
+      {
+        path: 'evento/:id/checklist',
+        loadComponent: () =>
+          import('./pages/admin-event-checklist/admin-event-checklist').then(
+            (m) => m.AdminEventChecklist,
           ),
       },
 

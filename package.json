@@ -7,7 +7,9 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:hula-hoop": "node dist/hula-hoop/server/server.mjs"
+    "serve:ssr:hula-hoop": "node dist/hula-hoop/server/server.mjs",
+    "audit:patterns": "node tools/audit-angular-patterns.js",
+    "audit:security": "node tools/audit-security.js"
   },
   "prettier": {
     "printWidth": 100,

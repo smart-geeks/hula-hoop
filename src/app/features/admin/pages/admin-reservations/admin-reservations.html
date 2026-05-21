@@ -8,27 +8,66 @@
   </a>
 </div>
 
-<!-- Stats cards -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-  <div class="bg-neutro-50 rounded-xl p-4 text-center">
-    <p class="text-2xl font-bold">{{ stats().total }}</p>
-    <p class="text-sm text-neutro-500">Total</p>
-  </div>
-  <div class="bg-amber-50 rounded-xl p-4 text-center">
-    <p class="text-2xl font-bold text-amber-600">{{ stats().pending }}</p>
-    <p class="text-sm text-neutro-500">Pendientes</p>
-  </div>
-  <div class="bg-green-50 rounded-xl p-4 text-center">
-    <p class="text-2xl font-bold text-green-600">{{ stats().confirmed }}</p>
-    <p class="text-sm text-neutro-500">Confirmadas</p>
-  </div>
-  <div class="bg-blue-50 rounded-xl p-4 text-center">
-    <p class="text-2xl font-bold text-blue-600">{{ stats().completed }}</p>
-    <p class="text-sm text-neutro-500">Completadas</p>
-  </div>
+<!-- Quick filter chips -->
+<div class="flex flex-wrap gap-2 mb-4">
+  <button
+    (click)="filterStatus.set(null)"
+    [class]="!filterStatus() ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'"
+    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors"
+  >
+    Todas
+    <span [class]="!filterStatus() ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" class="text-xs font-bold px-1.5 py-0.5 rounded-full">
+      {{ stats().total }}
+    </span>
+  </button>
+  <button
+    (click)="filterStatus.set('pending_payment')"
+    [class]="filterStatus() === 'pending_payment' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-amber-700 border-amber-200 hover:border-amber-400'"
+    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors"
+  >
+    <span class="w-2 h-2 rounded-full bg-amber-400" [class.bg-white]="filterStatus() === 'pending_payment'"></span>
+    Pendientes
+    <span [class]="filterStatus() === 'pending_payment' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'" class="text-xs font-bold px-1.5 py-0.5 rounded-full">
+      {{ stats().pending }}
+    </span>
+  </button>
+  <button
+    (click)="filterStatus.set('confirmed')"
+    [class]="filterStatus() === 'confirmed' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400'"
+    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors"
+  >
+    <span class="w-2 h-2 rounded-full bg-emerald-400" [class.bg-white]="filterStatus() === 'confirmed'"></span>
+    Confirmadas
+    <span [class]="filterStatus() === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'" class="text-xs font-bold px-1.5 py-0.5 rounded-full">
+      {{ stats().confirmed }}
+    </span>
+  </button>
+  <button
+    (click)="filterStatus.set('completed')"
+    [class]="filterStatus() === 'completed' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-blue-700 border-blue-200 hover:border-blue-400'"
+    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors"
+  >
+    <span class="w-2 h-2 rounded-full bg-blue-400" [class.bg-white]="filterStatus() === 'completed'"></span>
+    Completadas
+    <span [class]="filterStatus() === 'completed' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'" class="text-xs font-bold px-1.5 py-0.5 rounded-full">
+      {{ stats().completed }}
+    </span>
+  </button>
 </div>
 
-<!-- Filters -->
+<!-- Search -->
+<div class="relative mb-4">
+  <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+  <input
+    type="search"
+    placeholder="Buscar por nombre, email o teléfono…"
+    [value]="filterSearch()"
+    (input)="filterSearch.set($any($event.target).value)"
+    class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
+    aria-label="Buscar reserva" />
+</div>
+
+<!-- Advanced filters -->
 <div class="flex flex-wrap items-end gap-3 mb-4">
   <div class="flex-1 min-w-[10rem]">
     <label class="block text-sm font-medium text-neutro-600 mb-1">Tipo</label>
@@ -56,7 +95,79 @@
             (onClick)="clearFilters()" />
 </div>
 
-<!-- Table -->
+<!-- Mobile cards (visible < md) -->
+<div class="md:hidden space-y-3 mb-4">
+  @if (loading()) {
+    @for (i of [1,2,3]; track i) {
+      <div class="h-28 bg-slate-100 rounded-2xl animate-pulse"></div>
+    }
+  } @else if (filteredRows().length === 0) {
+    <div class="flex flex-col items-center py-10 text-center gap-2">
+      <i class="pi pi-calendar-plus text-3xl text-slate-300"></i>
+      <p class="text-sm text-slate-400">Sin reservas</p>
+      @if (filterSearch() || filterType() || filterStatus() || filterDate() || filterLiquidation()) {
+        <button (click)="clearFilters()" class="text-xs font-semibold text-rojo-brillante hover:underline">Limpiar filtros</button>
+      }
+    </div>
+  } @else {
+    @for (row of filteredRows(); track row.id) {
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <!-- Header row -->
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="font-semibold text-slate-800">{{ row.guest_name }}</p>
+            <p class="text-xs text-slate-400">{{ row.guest_phone }}</p>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                  [class]="getStatusConfig(row.status).severity === 'warn' ? 'bg-amber-100 text-amber-700' :
+                           getStatusConfig(row.status).severity === 'success' ? 'bg-emerald-100 text-emerald-700' :
+                           getStatusConfig(row.status).severity === 'info' ? 'bg-blue-100 text-blue-700' :
+                           getStatusConfig(row.status).severity === 'danger' ? 'bg-red-100 text-red-700' :
+                           'bg-slate-100 text-slate-500'">
+              {{ getStatusConfig(row.status).label }}
+            </span>
+          </div>
+        </div>
+        <!-- Details row -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <p class="text-slate-400">Fecha</p>
+            <p class="font-medium text-slate-700">{{ formatDate(row.reservation_date) }}</p>
+          </div>
+          <div>
+            <p class="text-slate-400">Turno</p>
+            <p class="font-medium text-slate-700">{{ row.time_slot_label }}</p>
+          </div>
+          <div>
+            <p class="text-slate-400">Total</p>
+            <p class="font-semibold text-slate-800">{{ row.total_cents | currencyMxn }}</p>
+          </div>
+          <div>
+            <p class="text-slate-400">Abonado</p>
+            <p class="font-semibold text-emerald-600">{{ row.paid_deposit_cents | currencyMxn }}</p>
+          </div>
+        </div>
+        <!-- Actions row -->
+        <div class="flex gap-2 pt-1 border-t border-slate-100">
+          <button (click)="openDetail(row)"
+                  class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors min-h-[44px]">
+            <i class="pi pi-eye text-xs"></i>
+            Ver detalle
+          </button>
+          <button (click)="openPayment(row)"
+                  class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors min-h-[44px]">
+            <i class="pi pi-money-bill text-xs"></i>
+            Registrar pago
+          </button>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- Table (visible >= md) -->
+<div class="hidden md:block">
 <p-table [value]="filteredRows()" [loading]="loading()" [rowHover]="true"
          [paginator]="true" [rows]="15" [showCurrentPageReport]="true"
          currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} reservas"
@@ -125,12 +236,37 @@
   </ng-template>
   <ng-template #emptymessage>
     <tr>
-      <td colspan="9" class="text-center py-8 text-neutro-500">
-        No hay reservas que coincidan con los filtros.
+      <td colspan="11" class="py-12">
+        @if (!filterSearch() && !filterType() && !filterStatus() && !filterDate() && !filterLiquidation()) {
+          <!-- True empty state: no reservations at all -->
+          <div class="flex flex-col items-center text-center max-w-xs mx-auto gap-3">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+              <i class="pi pi-calendar-plus text-2xl text-slate-300"></i>
+            </div>
+            <p class="font-semibold text-slate-600">Aún no hay reservas</p>
+            <p class="text-sm text-slate-400">Las reservas de clientes aparecerán aquí. Puedes crear una directamente o esperar a que lleguen del sitio.</p>
+            <a routerLink="/reservar/fiesta-privada"
+               class="flex items-center gap-2 px-4 py-2 rounded-xl bg-rojo-brillante text-white text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors">
+              <i class="pi pi-plus text-xs"></i>
+              Crear primera reserva
+            </a>
+          </div>
+        } @else {
+          <!-- Filtered empty state -->
+          <div class="flex flex-col items-center text-center gap-2">
+            <i class="pi pi-filter-slash text-2xl text-slate-300"></i>
+            <p class="text-sm text-slate-500">Sin resultados para los filtros actuales</p>
+            <button (click)="clearFilters()"
+                    class="text-xs font-semibold text-rojo-brillante hover:underline">
+              Limpiar filtros
+            </button>
+          </div>
+        }
       </td>
     </tr>
   </ng-template>
 </p-table>
+</div>
 
 <!-- Detail dialog -->
 @if (detailRow(); as row) {

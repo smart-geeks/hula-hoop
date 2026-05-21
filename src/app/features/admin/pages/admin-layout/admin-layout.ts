@@ -2,9 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
+  OnDestroy,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DrawerModule } from 'primeng/drawer';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +15,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AvatarModule } from 'primeng/avatar';
 import { BadgeModule } from 'primeng/badge';
 import { AuthService } from '../../../../core/services/auth.service';
+import { SupabaseService } from '../../../../core/services/supabase.service';
+import { GlobalSearch } from '../../components/global-search/global-search';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface NavItem {
   label: string;
@@ -37,15 +43,26 @@ interface NavSection {
     TooltipModule,
     AvatarModule,
     BadgeModule,
+    GlobalSearch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminLayout {
+export class AdminLayout implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly supabase = inject(SupabaseService);
+  private readonly doc = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private realtimeChannel: RealtimeChannel | null = null;
+  private notifTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly sidebarCollapsed = signal(false);
   readonly mobileSidebarVisible = signal(false);
+  readonly fabOpen = signal(false);
+
+  // ── Realtime notification ──────────────────────────────────
+  readonly newReservationNotif = signal<{ name: string; type: string } | null>(null);
+  readonly notifVisible = signal(false);
 
   readonly userProfile = this.auth.userProfile;
   readonly isOwner = this.auth.isOwner;
@@ -61,12 +78,15 @@ export class AdminLayout {
       .toUpperCase();
   });
 
+  // ── Navigation (task-oriented grouping) ───────────────────
   readonly navSections: NavSection[] = [
     {
-      label: 'General',
+      label: 'Operaciones',
       items: [
-        { label: 'Dashboard', route: 'dashboard', icon: 'pi-chart-bar' },
+        { label: 'Hoy', route: 'hoy', icon: 'pi-sun' },
         { label: 'Calendario', route: 'calendario', icon: 'pi-calendar' },
+        { label: 'Reservas', route: 'reservas', icon: 'pi-calendar-plus' },
+        { label: 'Eventos', route: 'eventos', icon: 'pi-star' },
       ],
     },
     {
@@ -75,24 +95,22 @@ export class AdminLayout {
         { label: 'Clientes', route: 'clientes', icon: 'pi-users' },
         { label: 'Cotizaciones', route: 'cotizaciones', icon: 'pi-file' },
         { label: 'Contratos', route: 'contratos', icon: 'pi-file-edit' },
-        { label: 'Reservas', route: 'reservas', icon: 'pi-calendar-plus' },
       ],
     },
     {
-      label: 'Operativo',
+      label: 'Finanzas',
       items: [
-        { label: 'Eventos', route: 'eventos', icon: 'pi-star' },
-        { label: 'Inventario', route: 'inventario', icon: 'pi-box' },
-        { label: 'Punto de Venta', route: 'punto-de-venta', icon: 'pi-shopping-cart' },
-        { label: 'Compras', route: 'compras', icon: 'pi-shopping-bag' },
-      ],
-    },
-    {
-      label: 'Administración',
-      items: [
-        { label: 'Proveedores', route: 'proveedores', icon: 'pi-truck' },
         { label: 'Gastos', route: 'gastos', icon: 'pi-wallet' },
+        { label: 'Compras', route: 'compras', icon: 'pi-shopping-bag' },
+        { label: 'Punto de Venta', route: 'punto-de-venta', icon: 'pi-shopping-cart' },
         { label: 'Reportes', route: 'reportes', icon: 'pi-chart-line' },
+      ],
+    },
+    {
+      label: 'Bodega',
+      items: [
+        { label: 'Inventario', route: 'inventario', icon: 'pi-box' },
+        { label: 'Proveedores', route: 'proveedores', icon: 'pi-truck' },
       ],
     },
     {
@@ -108,8 +126,67 @@ export class AdminLayout {
     },
   ];
 
+  constructor() {
+    this.subscribeToRealtime();
+
+    // Cmd+K / Ctrl+K opens global search (delegated to GlobalSearch component)
+    const handler = (e: KeyboardEvent) => {
+      // Handled by GlobalSearch component — this is just a placeholder
+      // for any layout-level keyboard shortcuts
+      if (e.key === 'Escape') {
+        this.fabOpen.set(false);
+      }
+    };
+    this.doc.addEventListener('keydown', handler);
+    this.destroyRef.onDestroy(() => this.doc.removeEventListener('keydown', handler));
+  }
+
+  private subscribeToRealtime(): void {
+    const client = this.supabase.client;
+    if (!client) return;
+
+    this.realtimeChannel = client
+      .channel('admin-new-reservations')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'private_reservations' },
+        (payload) => {
+          const data = payload.new as { guest_name: string };
+          this.showNotification(data.guest_name, 'Fiesta Privada');
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'playdate_reservations' },
+        (payload) => {
+          const data = payload.new as { guest_name: string };
+          this.showNotification(data.guest_name, 'Play Day');
+        },
+      )
+      .subscribe();
+  }
+
+  private showNotification(name: string, type: string): void {
+    this.newReservationNotif.set({ name, type });
+    this.notifVisible.set(true);
+    if (this.notifTimer) clearTimeout(this.notifTimer);
+    this.notifTimer = setTimeout(() => this.notifVisible.set(false), 7000);
+  }
+
+  dismissNotif(): void {
+    this.notifVisible.set(false);
+    if (this.notifTimer) {
+      clearTimeout(this.notifTimer);
+      this.notifTimer = null;
+    }
+  }
+
   toggleSidebar(): void {
     this.sidebarCollapsed.update((v) => !v);
+  }
+
+  toggleFab(): void {
+    this.fabOpen.update((v) => !v);
   }
 
   openMobileSidebar(): void {
@@ -123,5 +200,12 @@ export class AdminLayout {
   async logout(): Promise<void> {
     await this.auth.logout();
     this.router.navigate(['/']);
+  }
+
+  ngOnDestroy(): void {
+    if (this.realtimeChannel) {
+      this.supabase.client?.removeChannel(this.realtimeChannel);
+    }
+    if (this.notifTimer) clearTimeout(this.notifTimer);
   }
 }

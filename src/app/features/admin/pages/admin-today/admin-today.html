@@ -1,0 +1,310 @@
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <p class="text-sm text-slate-400 font-medium">{{ getDayGreeting() }}</p>
+      <h1 class="text-2xl font-bold text-slate-800 capitalize">
+        {{ today | date:"EEEE d 'de' MMMM" : '' : 'es-MX' }}
+      </h1>
+      @if (!loading()) {
+        <p class="text-slate-500 text-sm mt-0.5">
+          @if (totalEvents() === 0) {
+            Sin eventos programados hoy
+          } @else {
+            {{ totalEvents() }} evento{{ totalEvents() !== 1 ? 's' : '' }} programado{{ totalEvents() !== 1 ? 's' : '' }} hoy
+          }
+        </p>
+      }
+    </div>
+    <a
+      routerLink="../reservas"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm shrink-0"
+    >
+      <i class="pi pi-plus"></i>
+      Nueva reserva
+    </a>
+  </div>
+
+  <!-- Alerts banner -->
+  @if (!loading() && totalAlerts() > 0) {
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+        <i class="pi pi-exclamation-triangle text-amber-600"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-amber-800">
+          {{ totalAlerts() }} alerta{{ totalAlerts() !== 1 ? 's' : '' }} activa{{ totalAlerts() !== 1 ? 's' : '' }}
+        </p>
+        <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+          @if (lowStockCount() > 0) {
+            <p class="text-xs text-amber-600">
+              {{ lowStockCount() }} artículo{{ lowStockCount() !== 1 ? 's' : '' }} bajo stock
+            </p>
+          }
+          @if (overdueCount() > 0) {
+            <p class="text-xs text-amber-600">
+              {{ overdueCount() }} contrato{{ overdueCount() !== 1 ? 's' : '' }} con saldo vencido
+            </p>
+          }
+        </div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        @if (lowStockCount() > 0) {
+          <a routerLink="../inventario" class="text-xs font-semibold text-amber-700 hover:underline">Inventario →</a>
+        }
+        @if (overdueCount() > 0) {
+          <a routerLink="../contratos" class="text-xs font-semibold text-amber-700 hover:underline">Contratos →</a>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Events grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Contratos hoy -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
+            <i class="pi pi-file-edit text-violet-600 text-xs"></i>
+          </div>
+          <h2 class="font-semibold text-slate-800">Eventos contratados</h2>
+        </div>
+        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+          {{ loading() ? '…' : todayContracts().length }}
+        </span>
+      </div>
+
+      @if (loading()) {
+        <div class="p-5 space-y-3">
+          @for (i of [1, 2]; track i) {
+            <div class="h-16 bg-slate-100 rounded-xl animate-pulse"></div>
+          }
+        </div>
+      } @else if (todayContracts().length === 0) {
+        <div class="flex flex-col items-center justify-center py-10 px-4 text-center">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <i class="pi pi-calendar text-xl text-slate-300"></i>
+          </div>
+          <p class="text-sm text-slate-400">Sin eventos contratados hoy</p>
+          <a routerLink="../contratos" class="mt-2 text-xs text-rojo-brillante font-semibold hover:underline">
+            Ver contratos →
+          </a>
+        </div>
+      } @else {
+        <div class="divide-y divide-slate-50">
+          @for (contract of todayContracts(); track contract.id) {
+            <div class="px-5 py-4 hover:bg-slate-50/60 transition-colors">
+              <div class="flex items-start gap-3">
+                <div class="w-14 shrink-0 text-center pt-0.5">
+                  @if (contract.hora_inicio) {
+                    <span class="text-sm font-bold text-slate-700">{{ contract.hora_inicio }}</span>
+                  } @else {
+                    <span class="text-xs text-slate-300">—</span>
+                  }
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-800 truncate">
+                    {{ contract.client?.nombre ?? 'Sin cliente' }}
+                  </p>
+                  <p class="text-xs text-slate-400">{{ contract.folio }}</p>
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span
+                      [class]="'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ' + getStatusConfig(contract.estado).bg + ' ' + getStatusConfig(contract.estado).text"
+                    >
+                      <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + getStatusConfig(contract.estado).dot"></span>
+                      {{ getStatusConfig(contract.estado).label }}
+                    </span>
+                    <a
+                      [routerLink]="['../evento', contract.id, 'checklist']"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rojo-brillante/8 text-rojo-brillante hover:bg-rojo-brillante/15 transition-colors"
+                    >
+                      <i class="pi pi-check-square text-[10px]"></i>
+                      Checklist
+                    </a>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold text-slate-700">
+                    {{ contract.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                  @if (contract.saldo_pendiente > 0) {
+                    <p class="text-xs text-amber-600 font-medium">
+                      Debe {{ contract.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    </p>
+                  } @else {
+                    <p class="text-xs text-emerald-600 font-medium">Liquidado ✓</p>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="px-5 py-3 border-t border-slate-50">
+          <a routerLink="../contratos" class="text-xs text-rojo-brillante font-semibold hover:underline">
+            Ver todos los contratos →
+          </a>
+        </div>
+      }
+    </div>
+
+    <!-- Reservas hoy -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+            <i class="pi pi-calendar-plus text-blue-600 text-xs"></i>
+          </div>
+          <h2 class="font-semibold text-slate-800">Reservas en línea</h2>
+        </div>
+        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+          {{ loading() ? '…' : todayReservations().length }}
+        </span>
+      </div>
+
+      @if (loading()) {
+        <div class="p-5 space-y-3">
+          @for (i of [1, 2]; track i) {
+            <div class="h-16 bg-slate-100 rounded-xl animate-pulse"></div>
+          }
+        </div>
+      } @else if (todayReservations().length === 0) {
+        <div class="flex flex-col items-center justify-center py-10 px-4 text-center">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <i class="pi pi-calendar-plus text-xl text-slate-300"></i>
+          </div>
+          <p class="text-sm text-slate-400">Sin reservas en línea para hoy</p>
+          <a routerLink="../reservas" class="mt-2 text-xs text-rojo-brillante font-semibold hover:underline">
+            Ver todas las reservas →
+          </a>
+        </div>
+      } @else {
+        <div class="divide-y divide-slate-50">
+          @for (res of todayReservations(); track res.id) {
+            <div class="px-5 py-4 hover:bg-slate-50/60 transition-colors">
+              <div class="flex items-start gap-3">
+                <div
+                  [class]="'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ' + (res.type === 'private' ? 'bg-violet-50' : 'bg-sky-50')"
+                >
+                  <i
+                    [class]="'text-sm ' + (res.type === 'private' ? 'pi pi-star text-violet-600' : 'pi pi-users text-sky-600')"
+                  ></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-800 truncate">{{ res.guest_name }}</p>
+                  <p class="text-xs text-slate-400">
+                    {{ res.type === 'private' ? 'Fiesta privada' : 'Play Day' }} · {{ res.guest_phone }}
+                  </p>
+                  @if (res.time_slot_label) {
+                    <p class="text-xs text-slate-500 font-medium mt-0.5">
+                      <i class="pi pi-clock text-[10px] mr-0.5"></i>{{ res.time_slot_label }}
+                    </p>
+                  }
+                  <span
+                    [class]="'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ' + getStatusConfig(res.status).bg + ' ' + getStatusConfig(res.status).text"
+                  >
+                    <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + getStatusConfig(res.status).dot"></span>
+                    {{ getStatusConfig(res.status).label }}
+                  </span>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold text-slate-700">
+                    {{ res.total_cents | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  </p>
+                  @if (res.paid_deposit_cents < res.total_cents) {
+                    <p class="text-xs text-amber-600 font-medium">Saldo pendiente</p>
+                  } @else {
+                    <p class="text-xs text-emerald-600 font-medium">Liquidado ✓</p>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="px-5 py-3 border-t border-slate-50">
+          <a routerLink="../reservas" class="text-xs text-rojo-brillante font-semibold hover:underline">
+            Ver todas las reservas →
+          </a>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- Empty state: no events today -->
+  @if (!loading() && totalEvents() === 0) {
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+        <i class="pi pi-calendar text-3xl text-slate-300"></i>
+      </div>
+      <h3 class="font-semibold text-slate-700 mb-1">Día sin eventos</h3>
+      <p class="text-sm text-slate-400 mb-5">No hay eventos programados para hoy — buen momento para planificar</p>
+      <div class="flex flex-wrap gap-3 justify-center">
+        <a
+          routerLink="../cotizaciones"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-50 text-violet-700 text-sm font-semibold hover:bg-violet-100 transition-colors"
+        >
+          <i class="pi pi-file-plus text-xs"></i>
+          Nueva cotización
+        </a>
+        <a
+          routerLink="../contratos"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 transition-colors"
+        >
+          <i class="pi pi-file-edit text-xs"></i>
+          Nuevo contrato
+        </a>
+        <a
+          routerLink="../reservas"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rojo-brillante/5 text-rojo-brillante text-sm font-semibold hover:bg-rojo-brillante/10 transition-colors"
+        >
+          <i class="pi pi-calendar-plus text-xs"></i>
+          Ver reservas
+        </a>
+      </div>
+    </div>
+  }
+
+  <!-- Quick access shortcuts -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <a
+      routerLink="../reservas"
+      class="flex flex-col items-center gap-2 bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-rojo-brillante/30 transition-all group"
+    >
+      <div class="w-10 h-10 rounded-xl bg-rojo-brillante/8 flex items-center justify-center group-hover:bg-rojo-brillante/15 transition-colors">
+        <i class="pi pi-calendar-plus text-rojo-brillante"></i>
+      </div>
+      <span class="text-xs font-semibold text-slate-700 text-center">Reservas</span>
+    </a>
+    <a
+      routerLink="../contratos"
+      class="flex flex-col items-center gap-2 bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-violet-300 transition-all group"
+    >
+      <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center group-hover:bg-violet-100 transition-colors">
+        <i class="pi pi-file-edit text-violet-600"></i>
+      </div>
+      <span class="text-xs font-semibold text-slate-700 text-center">Contratos</span>
+    </a>
+    <a
+      routerLink="../calendario"
+      class="flex flex-col items-center gap-2 bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition-all group"
+    >
+      <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+        <i class="pi pi-calendar text-blue-600"></i>
+      </div>
+      <span class="text-xs font-semibold text-slate-700 text-center">Calendario</span>
+    </a>
+    <a
+      routerLink="../inventario"
+      class="flex flex-col items-center gap-2 bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-amber-300 transition-all group"
+    >
+      <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+        <i class="pi pi-box text-amber-600"></i>
+      </div>
+      <span class="text-xs font-semibold text-slate-700 text-center">Inventario</span>
+    </a>
+  </div>
+
+</div>

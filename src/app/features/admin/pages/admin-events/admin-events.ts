@@ -7,11 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ContractService } from '../../../../core/services/contract.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { EventTaskService } from '../../../../core/services/event-task.service';
+import { getStatusCfg } from '../../../../core/utils/status-config';
 import type { Contract } from '../../../../core/interfaces/contract';
 import type { PrivateReservation } from '../../../../core/interfaces/reservation';
+import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 
 export interface EventItem {
   id: string;
@@ -26,16 +29,18 @@ export interface EventItem {
 }
 
 type ActiveTab = 'all' | 'contratos' | 'reservaciones';
+type DetailTab = 'info' | 'tareas' | 'pagos';
 
 @Component({
   selector: 'app-admin-events',
   templateUrl: './admin-events.html',
-  imports: [RouterLink, CurrencyPipe],
+  imports: [RouterLink, CurrencyPipe, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEvents implements OnInit {
   private readonly contractService    = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
+  private readonly eventTaskService   = inject(EventTaskService);
 
   // ── State ────────────────────────────────────────────────────
   readonly loading       = signal(true);
@@ -44,6 +49,14 @@ export class AdminEvents implements OnInit {
   readonly statusFilter  = signal<string>('all');
   readonly selectedEvent = signal<EventItem | null>(null);
   readonly searchQuery   = signal('');
+  readonly detailTab     = signal<DetailTab>('info');
+  readonly tasks         = signal<EventTask[]>([]);
+  readonly tasksLoading  = signal(false);
+  readonly taskSaving    = signal<string | null>(null);
+
+  readonly completedTaskCount = computed(
+    () => this.tasks().filter((t) => t.estado === 'completado').length,
+  );
 
   // ── Computed: KPIs ───────────────────────────────────────────
   readonly todayCount = computed(() => {
@@ -166,51 +179,66 @@ export class AdminEvents implements OnInit {
 
   selectEvent(item: EventItem): void {
     this.selectedEvent.set(item);
+    this.detailTab.set('info');
+    this.tasks.set([]);
   }
 
   closePanel(): void {
     this.selectedEvent.set(null);
+    this.tasks.set([]);
+  }
+
+  async setDetailTab(tab: DetailTab): Promise<void> {
+    this.detailTab.set(tab);
+    if (tab === 'tareas') {
+      const event = this.selectedEvent();
+      if (event?.type === 'contract' && this.tasks().length === 0) {
+        this.tasksLoading.set(true);
+        const tasks = await this.eventTaskService.getByContract(event.id);
+        this.tasks.set(
+          [...tasks].sort((a, b) => {
+            if (!a.hora_inicio && !b.hora_inicio) return 0;
+            if (!a.hora_inicio) return 1;
+            if (!b.hora_inicio) return -1;
+            return a.hora_inicio.localeCompare(b.hora_inicio);
+          }),
+        );
+        this.tasksLoading.set(false);
+      }
+    }
+  }
+
+  async toggleTask(task: EventTask): Promise<void> {
+    if (this.taskSaving() === task.id) return;
+    const newStatus: TaskStatus =
+      task.estado === 'completado' ? 'pendiente' : 'completado';
+    this.taskSaving.set(task.id);
+    const ok = await this.eventTaskService.updateStatus(task.id, newStatus);
+    if (ok) {
+      this.tasks.update((all) =>
+        all.map((t) => (t.id === task.id ? { ...t, estado: newStatus } : t)),
+      );
+    }
+    this.taskSaving.set(null);
+  }
+
+  formatTime(time: string): string {
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
   }
 
   // ── Badge helpers ────────────────────────────────────────────
   getStatusBadge(estado: string, type: 'contract' | 'reservation'): string {
-    if (type === 'contract') {
-      switch (estado) {
-        case 'borrador':  return 'bg-slate-100 text-slate-600';
-        case 'firmado':   return 'bg-blue-100 text-blue-700';
-        case 'liquidado': return 'bg-emerald-100 text-emerald-700';
-        case 'cancelado': return 'bg-red-100 text-red-700';
-        default:          return 'bg-slate-100 text-slate-600';
-      }
-    }
-    switch (estado) {
-      case 'pending_payment': return 'bg-amber-100 text-amber-700';
-      case 'confirmed':       return 'bg-blue-100 text-blue-700';
-      case 'completed':       return 'bg-emerald-100 text-emerald-700';
-      case 'cancelled':       return 'bg-red-100 text-red-700';
-      case 'expired':         return 'bg-slate-100 text-slate-500';
-      default:                return 'bg-slate-100 text-slate-600';
-    }
+    const cfgType = type === 'contract' ? 'contract' : 'reservation';
+    return getStatusCfg(estado, cfgType).classes;
   }
 
   getStatusLabel(estado: string, type: 'contract' | 'reservation'): string {
-    if (type === 'contract') {
-      switch (estado) {
-        case 'borrador':  return 'Borrador';
-        case 'firmado':   return 'Contratado';
-        case 'liquidado': return 'Liquidado';
-        case 'cancelado': return 'Cancelado';
-        default:          return estado;
-      }
-    }
-    switch (estado) {
-      case 'pending_payment': return 'Pend. pago';
-      case 'confirmed':       return 'Confirmada';
-      case 'completed':       return 'Completada';
-      case 'cancelled':       return 'Cancelada';
-      case 'expired':         return 'Expirada';
-      default:                return estado;
-    }
+    const cfgType = type === 'contract' ? 'contract' : 'reservation';
+    return getStatusCfg(estado, cfgType).label;
   }
 
   getTypeIcon(type: 'contract' | 'reservation'): string {
