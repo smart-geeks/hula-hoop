@@ -15,10 +15,14 @@ export interface Quote {
   client_id: string | null;
   fecha: string;
   fecha_evento: string | null;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  guest_count: number | null;
   estado: QuoteStatus;
   subtotal: number;
   descuento: number;
   total: number;
+  deposit_amount: number | null;
   notas: string | null;
   created_at: string;
   // Relations
@@ -30,10 +34,14 @@ export interface CreateQuoteData {
   client_id?: string;
   fecha: string;
   fecha_evento?: string;
+  hora_inicio?: string;
+  hora_fin?: string;
+  guest_count?: number;
   estado?: QuoteStatus;
   subtotal: number;
   descuento?: number;
   total: number;
+  deposit_amount?: number;
   notas?: string;
   items: Omit<QuoteItem, 'id' | 'quote_id' | 'subtotal'>[];
 }
