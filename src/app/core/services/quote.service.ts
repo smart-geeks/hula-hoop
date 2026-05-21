@@ -116,6 +116,23 @@ export class QuoteService {
     return true;
   }
 
+  async getByPublicToken(token: string): Promise<Quote | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('quotes')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*)')
+      .eq('public_token', token)
+      .single();
+
+    if (error) {
+      console.error('Error fetching quote by token:', error.message);
+      return null;
+    }
+    return data;
+  }
+
   async delete(id: string): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;

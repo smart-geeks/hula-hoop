@@ -24,6 +24,7 @@ import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 
 export interface SlotAvailability {
   slot: TimeSlot;
@@ -78,19 +79,25 @@ export class AdminQuotes implements OnInit {
   readonly statusFilter = signal<QuoteStatus | 'all'>('all');
   readonly toast        = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   readonly deleteTarget = signal<Quote | null>(null);
-  readonly converting   = signal(false);
 
   // ── Wizard / drawer state ─────────────────────────────────
   readonly drawerOpen    = signal(false);
   readonly wizardStep    = signal<WizardStep>(1);
   readonly saving        = signal(false);
-  readonly editingQuote  = signal<Quote | null>(null);  // null = create mode
+  readonly editingQuote  = signal<Quote | null>(null);
 
   // Step 1 — Cliente
   readonly clientQuery        = signal('');
   readonly clientDropdownOpen = signal(false);
   readonly selectedClient     = signal<Client | null>(null);
   readonly guestCount         = signal<number>(10);
+
+  // Step 1 — Inline client creation
+  readonly showCreateClient = signal(false);
+  readonly newClientName    = signal('');
+  readonly newClientPhone   = signal('');
+  readonly newClientEmail   = signal('');
+  readonly savingNewClient  = signal(false);
 
   // Step 2 — Fecha & Horario
   readonly selectedDate  = signal<string>('');
@@ -115,6 +122,13 @@ export class AdminQuotes implements OnInit {
   // ── Send popover ─────────────────────────────────────────
   readonly sendTarget  = signal<Quote | null>(null);
   readonly sendMessage = signal('');
+
+  // ── Anticipo dialog (quote → contract) ───────────────────
+  readonly anticoDialog  = signal<Quote | null>(null);
+  readonly anticoMonto   = signal(0);
+  readonly anticoFecha   = signal('');
+  readonly anticoMetodo  = signal<PayMethod>('efectivo');
+  readonly anticoSaving  = signal(false);
 
   // ── Computed ─────────────────────────────────────────────
   readonly STATUS_CONFIG = STATUS_CONFIG;
@@ -146,13 +160,11 @@ export class AdminQuotes implements OnInit {
     { value: 'vencida',   label: 'Vencida' },
   ];
 
-  /** Extras that have been selected (qty > 0) */
   readonly selectedExtras = computed(() => {
     const qty = this.extraQty();
     return this.extras().filter((e) => (qty.get(e.id) ?? 0) > 0);
   });
 
-  /** Line items for the summary */
   readonly summaryItems = computed(() => {
     const items: Array<{ descripcion: string; cantidad: number; precio_unitario: number }> = [];
     const pkg = this.selectedPackage();
@@ -206,7 +218,7 @@ export class AdminQuotes implements OnInit {
   readonly step1Valid = computed(() => this.selectedClient() !== null);
   readonly step2Valid = computed(() => !!this.selectedDate() && this.selectedSlot() !== null);
   readonly step3Valid = computed(() => this.selectedPackage() !== null);
-  readonly step4Valid = computed(() => true); // snack always optional
+  readonly step4Valid = computed(() => true);
 
   // ── Lifecycle ─────────────────────────────────────────────
   async ngOnInit(): Promise<void> {
@@ -238,7 +250,6 @@ export class AdminQuotes implements OnInit {
     this.resetWizard();
     this.editingQuote.set(quote);
 
-    // Pre-fill edit state from existing quote
     const client = this.allClients().find((c) => c.id === quote.client_id) ?? null;
     this.selectedClient.set(client);
     this.guestCount.set(quote.guest_count ?? 10);
@@ -264,7 +275,6 @@ export class AdminQuotes implements OnInit {
   nextStep(): void {
     const current = this.wizardStep();
     if (current < 6) {
-      // Skip snack step if no snack options
       if (current === 3 && this.snackOptions().length === 0) {
         this.wizardStep.set(5 as WizardStep);
         return;
@@ -276,7 +286,6 @@ export class AdminQuotes implements OnInit {
   prevStep(): void {
     const current = this.wizardStep();
     if (current > 1) {
-      // Skip snack step back if no snack options
       if (current === 5 && this.snackOptions().length === 0) {
         this.wizardStep.set(3 as WizardStep);
         return;
@@ -296,11 +305,12 @@ export class AdminQuotes implements OnInit {
     }
   }
 
-  // ── Step 1: Client ────────────────────────────────────────
+  // ── Step 1: Client search ─────────────────────────────────
   onClientInput(event: Event): void {
     const val = (event.target as HTMLInputElement).value;
     this.clientQuery.set(val);
     this.clientDropdownOpen.set(true);
+    this.showCreateClient.set(false);
     if (!val) this.selectedClient.set(null);
   }
 
@@ -308,16 +318,56 @@ export class AdminQuotes implements OnInit {
     this.selectedClient.set(client);
     this.clientQuery.set('');
     this.clientDropdownOpen.set(false);
+    this.showCreateClient.set(false);
   }
 
   clearClient(): void {
     this.selectedClient.set(null);
     this.clientQuery.set('');
+    this.showCreateClient.set(false);
   }
 
   onGuestCountInput(event: Event): void {
     const val = +(event.target as HTMLInputElement).value;
     this.guestCount.set(isNaN(val) ? 1 : Math.max(1, val));
+  }
+
+  // ── Step 1: Inline client creation ───────────────────────
+  openCreateClient(): void {
+    this.showCreateClient.set(true);
+    this.newClientName.set(this.clientQuery().trim());
+    this.newClientPhone.set('');
+    this.newClientEmail.set('');
+    this.clientDropdownOpen.set(false);
+  }
+
+  cancelCreateClient(): void {
+    this.showCreateClient.set(false);
+    this.newClientName.set('');
+    this.newClientPhone.set('');
+    this.newClientEmail.set('');
+  }
+
+  async submitCreateClient(): Promise<void> {
+    const name = this.newClientName().trim();
+    if (!name || this.savingNewClient()) return;
+    this.savingNewClient.set(true);
+    const created = await this.clientService.create({
+      nombre:   name,
+      telefono: this.newClientPhone().trim() || undefined,
+      email:    this.newClientEmail().trim() || undefined,
+    });
+    if (created) {
+      this.allClients.update((list) =>
+        [...list, created].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      );
+      this.selectClient(created);
+      this.cancelCreateClient();
+      this.showToast('success', `Cliente "${created.nombre}" creado`);
+    } else {
+      this.showToast('error', 'No se pudo crear el cliente');
+    }
+    this.savingNewClient.set(false);
   }
 
   // ── Step 2: Date & Slot ───────────────────────────────────
@@ -396,7 +446,7 @@ export class AdminQuotes implements OnInit {
     this.extraQty.set(map);
   }
 
-  // ── Submit ────────────────────────────────────────────────
+  // ── Submit wizard ─────────────────────────────────────────
   async onSubmit(): Promise<void> {
     if (this.saving()) return;
     this.saving.set(true);
@@ -445,32 +495,7 @@ export class AdminQuotes implements OnInit {
     if (ok) {
       this.quotes.update((list) => list.map((q) => (q.id === quote.id ? { ...q, estado } : q)));
       this.showToast('success', `Estado: ${STATUS_CONFIG[estado].label}`);
-
-      // Auto-convert to contract when approved
-      if (estado === 'aprobada') {
-        await this.convertToContract({ ...quote, estado });
-      }
     }
-  }
-
-  async convertToContract(quote: Quote): Promise<void> {
-    if (this.converting()) return;
-    this.converting.set(true);
-    const result = await this.contractService.create({
-      quote_id:        quote.id,
-      client_id:       quote.client_id ?? undefined,
-      fecha_evento:    quote.fecha_evento ?? this.todayStr(),
-      salon_renta:     0,
-      total_contrato:  quote.total,
-      deposito_pagado: quote.deposit_amount ?? 0,
-      estado:          'borrador',
-    });
-    if (result) {
-      this.showToast('success', `Contrato ${result.folio} generado`);
-    } else {
-      this.showToast('error', 'No se pudo generar el contrato');
-    }
-    this.converting.set(false);
   }
 
   confirmDelete(quote: Quote): void { this.deleteTarget.set(quote); }
@@ -487,6 +512,68 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo eliminar');
     }
     this.deleteTarget.set(null);
+  }
+
+  // ── Anticipo dialog — convert quote to signed contract ────
+  openAnticoDialog(quote: Quote): void {
+    this.anticoDialog.set(quote);
+    this.anticoMonto.set(quote.deposit_amount ?? quote.total);
+    this.anticoFecha.set(this.todayStr());
+    this.anticoMetodo.set('efectivo');
+  }
+
+  closeAnticoDialog(): void {
+    this.anticoDialog.set(null);
+  }
+
+  async submitAnticipo(): Promise<void> {
+    const quote = this.anticoDialog();
+    if (!quote || this.anticoSaving()) return;
+
+    const monto = this.anticoMonto();
+    if (monto <= 0) {
+      this.showToast('error', 'El monto debe ser mayor a cero');
+      return;
+    }
+
+    this.anticoSaving.set(true);
+
+    const contract = await this.contractService.create({
+      quote_id:        quote.id,
+      client_id:       quote.client_id ?? undefined,
+      fecha_evento:    quote.fecha_evento ?? this.todayStr(),
+      hora_inicio:     quote.hora_inicio ?? undefined,
+      hora_fin:        quote.hora_fin ?? undefined,
+      salon_renta:     0,
+      total_contrato:  quote.total,
+      deposito_pagado: monto,
+      estado:          'firmado',
+      notas:           quote.notas ?? undefined,
+    });
+
+    if (!contract) {
+      this.showToast('error', 'No se pudo crear el contrato');
+      this.anticoSaving.set(false);
+      return;
+    }
+
+    // Register the payment record
+    await this.contractService.addPayment(contract.id, {
+      monto,
+      fecha:  this.anticoFecha(),
+      metodo: this.anticoMetodo(),
+      notas:  `Anticipo — cotización ${quote.folio}`,
+    });
+
+    // Mark quote as approved
+    await this.quoteService.updateStatus(quote.id, 'aprobada');
+    this.quotes.update((list) =>
+      list.map((q) => (q.id === quote.id ? { ...q, estado: 'aprobada' as QuoteStatus } : q)),
+    );
+
+    this.closeAnticoDialog();
+    this.showToast('success', `Contrato ${contract.folio} creado — anticipo registrado`);
+    this.anticoSaving.set(false);
   }
 
   // ── Send (WhatsApp / Email) ───────────────────────────────
@@ -517,85 +604,16 @@ export class AdminQuotes implements OnInit {
     this.closeSendPanel();
   }
 
-  private async markAsSent(quote: Quote): Promise<void> {
-    if (quote.estado === 'borrador') {
-      const ok = await this.quoteService.updateStatus(quote.id, 'enviada');
-      if (ok) {
-        this.quotes.update((list) =>
-          list.map((q) => (q.id === quote.id ? { ...q, estado: 'enviada' as QuoteStatus } : q)),
-        );
-      }
-    }
+  // ── Public link ───────────────────────────────────────────
+  getPublicUrl(quote: Quote): string {
+    return `${window.location.origin}/cotizacion/${quote.public_token}`;
   }
 
-  private buildWhatsAppMessage(quote: Quote): string {
-    const client = quote.client?.nombre ?? 'Cliente';
-    const fecha = quote.fecha_evento
-      ? new Date(quote.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
-      : '';
-    const horario = quote.hora_inicio
-      ? `${quote.hora_inicio}${quote.hora_fin ? ' – ' + quote.hora_fin : ''}`
-      : '';
-    const items = (quote.items ?? [])
-      .map((it) => `  • ${it.descripcion} x${it.cantidad} — $${(it.cantidad * it.precio_unitario).toLocaleString('es-MX')}`)
-      .join('\n');
-
-    return [
-      `Hola ${client}, te comparto tu cotización *${quote.folio}* de Hula Hoop 🎉`,
-      '',
-      fecha   ? `📅 Fecha evento: ${fecha}` : '',
-      horario ? `⏰ Horario: ${horario}` : '',
-      quote.guest_count ? `👥 Invitados: ${quote.guest_count}` : '',
-      '',
-      '📋 *Conceptos:*',
-      items,
-      '',
-      `Subtotal: $${quote.subtotal.toLocaleString('es-MX')}`,
-      quote.descuento > 0 ? `Descuento: -$${quote.descuento.toLocaleString('es-MX')}` : '',
-      `*Total: $${quote.total.toLocaleString('es-MX')}*`,
-      (quote.deposit_amount ?? 0) > 0 ? `*Anticipo requerido: $${(quote.deposit_amount ?? 0).toLocaleString('es-MX')}*` : '',
-      '',
-      quote.notas ? `📝 Notas: ${quote.notas}` : '',
-      '',
-      '¿Tienes alguna pregunta? Estamos para ayudarte. 😊',
-    ]
-      .filter(Boolean)
-      .join('\n');
-  }
-
-  private buildEmailBody(quote: Quote): string {
-    const client = quote.client?.nombre ?? 'Cliente';
-    const fecha = quote.fecha_evento
-      ? new Date(quote.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
-      : '';
-    const items = (quote.items ?? [])
-      .map((it) => `• ${it.descripcion} x${it.cantidad}: $${(it.cantidad * it.precio_unitario).toLocaleString('es-MX')}`)
-      .join('\n');
-
-    return [
-      `Hola ${client},`,
-      '',
-      `Adjuntamos tu cotización ${quote.folio}:`,
-      '',
-      fecha ? `Fecha del evento: ${fecha}` : '',
-      quote.hora_inicio ? `Horario: ${quote.hora_inicio} – ${quote.hora_fin ?? ''}` : '',
-      quote.guest_count ? `Invitados: ${quote.guest_count}` : '',
-      '',
-      'CONCEPTOS:',
-      items,
-      '',
-      `Subtotal: $${quote.subtotal.toLocaleString('es-MX')}`,
-      quote.descuento > 0 ? `Descuento: -$${quote.descuento.toLocaleString('es-MX')}` : '',
-      `Total: $${quote.total.toLocaleString('es-MX')}`,
-      (quote.deposit_amount ?? 0) > 0 ? `Anticipo requerido: $${(quote.deposit_amount ?? 0).toLocaleString('es-MX')}` : '',
-      '',
-      quote.notas ? `Notas: ${quote.notas}` : '',
-      '',
-      'Gracias por su preferencia,',
-      'Equipo Hula Hoop',
-    ]
-      .filter(Boolean)
-      .join('\n');
+  copyPublicUrl(quote: Quote): void {
+    navigator.clipboard
+      .writeText(this.getPublicUrl(quote))
+      .then(() => this.showToast('success', 'Link copiado al portapapeles'))
+      .catch(() => this.showToast('error', 'No se pudo copiar el link'));
   }
 
   // ── PDF ───────────────────────────────────────────────────
@@ -705,6 +723,93 @@ export class AdminQuotes implements OnInit {
     }
   }
 
+  private async markAsSent(quote: Quote): Promise<void> {
+    if (quote.estado === 'borrador') {
+      const ok = await this.quoteService.updateStatus(quote.id, 'enviada');
+      if (ok) {
+        this.quotes.update((list) =>
+          list.map((q) => (q.id === quote.id ? { ...q, estado: 'enviada' as QuoteStatus } : q)),
+        );
+      }
+    }
+  }
+
+  private buildWhatsAppMessage(quote: Quote): string {
+    const client = quote.client?.nombre ?? 'Cliente';
+    const fecha = quote.fecha_evento
+      ? new Date(quote.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : '';
+    const horario = quote.hora_inicio
+      ? `${quote.hora_inicio}${quote.hora_fin ? ' – ' + quote.hora_fin : ''}`
+      : '';
+    const items = (quote.items ?? [])
+      .map((it) => `  • ${it.descripcion} x${it.cantidad} — $${(it.cantidad * it.precio_unitario).toLocaleString('es-MX')}`)
+      .join('\n');
+    const publicUrl = this.getPublicUrl(quote);
+
+    return [
+      `Hola ${client}, te comparto tu cotización *${quote.folio}* de Hula Hoop 🎉`,
+      '',
+      fecha   ? `📅 Fecha evento: ${fecha}` : '',
+      horario ? `⏰ Horario: ${horario}` : '',
+      quote.guest_count ? `👥 Invitados: ${quote.guest_count}` : '',
+      '',
+      '📋 *Conceptos:*',
+      items,
+      '',
+      `Subtotal: $${quote.subtotal.toLocaleString('es-MX')}`,
+      quote.descuento > 0 ? `Descuento: -$${quote.descuento.toLocaleString('es-MX')}` : '',
+      `*Total: $${quote.total.toLocaleString('es-MX')}*`,
+      (quote.deposit_amount ?? 0) > 0 ? `*Anticipo requerido: $${(quote.deposit_amount ?? 0).toLocaleString('es-MX')}*` : '',
+      '',
+      quote.notas ? `📝 Notas: ${quote.notas}` : '',
+      '',
+      `🔗 Ver tu cotización en línea: ${publicUrl}`,
+      '',
+      '¿Tienes alguna pregunta? Estamos para ayudarte. 😊',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private buildEmailBody(quote: Quote): string {
+    const client = quote.client?.nombre ?? 'Cliente';
+    const fecha = quote.fecha_evento
+      ? new Date(quote.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : '';
+    const items = (quote.items ?? [])
+      .map((it) => `• ${it.descripcion} x${it.cantidad}: $${(it.cantidad * it.precio_unitario).toLocaleString('es-MX')}`)
+      .join('\n');
+    const publicUrl = this.getPublicUrl(quote);
+
+    return [
+      `Hola ${client},`,
+      '',
+      `Adjuntamos tu cotización ${quote.folio}:`,
+      '',
+      fecha ? `Fecha del evento: ${fecha}` : '',
+      quote.hora_inicio ? `Horario: ${quote.hora_inicio} – ${quote.hora_fin ?? ''}` : '',
+      quote.guest_count ? `Invitados: ${quote.guest_count}` : '',
+      '',
+      'CONCEPTOS:',
+      items,
+      '',
+      `Subtotal: $${quote.subtotal.toLocaleString('es-MX')}`,
+      quote.descuento > 0 ? `Descuento: -$${quote.descuento.toLocaleString('es-MX')}` : '',
+      `Total: $${quote.total.toLocaleString('es-MX')}`,
+      (quote.deposit_amount ?? 0) > 0 ? `Anticipo requerido: $${(quote.deposit_amount ?? 0).toLocaleString('es-MX')}` : '',
+      '',
+      `Ver cotización en línea: ${publicUrl}`,
+      '',
+      quote.notas ? `Notas: ${quote.notas}` : '',
+      '',
+      'Gracias por su preferencia,',
+      'Equipo Hula Hoop',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
   private async refreshQuotes(): Promise<void> {
     const quotes = await this.quoteService.getAll();
     this.quotes.set(quotes);
@@ -715,6 +820,10 @@ export class AdminQuotes implements OnInit {
     this.selectedClient.set(null);
     this.clientQuery.set('');
     this.clientDropdownOpen.set(false);
+    this.showCreateClient.set(false);
+    this.newClientName.set('');
+    this.newClientPhone.set('');
+    this.newClientEmail.set('');
     this.guestCount.set(10);
     this.selectedDate.set('');
     this.selectedSlot.set(null);

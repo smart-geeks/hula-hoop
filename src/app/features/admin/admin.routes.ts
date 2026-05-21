@@ -54,6 +54,13 @@ export const adminRoutes: Routes = [
       },
 
       {
+        path: 'evento/:id',
+        loadComponent: () =>
+          import('./pages/admin-event-detail/admin-event-detail').then(
+            (m) => m.AdminEventDetail,
+          ),
+      },
+      {
         path: 'evento/:id/checklist',
         loadComponent: () =>
           import('./pages/admin-event-checklist/admin-event-checklist').then(

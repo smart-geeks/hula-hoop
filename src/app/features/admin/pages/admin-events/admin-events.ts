@@ -6,7 +6,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ContractService } from '../../../../core/services/contract.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
@@ -41,6 +41,7 @@ export class AdminEvents implements OnInit {
   private readonly contractService    = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly eventTaskService   = inject(EventTaskService);
+  private readonly router             = inject(Router);
 
   // ── State ────────────────────────────────────────────────────
   readonly loading       = signal(true);
@@ -178,6 +179,11 @@ export class AdminEvents implements OnInit {
   }
 
   selectEvent(item: EventItem): void {
+    if (item.type === 'contract') {
+      void this.router.navigate(['/admin/evento', item.id]);
+      return;
+    }
+    // Reservations: keep side panel
     this.selectedEvent.set(item);
     this.detailTab.set('info');
     this.tasks.set([]);

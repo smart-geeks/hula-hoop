@@ -12,6 +12,7 @@ export interface QuoteItem {
 export interface Quote {
   id: string;
   folio: string;
+  public_token: string;
   client_id: string | null;
   fecha: string;
   fecha_evento: string | null;

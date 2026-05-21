@@ -10,6 +10,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    path: 'cotizacion/:token',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: 'reservar/**',
     renderMode: RenderMode.Client,
   },

@@ -227,20 +227,19 @@
                     <div class="flex items-center justify-end gap-1">
                       @if (event.type === 'contract') {
                         <a
-                          routerLink="/admin/contratos"
+                          [routerLink]="['/admin/evento', event.id]"
                           (click)="$event.stopPropagation()"
-                          class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          aria-label="Ver contratos">
-                          <i class="pi pi-arrow-right text-sm"></i>
+                          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                          aria-label="Ver detalle del evento">
+                          <i class="pi pi-external-link text-xs"></i>
+                          <span class="hidden sm:inline">Ver evento</span>
                         </a>
                       } @else {
-                        <a
-                          routerLink="/admin/reservas"
-                          (click)="$event.stopPropagation()"
-                          class="p-2 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
-                          aria-label="Ver reservaciones">
-                          <i class="pi pi-arrow-right text-sm"></i>
-                        </a>
+                        <span
+                          class="p-2 rounded-lg text-slate-400 cursor-pointer hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                          aria-label="Ver detalle de reservación">
+                          <i class="pi pi-chevron-right text-sm"></i>
+                        </span>
                       }
                     </div>
                   </td>

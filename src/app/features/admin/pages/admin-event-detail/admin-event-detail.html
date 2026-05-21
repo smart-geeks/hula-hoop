@@ -1,0 +1,681 @@
+<!-- Toast -->
+@if (toast()) {
+<div [class]="'fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium '
+  + (toast()!.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200')">
+  <i [class]="'pi ' + (toast()!.type === 'success' ? 'pi-check-circle' : 'pi-times-circle')"></i>
+  {{ toast()!.message }}
+</div>
+}
+
+@if (loading()) {
+  <div class="flex justify-center py-16">
+    <div class="w-8 h-8 border-4 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+  </div>
+
+} @else if (contract(); as c) {
+
+<div class="space-y-6">
+
+  <!-- ── HEADER ──────────────────────────────────────────── -->
+  <div>
+    <button (click)="goBack()"
+      class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors mb-4">
+      <i class="pi pi-chevron-left text-xs"></i>
+      Volver a Eventos
+    </button>
+
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+            <i class="pi pi-file-edit text-blue-600"></i>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-slate-800 font-mono">{{ c.folio }}</h1>
+            <p class="text-slate-500 text-sm">{{ c.client?.nombre ?? 'Sin cliente asignado' }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 mt-2 flex-wrap">
+          <span [class]="'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ' + statusConfig().classes">
+            {{ statusConfig().label }}
+          </span>
+          <span class="text-sm text-slate-500 capitalize">
+            <i class="pi pi-calendar text-slate-400 text-xs mr-1"></i>
+            {{ formatDate(c.fecha_evento) }}
+          </span>
+          @if (c.hora_inicio) {
+          <span class="text-sm text-slate-500">
+            <i class="pi pi-clock text-slate-400 text-xs mr-1"></i>
+            {{ c.hora_inicio }}{{ c.hora_fin ? ' – ' + c.hora_fin : '' }}
+          </span>
+          }
+        </div>
+      </div>
+
+      <!-- Financial summary chip -->
+      <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm text-right shrink-0">
+        <p class="text-xs text-slate-400 mb-0.5">Total del contrato</p>
+        <p class="text-2xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        @if (saldoPendiente() > 0) {
+          <p class="text-sm font-semibold text-amber-600 mt-0.5">Saldo: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        } @else {
+          <p class="text-sm font-semibold text-emerald-600 mt-0.5">Liquidado ✓</p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB BAR ────────────────────────────────────────── -->
+  <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
+    @for (tab of [
+      {id: 'resumen',    icon: 'pi-info-circle',    label: 'Resumen'},
+      {id: 'pagos',      icon: 'pi-credit-card',    label: 'Pagos'},
+      {id: 'cotizacion', icon: 'pi-file',            label: 'Cotización'},
+      {id: 'tareas',     icon: 'pi-check-square',   label: 'Tareas'},
+      {id: 'gastos',     icon: 'pi-wallet',          label: 'Gastos'}
+    ]; track tab.id) {
+      <button
+        (click)="setTab($any(tab.id))"
+        [class]="'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap '
+          + (activeTab() === tab.id
+            ? 'bg-white text-slate-800 shadow-sm font-semibold'
+            : 'text-slate-500 hover:text-slate-700')">
+        <i [class]="'pi ' + tab.icon + ' text-xs'"></i>
+        {{ tab.label }}
+        @if (tab.id === 'tareas' && tasks().length > 0) {
+          <span class="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rojo-brillante/10 text-rojo-brillante">
+            {{ completedTaskCount() }}/{{ tasks().length }}
+          </span>
+        }
+        @if (tab.id === 'gastos' && expenses().length > 0) {
+          <span class="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+            {{ expenses().length }}
+          </span>
+        }
+        @if (tab.id === 'cotizacion' && !quote()) {
+          <span class="ml-0.5 text-[10px] text-slate-300">—</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ══ TAB CONTENT ══════════════════════════════════════ -->
+
+  <!-- ── RESUMEN ──────────────────────────────────────────── -->
+  @if (activeTab() === 'resumen') {
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Contract details -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <h2 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+        <i class="pi pi-file-edit text-blue-500 text-sm"></i>
+        Datos del contrato
+      </h2>
+      <dl class="space-y-3 text-sm">
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Folio</dt>
+          <dd class="font-mono font-semibold text-slate-700">{{ c.folio }}</dd>
+        </div>
+        @if (c.fecha_firma) {
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Firma</dt>
+          <dd class="font-medium text-slate-700">{{ c.fecha_firma | date:'d MMM yyyy':'':'es-MX' }}</dd>
+        </div>
+        }
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Fecha del evento</dt>
+          <dd class="font-semibold text-slate-800 text-right capitalize">{{ formatDate(c.fecha_evento) }}</dd>
+        </div>
+        @if (c.hora_inicio) {
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Horario</dt>
+          <dd class="font-medium text-slate-700">{{ c.hora_inicio }}{{ c.hora_fin ? ' – ' + c.hora_fin : '' }}</dd>
+        </div>
+        }
+        <hr class="border-slate-100" />
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Total contrato</dt>
+          <dd class="font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</dd>
+        </div>
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Pagado</dt>
+          <dd class="font-semibold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</dd>
+        </div>
+        <div class="flex justify-between gap-2">
+          <dt class="text-slate-400">Saldo</dt>
+          <dd [class]="'font-semibold ' + (saldoPendiente() > 0 ? 'text-amber-600' : 'text-emerald-600')">
+            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : 'Liquidado ✓' }}
+          </dd>
+        </div>
+        <!-- Progress -->
+        <div class="pt-1">
+          <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+            <span>Progreso de pago</span>
+            <span>{{ pagoProgress() }}%</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-2">
+            <div class="h-2 rounded-full transition-all duration-500"
+              [class]="pagoProgress() >= 100 ? 'bg-emerald-400' : 'bg-amber-400'"
+              [style.width.%]="pagoProgress()"></div>
+          </div>
+        </div>
+      </dl>
+      @if (saldoPendiente() > 0) {
+      <button (click)="setTab('pagos')"
+        class="mt-5 w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors">
+        <i class="pi pi-money-bill text-sm"></i>
+        Registrar pago
+      </button>
+      }
+    </div>
+
+    <!-- Client details -->
+    <div class="space-y-5">
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h2 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <i class="pi pi-user text-violet-500 text-sm"></i>
+          Cliente
+        </h2>
+        @if (c.client) {
+        <dl class="space-y-3 text-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center font-bold shrink-0">
+              {{ c.client.nombre.charAt(0).toUpperCase() }}
+            </div>
+            <div>
+              <p class="font-semibold text-slate-800">{{ c.client.nombre }}</p>
+              @if (c.client.telefono) { <p class="text-xs text-slate-500">{{ c.client.telefono }}</p> }
+              @if (c.client.email) { <p class="text-xs text-slate-400">{{ c.client.email }}</p> }
+            </div>
+          </div>
+        </dl>
+        } @else {
+        <p class="text-sm text-slate-400">Sin cliente asignado</p>
+        }
+      </div>
+
+      <!-- Notes -->
+      @if (c.notas) {
+      <div class="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+        <h2 class="font-semibold text-amber-800 mb-2 text-sm flex items-center gap-2">
+          <i class="pi pi-pencil text-amber-500 text-xs"></i>
+          Notas
+        </h2>
+        <p class="text-sm text-amber-900">{{ c.notas }}</p>
+      </div>
+      }
+
+      <!-- Quick actions -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <h2 class="font-semibold text-slate-700 mb-3 text-sm">Acciones rápidas</h2>
+        <div class="space-y-2">
+          <a [routerLink]="['/admin/evento', c.id, 'checklist']"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 border border-slate-200 transition-colors text-sm font-medium text-slate-700 group">
+            <i class="pi pi-check-square text-rojo-brillante group-hover:scale-110 transition-transform"></i>
+            Ver checklist del evento
+          </a>
+          <a routerLink="/admin/contratos"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 border border-slate-200 transition-colors text-sm font-medium text-slate-700 group">
+            <i class="pi pi-file-edit text-blue-500 group-hover:scale-110 transition-transform"></i>
+            Módulo de contratos
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ── PAGOS ────────────────────────────────────────────── -->
+  @if (activeTab() === 'pagos') {
+  <div class="space-y-5">
+
+    <!-- Balance card -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="font-semibold text-slate-700">Resumen financiero</h2>
+        @if (saldoPendiente() > 0) {
+        <button (click)="openPayDialog()"
+          class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors">
+          <i class="pi pi-plus text-xs"></i>
+          Registrar pago
+        </button>
+        }
+      </div>
+      <div class="grid grid-cols-3 gap-4 mb-5">
+        <div class="text-center">
+          <p class="text-xs text-slate-400 mb-1">Total</p>
+          <p class="text-xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        </div>
+        <div class="text-center border-x border-slate-100">
+          <p class="text-xs text-slate-400 mb-1">Pagado</p>
+          <p class="text-xl font-bold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-slate-400 mb-1">Saldo</p>
+          <p [class]="'text-xl font-bold ' + (saldoPendiente() > 0 ? 'text-amber-600' : 'text-emerald-600')">
+            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : '—' }}
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+          <span>Progreso de pago</span>
+          <span>{{ pagoProgress() }}%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div class="h-3 rounded-full transition-all duration-700"
+            [class]="pagoProgress() >= 100 ? 'bg-emerald-400' : 'bg-amber-400'"
+            [style.width.%]="pagoProgress()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payments history -->
+    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-700">Historial de pagos</h2>
+        <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+          {{ (c.payments ?? []).length }}
+        </span>
+      </div>
+      @if ((c.payments ?? []).length === 0) {
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <i class="pi pi-credit-card text-3xl text-slate-200 mb-3"></i>
+        <p class="text-sm text-slate-400">Sin pagos registrados</p>
+        <button (click)="openPayDialog()"
+          class="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-800 transition-colors">
+          Registrar primer pago →
+        </button>
+      </div>
+      } @else {
+      <div class="divide-y divide-slate-50">
+        @for (pay of c.payments; track pay.id) {
+        <div class="flex items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              [class]="pay.metodo === 'efectivo' ? 'bg-emerald-50' : pay.metodo === 'tarjeta' ? 'bg-blue-50' : 'bg-violet-50'">
+              <i [class]="'text-sm ' + (pay.metodo === 'efectivo' ? 'pi pi-wallet text-emerald-600' : pay.metodo === 'tarjeta' ? 'pi pi-credit-card text-blue-600' : 'pi pi-send text-violet-600')"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-700 capitalize">{{ pay.metodo }}</p>
+              <p class="text-xs text-slate-400">{{ pay.fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
+              @if (pay.notas) { <p class="text-xs text-slate-400 italic">{{ pay.notas }}</p> }
+            </div>
+          </div>
+          <p class="text-base font-bold text-emerald-700">+{{ pay.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+  </div>
+  }
+
+  <!-- ── COTIZACIÓN ────────────────────────────────────────── -->
+  @if (activeTab() === 'cotizacion') {
+  @if (!quote()) {
+  <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm text-center">
+    <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+      <i class="pi pi-file text-3xl text-slate-300"></i>
+    </div>
+    <h3 class="font-semibold text-slate-600 mb-1">Sin cotización asociada</h3>
+    <p class="text-sm text-slate-400 mb-5">Este contrato fue creado directamente sin una cotización previa.</p>
+    <a routerLink="/admin/cotizaciones"
+      class="inline-flex items-center gap-2 px-5 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors">
+      <i class="pi pi-plus text-sm"></i>
+      Ir a cotizaciones
+    </a>
+  </div>
+  } @else {
+  @let q = quote()!;
+  <div class="space-y-5">
+    <!-- Quote header -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <p class="text-xs text-slate-400 mb-0.5">Cotización origen</p>
+          <p class="text-xl font-bold text-slate-800 font-mono">{{ q.folio }}</p>
+          <p class="text-sm text-slate-500 mt-0.5">Emitida el {{ q.fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Aprobada</span>
+      </div>
+    </div>
+
+    <!-- Quote items -->
+    @if ((q.items ?? []).length > 0) {
+    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Conceptos cotizados</h2>
+      </div>
+      <div class="divide-y divide-slate-50">
+        @for (item of q.items; track item.id) {
+        <div class="flex items-center justify-between px-6 py-4 text-sm">
+          <div>
+            <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
+            @if (item.cantidad > 1) {
+            <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            }
+          </div>
+          <p class="font-semibold text-slate-700 shrink-0 ml-4">
+            @if (item.precio_unitario === 0) {
+              <span class="text-emerald-600 text-xs">Incluido</span>
+            } @else {
+              {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+            }
+          </p>
+        </div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Quote totals -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <h2 class="font-semibold text-slate-700 mb-4">Totales cotización</h2>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Subtotal</span>
+          <span class="font-medium">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+        </div>
+        @if (q.descuento > 0) {
+        <div class="flex justify-between">
+          <span class="text-slate-500">Descuento</span>
+          <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+        </div>
+        }
+        <hr class="border-slate-100" />
+        <div class="flex justify-between text-base font-bold text-slate-800">
+          <span>Total</span>
+          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+        </div>
+        @if ((q.deposit_amount ?? 0) > 0) {
+        <div class="flex justify-between font-semibold text-rojo-brillante">
+          <span>Anticipo</span>
+          <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+        </div>
+        }
+      </div>
+      @if (q.notas) {
+      <div class="mt-4 pt-4 border-t border-slate-100">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Notas</p>
+        <p class="text-sm text-slate-700">{{ q.notas }}</p>
+      </div>
+      }
+    </div>
+  </div>
+  }
+  }
+
+  <!-- ── TAREAS ────────────────────────────────────────────── -->
+  @if (activeTab() === 'tareas') {
+  <div class="space-y-5">
+
+    <!-- Progress -->
+    @if (tasks().length > 0) {
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-slate-700">Progreso del equipo</h2>
+        <span class="text-sm font-bold text-slate-500">{{ completedTaskCount() }}/{{ tasks().length }}</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-3">
+        <div class="h-3 rounded-full transition-all duration-500"
+          [class]="taskProgress() >= 100 ? 'bg-emerald-400' : 'bg-rojo-brillante'"
+          [style.width.%]="taskProgress()"></div>
+      </div>
+      <p class="text-xs text-slate-400 mt-2">{{ taskProgress() }}% completado</p>
+    </div>
+    }
+
+    <!-- Task list -->
+    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-700">Lista de tareas</h2>
+        <a [routerLink]="['/admin/evento', contract()!.id, 'checklist']"
+          class="text-xs font-semibold text-rojo-brillante hover:text-rojo-brillante/80 transition-colors flex items-center gap-1">
+          <i class="pi pi-expand text-xs"></i>
+          Pantalla completa
+        </a>
+      </div>
+
+      @if (tasks().length === 0) {
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <i class="pi pi-check-square text-3xl text-slate-200 mb-3"></i>
+        <p class="text-sm text-slate-400">Sin tareas configuradas para este evento</p>
+      </div>
+      } @else {
+      <div class="divide-y divide-slate-50">
+        @for (task of tasks(); track task.id) {
+        <button type="button"
+          (click)="toggleTask(task)"
+          [disabled]="taskSaving() === task.id"
+          class="w-full text-left flex items-start gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors"
+          [class]="task.estado === 'completado' ? 'opacity-75' : ''">
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all"
+            [class]="task.estado === 'completado' ? 'bg-emerald-400 border-emerald-400' : 'border-slate-300'">
+            @if (taskSaving() === task.id) {
+              <i class="pi pi-spin pi-spinner text-[9px] text-slate-400"></i>
+            } @else if (task.estado === 'completado') {
+              <i class="pi pi-check text-[9px] text-white"></i>
+            }
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium leading-tight"
+              [class]="task.estado === 'completado' ? 'text-slate-400 line-through' : 'text-slate-700'">
+              {{ task.titulo }}
+            </p>
+            @if (task.hora_inicio) {
+            <p class="text-xs text-slate-400 mt-0.5">{{ formatTime(task.hora_inicio) }}</p>
+            }
+          </div>
+          <span [class]="'text-xs px-2 py-0.5 rounded-full font-medium shrink-0 '
+            + (task.estado === 'completado' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500')">
+            {{ task.estado === 'completado' ? 'Hecho' : 'Pendiente' }}
+          </span>
+        </button>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- ── GASTOS ────────────────────────────────────────────── -->
+  @if (activeTab() === 'gastos') {
+  <div class="space-y-5">
+
+    <!-- Summary + add button -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs text-slate-400 mb-0.5">Total gastos del evento</p>
+        <p class="text-2xl font-bold text-slate-800">{{ totalExpenses() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        <p class="text-xs text-slate-400 mt-0.5">{{ expenses().length }} gasto{{ expenses().length !== 1 ? 's' : '' }} registrado{{ expenses().length !== 1 ? 's' : '' }}</p>
+      </div>
+      <button (click)="openExpDialog()"
+        class="flex items-center gap-2 px-4 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+        <i class="pi pi-plus text-xs"></i>
+        Agregar gasto
+      </button>
+    </div>
+
+    <!-- Expense list -->
+    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div class="px-6 py-4 border-b border-slate-100">
+        <h2 class="font-semibold text-slate-700">Detalle de gastos</h2>
+      </div>
+      @if (expenses().length === 0) {
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <i class="pi pi-wallet text-3xl text-slate-200 mb-3"></i>
+        <p class="text-sm text-slate-400">Sin gastos registrados para este evento</p>
+        <button (click)="openExpDialog()"
+          class="mt-3 text-sm font-semibold text-rojo-brillante hover:text-rojo-brillante/80 transition-colors">
+          Agregar primer gasto →
+        </button>
+      </div>
+      } @else {
+      <div class="divide-y divide-slate-50">
+        @for (exp of expenses(); track exp.id) {
+        <div class="flex items-center justify-between px-6 py-4">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">{{ exp.categoria }}</span>
+            </div>
+            <p class="text-sm font-medium text-slate-800 truncate">{{ exp.descripcion }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ exp.fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 ml-4">
+            <p class="font-bold text-slate-700">{{ exp.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            <button (click)="deleteExpense(exp)"
+              class="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              aria-label="Eliminar gasto">
+              <i class="pi pi-trash text-xs"></i>
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+  </div>
+  }
+
+</div><!-- end space-y-6 -->
+}
+
+<!-- ══ PAYMENT DIALOG ════════════════════════════════════ -->
+@if (payDialog()) {
+<div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+  role="dialog" aria-modal="true" aria-label="Registrar pago">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="px-6 py-5 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+      <div>
+        <h3 class="font-bold text-slate-800 text-lg">Registrar pago</h3>
+        @if (contract()) {
+        <p class="text-sm text-slate-500 mt-0.5">Saldo pendiente: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        }
+      </div>
+      <button (click)="closePayDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-100 text-slate-400 transition-colors">
+        <i class="pi pi-times text-xs"></i>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Monto <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">$</span>
+          <input type="number" min="0.01" step="0.01"
+            [value]="payMonto()"
+            (input)="payMonto.set(+$any($event.target).value)"
+            class="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all font-bold text-lg" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Fecha</label>
+          <input type="date"
+            [value]="payFecha()"
+            (input)="payFecha.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Método</label>
+          <select
+            [value]="payMetodo()"
+            (change)="payMetodo.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all appearance-none cursor-pointer">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Notas (opcional)</label>
+        <input type="text" placeholder="Ej. Liquidación final del evento"
+          [value]="payNotas()"
+          (input)="payNotas.set($any($event.target).value)"
+          class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all" />
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+      <button (click)="closePayDialog()"
+        class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+        Cancelar
+      </button>
+      <button (click)="submitPayment()" [disabled]="paySaving() || payMonto() <= 0"
+        [class]="'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
+          + (paySaving() || payMonto() <= 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700')">
+        @if (paySaving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+        Confirmar pago
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ══ EXPENSE DIALOG ════════════════════════════════════ -->
+@if (expDialog()) {
+<div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+  role="dialog" aria-modal="true" aria-label="Agregar gasto">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-bold text-slate-800 text-lg">Agregar gasto</h3>
+      <button (click)="closeExpDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+        <i class="pi pi-times text-xs"></i>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Categoría</label>
+        <select
+          [value]="expCategoria()"
+          (change)="expCategoria.set($any($event.target).value)"
+          class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all appearance-none cursor-pointer">
+          @for (cat of EXPENSE_CATEGORIES; track cat) {
+            <option [value]="cat">{{ cat }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Descripción <span class="text-red-500">*</span></label>
+        <input type="text" placeholder="Ej. Decoración globos"
+          [value]="expDescripcion()"
+          (input)="expDescripcion.set($any($event.target).value)"
+          class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Monto <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+            <input type="number" min="0.01" step="0.01"
+              [value]="expMonto()"
+              (input)="expMonto.set(+$any($event.target).value)"
+              class="w-full pl-7 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Fecha</label>
+          <input type="date"
+            [value]="expFecha()"
+            (input)="expFecha.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+      <button (click)="closeExpDialog()"
+        class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+        Cancelar
+      </button>
+      <button (click)="submitExpense()" [disabled]="expSaving() || !expDescripcion().trim() || expMonto() <= 0"
+        [class]="'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
+          + (expSaving() || !expDescripcion().trim() || expMonto() <= 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-rojo-brillante text-white hover:bg-rojo-brillante/90')">
+        @if (expSaving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+        Guardar gasto
+      </button>
+    </div>
+  </div>
+</div>
+}

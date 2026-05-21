@@ -14,8 +14,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Cotizaciones</h1>
-      <p class="text-slate-500 text-sm mt-0.5">{{ filteredQuotes().length }} cotización{{ filteredQuotes().length !== 1
-        ? 'es' : '' }}</p>
+      <p class="text-slate-500 text-sm mt-0.5">{{ filteredQuotes().length }} cotización{{ filteredQuotes().length !== 1 ? 'es' : '' }}</p>
     </div>
     <button (click)="openCreate()"
       class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-rojo-brillante/90 transition-colors shadow-sm">
@@ -81,36 +80,33 @@
             <td class="px-6 py-4 hidden md:table-cell">
               <p class="text-slate-600 text-sm">{{ quote.fecha_evento ? formatDate(quote.fecha_evento) : '—' }}</p>
               @if (quote.hora_inicio) {
-              <p class="text-xs text-slate-400">{{ quote.hora_inicio }}{{ quote.hora_fin ? ' – ' + quote.hora_fin : ''
-                }}</p>
+              <p class="text-xs text-slate-400">{{ quote.hora_inicio }}{{ quote.hora_fin ? ' – ' + quote.hora_fin : '' }}</p>
               }
               @if (quote.guest_count) {
               <p class="text-xs text-slate-400">{{ quote.guest_count }} invitados</p>
               }
             </td>
             <td class="px-6 py-4">
-              <span
-                [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ' + STATUS_CONFIG[quote.estado].classes">
+              <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ' + STATUS_CONFIG[quote.estado].classes">
                 {{ STATUS_CONFIG[quote.estado].label }}
               </span>
             </td>
             <td class="px-6 py-4 text-right">
               <p class="font-bold text-slate-800">{{ quote.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
               @if ((quote.deposit_amount ?? 0) > 0) {
-              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) |
-                currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
               }
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center justify-end gap-1">
 
-                <!-- Approve (enviada only) -->
-                @if (quote.estado === 'enviada') {
-                <button (click)="changeStatus(quote, 'aprobada')"
+                <!-- Registrar anticipo → crear contrato (borrador / enviada) -->
+                @if (quote.estado === 'borrador' || quote.estado === 'enviada') {
+                <button (click)="openAnticoDialog(quote)"
                   class="px-2 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1"
-                  title="Aprobar cotización">
-                  <i class="pi pi-check text-xs"></i>
-                  <span class="hidden sm:inline">Aprobar</span>
+                  title="Registrar anticipo y crear contrato">
+                  <i class="pi pi-money-bill text-xs"></i>
+                  <span class="hidden sm:inline">Anticipo</span>
                 </button>
                 }
 
@@ -121,14 +117,19 @@
                   <i class="pi pi-file-pdf text-sm"></i>
                 </button>
 
+                <!-- Copy public link -->
+                <button (click)="copyPublicUrl(quote)"
+                  class="p-2 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                  title="Copiar link público">
+                  <i class="pi pi-link text-sm"></i>
+                </button>
+
                 <!-- Send popover trigger -->
-                <div class="relative">
-                  <button (click)="openSendPanel(quote)"
-                    class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    title="Enviar cotización">
-                    <i class="pi pi-send text-sm"></i>
-                  </button>
-                </div>
+                <button (click)="openSendPanel(quote)"
+                  class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  title="Enviar cotización">
+                  <i class="pi pi-send text-sm"></i>
+                </button>
 
                 <!-- Edit -->
                 <button (click)="openEdit(quote)"
@@ -158,27 +159,42 @@
   <!-- ══ SEND PANEL ════════════════════════════════════════ -->
   @if (sendTarget()) {
   <div class="fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm" (click)="closeSendPanel()" aria-hidden="true"></div>
-  <div class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col" role="dialog"
-    aria-modal="true">
+  <div class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col" role="dialog" aria-modal="true">
     <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
       <div>
         <h2 class="text-lg font-bold text-slate-800">Enviar cotización</h2>
-        <p class="text-xs text-slate-400 mt-0.5">{{ sendTarget()!.folio }} · {{ sendTarget()!.client?.nombre ?? 'Sin
-          cliente' }}</p>
+        <p class="text-xs text-slate-400 mt-0.5">{{ sendTarget()!.folio }} · {{ sendTarget()!.client?.nombre ?? 'Sin cliente' }}</p>
       </div>
-      <button (click)="closeSendPanel()"
-        class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500">
+      <button (click)="closeSendPanel()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500">
         <i class="pi pi-times"></i>
       </button>
     </div>
 
     <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+      <!-- Public link -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Link público de la cotización</label>
+        <div class="flex gap-2">
+          <input type="text" [value]="getPublicUrl(sendTarget()!)" readonly
+            class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-600 bg-slate-50 focus:outline-none truncate" />
+          <button (click)="copyPublicUrl(sendTarget()!)"
+            class="shrink-0 px-4 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center gap-2">
+            <i class="pi pi-copy text-sm"></i>
+            Copiar
+          </button>
+        </div>
+        <p class="text-xs text-slate-400 mt-1.5">El cliente puede ver y descargar la cotización en este link</p>
+      </div>
+
+      <hr class="border-slate-100" />
+
       <!-- Message preview / edit -->
       <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Mensaje</label>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Mensaje para WhatsApp / Email</label>
         <textarea [(ngModel)]="sendMessage" rows="12"
           class="w-full px-3.5 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all resize-none font-mono text-xs leading-relaxed"></textarea>
-        <p class="text-xs text-slate-400 mt-1.5">Edita el mensaje antes de enviar si lo necesitas</p>
+        <p class="text-xs text-slate-400 mt-1.5">El link público ya está incluido en el mensaje</p>
       </div>
 
       <!-- Client contact info -->
@@ -231,13 +247,11 @@
         <h2 class="text-lg font-bold text-slate-800">
           {{ editingQuote() ? 'Editar ' + editingQuote()!.folio : 'Nueva cotización' }}
         </h2>
-        <!-- Step indicator -->
         @if (!editingQuote()) {
         <div class="flex items-center gap-1.5 mt-2">
           @for (s of [1,2,3,4,5,6]; track s) {
-          <div
-            [class]="'h-1.5 rounded-full transition-all '
-                  + (s === wizardStep() ? 'w-6 bg-rojo-brillante' : s < wizardStep() ? 'w-3 bg-rojo-brillante/40' : 'w-3 bg-slate-200')">
+          <div [class]="'h-1.5 rounded-full transition-all '
+                + (s === wizardStep() ? 'w-6 bg-rojo-brillante' : s < wizardStep() ? 'w-3 bg-rojo-brillante/40' : 'w-3 bg-slate-200')">
           </div>
           }
           <span class="text-xs text-slate-400 ml-2">Paso {{ wizardStep() }} de 6</span>
@@ -259,16 +273,17 @@
       <div class="px-6 py-6 space-y-6">
         <div>
           <h3 class="text-base font-bold text-slate-800 mb-0.5">¿Para quién es la cotización?</h3>
-          <p class="text-sm text-slate-400">Selecciona el cliente y el número de invitados</p>
+          <p class="text-sm text-slate-400">Selecciona un cliente existente o crea uno nuevo</p>
         </div>
 
         <!-- Client search -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-2">Cliente</label>
+
           @if (selectedClient()) {
+          <!-- Selected client chip -->
           <div class="flex items-center gap-3 px-4 py-3 border border-emerald-200 rounded-xl bg-emerald-50">
-            <div
-              class="w-9 h-9 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center font-bold text-sm shrink-0">
+            <div class="w-9 h-9 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center font-bold text-sm shrink-0">
               {{ selectedClient()!.nombre.charAt(0).toUpperCase() }}
             </div>
             <div class="flex-1 min-w-0">
@@ -277,27 +292,71 @@
               <p class="text-xs text-slate-500">{{ selectedClient()!.telefono }}</p>
               }
             </div>
-            <button type="button" (click)="clearClient()" class="text-slate-400 hover:text-slate-600 p-1"
-              aria-label="Quitar cliente">
+            <button type="button" (click)="clearClient()" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Quitar cliente">
               <i class="pi pi-times text-xs"></i>
             </button>
           </div>
+
+          } @else if (showCreateClient()) {
+          <!-- Inline create client form -->
+          <div class="border border-violet-200 rounded-xl bg-violet-50 p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-bold text-violet-800">Nuevo cliente</p>
+              <button type="button" (click)="cancelCreateClient()" class="text-violet-400 hover:text-violet-600 p-1">
+                <i class="pi pi-times text-xs"></i>
+              </button>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre <span class="text-red-500">*</span></label>
+              <input type="text" placeholder="Nombre completo"
+                [value]="newClientName()"
+                (input)="newClientName.set($any($event.target).value)"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono</label>
+                <input type="tel" placeholder="Ej. 6441234567"
+                  [value]="newClientPhone()"
+                  (input)="newClientPhone.set($any($event.target).value)"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Correo electrónico</label>
+                <input type="email" placeholder="correo@ejemplo.com"
+                  [value]="newClientEmail()"
+                  (input)="newClientEmail.set($any($event.target).value)"
+                  class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400" />
+              </div>
+            </div>
+            <button type="button" (click)="submitCreateClient()"
+              [disabled]="!newClientName().trim() || savingNewClient()"
+              [class]="'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
+                + (newClientName().trim() && !savingNewClient() ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed')">
+              @if (savingNewClient()) {
+              <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+              }
+              Crear y seleccionar cliente
+            </button>
+          </div>
+
           } @else {
+          <!-- Search input + dropdown -->
           <div class="relative">
-            <i
-              class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
-            <input type="text" placeholder="Buscar por nombre, teléfono o email…" [value]="clientQuery()"
-              (input)="onClientInput($event)" (focus)="clientDropdownOpen.set(true)"
+            <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+            <input type="text" placeholder="Buscar por nombre, teléfono o email…"
+              [value]="clientQuery()"
+              (input)="onClientInput($event)"
+              (focus)="clientDropdownOpen.set(true)"
               class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all"
               autocomplete="off" />
-            @if (clientDropdownOpen() && clientResults().length > 0) {
-            <div
-              class="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+
+            @if (clientDropdownOpen()) {
+            <div class="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
               @for (c of clientResults(); track c.id) {
               <button type="button" (click)="selectClient(c)"
                 class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left transition-colors border-b border-slate-50 last:border-0">
-                <div
-                  class="w-8 h-8 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+                <div class="w-8 h-8 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
                   {{ c.nombre.charAt(0).toUpperCase() }}
                 </div>
                 <div>
@@ -306,9 +365,35 @@
                 </div>
               </button>
               }
+              <!-- Create new option -->
+              <button type="button" (click)="openCreateClient()"
+                class="w-full flex items-center gap-3 px-4 py-3 bg-violet-50 hover:bg-violet-100 text-left transition-colors border-t border-violet-100">
+                <div class="w-8 h-8 rounded-full bg-violet-200 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">
+                  <i class="pi pi-plus text-xs"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-violet-700">
+                    @if (clientQuery().trim()) {
+                      Crear "{{ clientQuery().trim() }}"
+                    } @else {
+                      Crear nuevo cliente
+                    }
+                  </p>
+                  <p class="text-xs text-violet-500">Agregar al directorio</p>
+                </div>
+              </button>
             </div>
             }
           </div>
+
+          <!-- Create button when dropdown is closed -->
+          @if (!clientDropdownOpen()) {
+          <button type="button" (click)="openCreateClient()"
+            class="mt-2 flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-800 font-medium transition-colors">
+            <i class="pi pi-plus-circle text-sm"></i>
+            Crear nuevo cliente
+          </button>
+          }
           }
         </div>
 
@@ -338,15 +423,11 @@
           <h3 class="text-base font-bold text-slate-800 mb-0.5">¿Cuándo es el evento?</h3>
           <p class="text-sm text-slate-400">Selecciona la fecha y el horario disponible</p>
         </div>
-
-        <!-- Date -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-2">Fecha del evento</label>
           <input type="date" [value]="selectedDate()" (change)="onDateChange($event)" [min]="todayStr()"
             class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
         </div>
-
-        <!-- Slots -->
         @if (selectedDate()) {
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-3">Horario disponible</label>
@@ -364,13 +445,10 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             @for (av of daySlots(); track av.slot.id) {
             <button type="button" (click)="selectSlot(av)" [disabled]="av.blocked" [class]="'relative flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 transition-all '
-                          + (av.blocked
-                            ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                            : selectedSlot()?.id === av.slot.id
-                              ? 'border-rojo-brillante bg-rojo-brillante/5'
-                              : 'border-slate-200 hover:border-rojo-brillante/50 hover:bg-rojo-brillante/5')">
-              <div
-                [class]="'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 '
+                          + (av.blocked ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                            : selectedSlot()?.id === av.slot.id ? 'border-rojo-brillante bg-rojo-brillante/5'
+                            : 'border-slate-200 hover:border-rojo-brillante/50 hover:bg-rojo-brillante/5')">
+              <div [class]="'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 '
                           + (selectedSlot()?.id === av.slot.id ? 'bg-rojo-brillante text-white' : 'bg-slate-100 text-slate-500')">
                 <i class="pi pi-clock text-sm"></i>
               </div>
@@ -399,30 +477,22 @@
           <h3 class="text-base font-bold text-slate-800 mb-0.5">¿Qué paquete incluye?</h3>
           <p class="text-sm text-slate-400">Elige el paquete para {{ guestCount() }} invitados</p>
         </div>
-
         @for (pkg of packages(); track pkg.id) {
         <button type="button" (click)="selectPackage(pkg)" [class]="'w-full text-left rounded-2xl border-2 p-5 transition-all '
-                  + (selectedPackage()?.id === pkg.id
-                    ? 'border-[' + getPackageColor(pkg) + '] shadow-md'
-                    : 'border-slate-200 hover:border-slate-300')">
+                  + (selectedPackage()?.id === pkg.id ? 'border-[' + getPackageColor(pkg) + '] shadow-md' : 'border-slate-200 hover:border-slate-300')">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
               <div class="w-4 h-4 rounded-full shrink-0" [style.background]="getPackageColor(pkg)"></div>
               <div class="min-w-0">
                 <p class="font-bold text-slate-800 text-base">{{ pkg.name }}</p>
-                @if (pkg.description) {
-                <p class="text-sm text-slate-500 mt-0.5">{{ pkg.description }}</p>
-                }
+                @if (pkg.description) { <p class="text-sm text-slate-500 mt-0.5">{{ pkg.description }}</p> }
               </div>
             </div>
             <div class="text-right shrink-0">
-              <p class="text-lg font-bold text-slate-800">{{ pkg.price_cents / 100 |
-                currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="text-lg font-bold text-slate-800">{{ pkg.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
               <p class="text-xs text-slate-400 mt-0.5">{{ formatDepositLabel(pkg) }}</p>
             </div>
           </div>
-
-          <!-- Guests range -->
           <div class="flex items-center gap-4 mt-3">
             <div class="flex items-center gap-1.5 text-xs text-slate-500">
               <i class="pi pi-users text-xs"></i>
@@ -435,8 +505,6 @@
             </span>
             }
           </div>
-
-          <!-- Inclusions -->
           @if (pkg.inclusions.length > 0) {
           <div class="mt-3 flex flex-wrap gap-1.5">
             @for (inc of pkg.inclusions; track $index) {
@@ -444,7 +512,6 @@
             }
           </div>
           }
-
           @if (selectedPackage()?.id === pkg.id) {
           <div class="mt-3 flex items-center gap-1.5 text-xs font-semibold text-rojo-brillante">
             <i class="pi pi-check-circle"></i>
@@ -463,41 +530,27 @@
           <h3 class="text-base font-bold text-slate-800 mb-0.5">¿Qué merienda prefieren?</h3>
           <p class="text-sm text-slate-400">Selecciona la opción de merienda incluida en el paquete</p>
         </div>
-
         @for (snack of snackOptions(); track snack.id) {
         <button type="button" (click)="selectSnack(snack)" [class]="'w-full text-left flex items-center gap-4 px-5 py-4 rounded-xl border-2 transition-all '
-                  + (selectedSnack()?.id === snack.id
-                    ? 'border-rojo-brillante bg-rojo-brillante/5'
-                    : 'border-slate-200 hover:border-slate-300')">
-          <div
-            [class]="'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 '
+                  + (selectedSnack()?.id === snack.id ? 'border-rojo-brillante bg-rojo-brillante/5' : 'border-slate-200 hover:border-slate-300')">
+          <div [class]="'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 '
                   + (selectedSnack()?.id === snack.id ? 'bg-rojo-brillante text-white' : 'bg-slate-100 text-slate-500')">
             <i class="pi pi-star text-sm"></i>
           </div>
           <div class="flex-1">
             <p class="font-semibold text-slate-800">{{ snack.name }}</p>
-            @if (snack.description) {
-            <p class="text-sm text-slate-400 mt-0.5">{{ snack.description }}</p>
-            }
+            @if (snack.description) { <p class="text-sm text-slate-400 mt-0.5">{{ snack.description }}</p> }
           </div>
-          @if (selectedSnack()?.id === snack.id) {
-          <i class="pi pi-check-circle text-rojo-brillante text-lg shrink-0"></i>
-          }
+          @if (selectedSnack()?.id === snack.id) { <i class="pi pi-check-circle text-rojo-brillante text-lg shrink-0"></i> }
         </button>
         }
-
-        <!-- Skip option -->
         <button type="button" (click)="setSkipSnack()" [class]="'w-full text-left flex items-center gap-4 px-5 py-4 rounded-xl border-2 transition-all '
-                + (skipSnack()
-                  ? 'border-slate-400 bg-slate-50'
-                  : 'border-dashed border-slate-200 hover:border-slate-300')">
+                + (skipSnack() ? 'border-slate-400 bg-slate-50' : 'border-dashed border-slate-200 hover:border-slate-300')">
           <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
             <i class="pi pi-minus text-slate-400 text-sm"></i>
           </div>
           <p class="font-medium text-slate-600">Sin merienda / por definir</p>
-          @if (skipSnack()) {
-          <i class="pi pi-check-circle text-slate-500 text-lg shrink-0 ml-auto"></i>
-          }
+          @if (skipSnack()) { <i class="pi pi-check-circle text-slate-500 text-lg shrink-0 ml-auto"></i> }
         </button>
       </div>
       }
@@ -509,7 +562,6 @@
           <h3 class="text-base font-bold text-slate-800 mb-0.5">¿Desean agregar extras?</h3>
           <p class="text-sm text-slate-400">Opcionales — puedes dejar todo en cero si no aplica</p>
         </div>
-
         @if (extras().length === 0) {
         <div class="py-10 text-center text-slate-400">
           <i class="pi pi-inbox text-2xl mb-2 block"></i>
@@ -520,27 +572,18 @@
         <div class="flex items-center justify-between gap-4 px-5 py-4 rounded-xl border border-slate-200 bg-white">
           <div class="min-w-0 flex-1">
             <p class="font-semibold text-slate-800 text-sm">{{ extra.name }}</p>
-            @if (extra.description) {
-            <p class="text-xs text-slate-400 mt-0.5 truncate">{{ extra.description }}</p>
-            }
+            @if (extra.description) { <p class="text-xs text-slate-400 mt-0.5 truncate">{{ extra.description }}</p> }
             <div class="flex items-center gap-3 mt-1">
-              <p class="text-sm font-bold text-rojo-brillante">{{ extra.price_cents / 100 |
-                currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
-              @if (extra.pay_at_venue) {
-              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Pago en sitio</span>
-              }
+              <p class="text-sm font-bold text-rojo-brillante">{{ extra.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              @if (extra.pay_at_venue) { <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Pago en sitio</span> }
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button type="button" (click)="setExtraQty(extra.id, -1)"
-              class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors">
-              −
-            </button>
+              class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors">−</button>
             <span class="w-8 text-center font-bold text-slate-800 text-sm">{{ getExtraQty(extra.id) }}</span>
             <button type="button" (click)="setExtraQty(extra.id, 1)"
-              class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors">
-              +
-            </button>
+              class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors">+</button>
           </div>
         </div>
         }
@@ -555,20 +598,15 @@
           <h3 class="text-base font-bold text-slate-800 mb-0.5">Resumen de la cotización</h3>
           <p class="text-sm text-slate-400">Revisa los detalles y ajusta si es necesario</p>
         </div>
-
-        <!-- Event info summary card -->
         <div class="bg-slate-50 rounded-2xl p-5 space-y-3">
           @if (selectedClient()) {
           <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
+            <div class="w-8 h-8 rounded-full bg-rojo-brillante/10 text-rojo-brillante flex items-center justify-center text-xs font-bold shrink-0">
               {{ selectedClient()!.nombre.charAt(0).toUpperCase() }}
             </div>
             <div>
               <p class="text-sm font-semibold text-slate-800">{{ selectedClient()!.nombre }}</p>
-              @if (selectedClient()!.telefono) {
-              <p class="text-xs text-slate-400">{{ selectedClient()!.telefono }}</p>
-              }
+              @if (selectedClient()!.telefono) { <p class="text-xs text-slate-400">{{ selectedClient()!.telefono }}</p> }
             </div>
           </div>
           }
@@ -576,10 +614,7 @@
           <div class="flex items-center gap-2 text-sm text-slate-600">
             <i class="pi pi-calendar text-slate-400 text-xs w-4 text-center"></i>
             {{ formatDate(selectedDate()) }}
-            @if (selectedSlot()) {
-            <span class="text-slate-400">·</span>
-            <span>{{ selectedSlot()!.start_time }} – {{ selectedSlot()!.end_time }}</span>
-            }
+            @if (selectedSlot()) { <span class="text-slate-400">·</span> <span>{{ selectedSlot()!.start_time }} – {{ selectedSlot()!.end_time }}</span> }
           </div>
           }
           @if (guestCount()) {
@@ -601,8 +636,6 @@
           </div>
           }
         </div>
-
-        <!-- Line items -->
         @if (summaryItems().length > 0) {
         <div class="border border-slate-200 rounded-xl overflow-hidden">
           <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
@@ -613,43 +646,31 @@
             <div class="flex items-center justify-between px-4 py-3 text-sm">
               <div>
                 <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
-                @if (item.precio_unitario === 0) {
-                <p class="text-xs text-emerald-600">Incluido en el paquete</p>
-                } @else if (item.cantidad > 1) {
-                <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario |
-                  currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
-                }
+                @if (item.precio_unitario === 0) { <p class="text-xs text-emerald-600">Incluido en el paquete</p> }
+                @else if (item.cantidad > 1) { <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p> }
               </div>
               <p class="font-semibold text-slate-800">
-                {{ item.precio_unitario === 0 ? '—' : (item.cantidad * item.precio_unitario |
-                currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') }}
+                {{ item.precio_unitario === 0 ? '—' : (item.cantidad * item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') }}
               </p>
             </div>
             }
           </div>
         </div>
         }
-
-        <!-- Discount -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-2">Descuento ($)</label>
-          <input type="number" [value]="discount()" (input)="discount.set(+($any($event.target).value))" min="0"
-            step="0.01" placeholder="0.00"
+          <input type="number" [value]="discount()" (input)="discount.set(+($any($event.target).value))" min="0" step="0.01" placeholder="0.00"
             class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
         </div>
-
-        <!-- Totals -->
         <div class="bg-slate-50 rounded-2xl p-5 space-y-2.5">
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Subtotal</span>
-            <span class="font-semibold text-slate-700">{{ subtotalAmount() |
-              currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-semibold text-slate-700">{{ subtotalAmount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
           </div>
           @if (discount() > 0) {
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Descuento</span>
-            <span class="font-semibold text-red-500">− {{ discount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX'
-              }}</span>
+            <span class="font-semibold text-red-500">− {{ discount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
           </div>
           }
           <div class="flex justify-between text-base font-bold text-slate-800 pt-2 border-t border-slate-200">
@@ -669,8 +690,6 @@
           }
           }
         </div>
-
-        <!-- Notes -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-2">Notas adicionales</label>
           <textarea [value]="notes()" (input)="notes.set($any($event.target).value)" rows="3"
@@ -680,7 +699,7 @@
       </div>
       }
 
-    </div>
+    </div><!-- end step content -->
 
     <!-- ── FOOTER NAVIGATION ── -->
     <div class="border-t border-slate-100 px-6 py-4 flex gap-3 shrink-0">
@@ -696,32 +715,127 @@
         Atrás
       </button>
       }
-
-      @if (wizardStep() < 6) { <button type="button" (click)="nextStep()" [disabled]="!canGoNext()"
+      @if (wizardStep() < 6) {
+      <button type="button" (click)="nextStep()" [disabled]="!canGoNext()"
         [class]="'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-colors '
               + (canGoNext() ? 'bg-rojo-brillante text-white hover:bg-rojo-brillante/90' : 'bg-slate-200 text-slate-400 cursor-not-allowed')">
         Continuar
         <i class="pi pi-chevron-right text-xs"></i>
-        </button>
-        } @else {
-        <button type="button" (click)="onSubmit()" [disabled]="saving()"
-          [class]="'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
+      </button>
+      } @else {
+      <button type="button" (click)="onSubmit()" [disabled]="saving()"
+        [class]="'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
               + (saving() ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-rojo-brillante text-white hover:bg-rojo-brillante/90')">
-          @if (saving()) {
-          <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-          }
-          {{ editingQuote() ? 'Guardar cambios' : 'Crear cotización' }}
-        </button>
-        }
+        @if (saving()) { <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> }
+        {{ editingQuote() ? 'Guardar cambios' : 'Crear cotización' }}
+      </button>
+      }
     </div>
 
   </aside>
   }
 
+  <!-- ══ ANTICIPO DIALOG ═══════════════════════════════════ -->
+  @if (anticoDialog()) {
+  <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    role="dialog" aria-modal="true" aria-label="Registrar anticipo">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 overflow-hidden">
+
+      <!-- Dialog header -->
+      <div class="px-6 py-5 bg-emerald-50 border-b border-emerald-100">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Registrar anticipo</h3>
+            <p class="text-sm text-slate-500 mt-0.5">
+              {{ anticoDialog()!.folio }} · {{ anticoDialog()!.client?.nombre ?? 'Sin cliente' }}
+            </p>
+          </div>
+          <button (click)="closeAnticoDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-100 text-slate-400 transition-colors">
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </div>
+        <div class="mt-4 bg-white rounded-xl p-4">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-slate-500">Total cotización</span>
+            <span class="font-bold text-slate-800">{{ anticoDialog()!.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          </div>
+          @if ((anticoDialog()!.deposit_amount ?? 0) > 0) {
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-400">Anticipo sugerido</span>
+            <span class="font-medium text-rojo-brillante">{{ (anticoDialog()!.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Dialog body -->
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Monto del anticipo <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">$</span>
+            <input type="number" min="0.01" step="0.01"
+              [value]="anticoMonto()"
+              (input)="anticoMonto.set(+$any($event.target).value)"
+              class="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all font-bold text-lg"
+              placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Fecha del pago</label>
+            <input type="date"
+              [value]="anticoFecha()"
+              (input)="anticoFecha.set($any($event.target).value)"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Método de pago</label>
+            <select
+              [value]="anticoMetodo()"
+              (change)="anticoMetodo.set($any($event.target).value)"
+              class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all appearance-none cursor-pointer">
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+          <i class="pi pi-info-circle text-blue-500 text-sm mt-0.5 shrink-0"></i>
+          <p class="text-xs text-blue-700">
+            Al confirmar se creará el <strong>contrato firmado</strong> y se registrará el anticipo.
+            La cotización quedará marcada como <strong>aprobada</strong> y la fecha se bloqueará en el calendario.
+          </p>
+        </div>
+      </div>
+
+      <!-- Dialog footer -->
+      <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+        <button (click)="closeAnticoDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button (click)="submitAnticipo()" [disabled]="anticoSaving() || anticoMonto() <= 0"
+          [class]="'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors '
+            + (anticoSaving() || anticoMonto() <= 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700')">
+          @if (anticoSaving()) {
+          <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          } @else {
+          <i class="pi pi-check text-sm"></i>
+          }
+          Confirmar anticipo
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
   <!-- ══ CONFIRM DELETE ════════════════════════════════════ -->
   @if (deleteTarget()) {
-  <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" role="dialog"
-    aria-modal="true">
+  <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
       <div class="flex items-start gap-4">
         <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">

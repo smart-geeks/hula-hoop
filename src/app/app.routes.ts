@@ -37,6 +37,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'cotizacion/:token',
+    loadComponent: () =>
+      import('./features/quotes/pages/quote-public-page/quote-public-page').then(
+        (m) => m.QuotePublicPage,
+      ),
+  },
+  {
     path: 'reserva/:accessToken',
     loadComponent: () =>
       import('./features/reservations/pages/reservation-detail-page/reservation-detail-page').then(
