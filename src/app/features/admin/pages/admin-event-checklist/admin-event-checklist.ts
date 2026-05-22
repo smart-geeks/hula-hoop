@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -20,6 +21,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventChecklist implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly eventTaskService = inject(EventTaskService);
   private readonly contractService = inject(ContractService);
   private readonly route = inject(ActivatedRoute);
@@ -59,6 +61,7 @@ export class AdminEventChecklist implements OnInit {
       }),
     );
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   async toggleTask(task: EventTask): Promise<void> {

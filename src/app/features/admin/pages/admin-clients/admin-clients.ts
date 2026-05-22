@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -19,6 +20,7 @@ type DrawerMode = 'create' | 'edit';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminClients implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly clientService = inject(ClientService);
   private readonly fb = inject(FormBuilder);
 
@@ -60,6 +62,7 @@ export class AdminClients implements OnInit {
     const data = await this.clientService.getAll();
     this.clients.set(data);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   onSearch(event: Event): void {

@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   inject,
@@ -57,6 +58,7 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminQuotes implements OnInit {
+  private readonly cdr                = inject(ChangeDetectorRef);
   private readonly quoteService       = inject(QuoteService);
   private readonly clientService      = inject(ClientService);
   private readonly contractService    = inject(ContractService);
@@ -237,6 +239,7 @@ export class AdminQuotes implements OnInit {
     this.snackOptions.set(snacks);
     this.allSlots.set(slots);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Wizard navigation ─────────────────────────────────────
@@ -368,6 +371,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo crear el cliente');
     }
     this.savingNewClient.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Step 2: Date & Slot ───────────────────────────────────
@@ -400,6 +404,7 @@ export class AdminQuotes implements OnInit {
       if (match && !match.blocked) this.selectedSlot.set(match.slot);
     }
     this.loadingSlots.set(false);
+    this.cdr.markForCheck();
   }
 
   selectSlot(availability: SlotAvailability): void {
@@ -487,6 +492,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Status actions ────────────────────────────────────────
@@ -496,6 +502,7 @@ export class AdminQuotes implements OnInit {
       this.quotes.update((list) => list.map((q) => (q.id === quote.id ? { ...q, estado } : q)));
       this.showToast('success', `Estado: ${STATUS_CONFIG[estado].label}`);
     }
+    this.cdr.markForCheck();
   }
 
   confirmDelete(quote: Quote): void { this.deleteTarget.set(quote); }
@@ -512,6 +519,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo eliminar');
     }
     this.deleteTarget.set(null);
+    this.cdr.markForCheck();
   }
 
   // ── Anticipo dialog — convert quote to signed contract ────
@@ -574,6 +582,7 @@ export class AdminQuotes implements OnInit {
     this.closeAnticoDialog();
     this.showToast('success', `Contrato ${contract.folio} creado — anticipo registrado`);
     this.anticoSaving.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Send (WhatsApp / Email) ───────────────────────────────
@@ -813,6 +822,7 @@ export class AdminQuotes implements OnInit {
   private async refreshQuotes(): Promise<void> {
     const quotes = await this.quoteService.getAll();
     this.quotes.set(quotes);
+    this.cdr.markForCheck();
   }
 
   private resetWizard(): void {

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -25,6 +26,7 @@ type DrawerMode = 'create' | 'edit';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminExpenses implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly expenseService  = inject(ExpenseService);
   private readonly contractService = inject(ContractService);
   private readonly supplierService = inject(SupplierService);
@@ -81,6 +83,7 @@ export class AdminExpenses implements OnInit {
     this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
     this.suppliers.set(suppliers);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   onSearch(event: Event): void {

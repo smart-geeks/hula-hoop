@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -33,6 +34,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminSuppliers implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly supplierService = inject(SupplierService);
   private readonly fb = inject(FormBuilder);
 
@@ -81,6 +83,7 @@ export class AdminSuppliers implements OnInit {
     const data = await this.supplierService.getAll(this.showInactive());
     this.suppliers.set(data);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   async toggleShowInactive(): Promise<void> {

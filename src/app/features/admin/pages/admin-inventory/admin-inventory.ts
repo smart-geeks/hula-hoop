@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -24,6 +25,7 @@ const UNIT_OPTIONS = ['pieza', 'kg', 'litro', 'caja', 'paquete', 'metro', 'par',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminInventory implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly inventoryService = inject(InventoryService);
   private readonly fb = inject(FormBuilder);
 
@@ -87,6 +89,7 @@ export class AdminInventory implements OnInit {
     const data = await this.inventoryService.getAll(this.showInactive());
     this.items.set(data);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   async toggleShowInactive(): Promise<void> {

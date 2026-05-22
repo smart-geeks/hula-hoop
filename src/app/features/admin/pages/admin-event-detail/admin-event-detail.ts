@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -29,6 +30,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventDetail implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly contractService  = inject(ContractService);
   private readonly quoteService     = inject(QuoteService);
   private readonly taskService      = inject(EventTaskService);
@@ -134,6 +136,7 @@ export class AdminEventDetail implements OnInit {
     }
 
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Tabs ──────────────────────────────────────────────────

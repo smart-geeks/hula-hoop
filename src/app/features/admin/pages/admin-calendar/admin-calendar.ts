@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -26,6 +27,7 @@ interface CalendarDay {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminCalendar implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly contractService = inject(ContractService);
 
   readonly loading           = signal(true);
@@ -88,6 +90,7 @@ export class AdminCalendar implements OnInit {
     const data = await this.contractService.getAll();
     this.contracts.set(data);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   prevMonth(): void {

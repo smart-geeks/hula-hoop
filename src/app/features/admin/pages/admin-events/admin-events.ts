@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -38,6 +39,7 @@ type DetailTab = 'info' | 'tareas' | 'pagos';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEvents implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly contractService    = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly eventTaskService   = inject(EventTaskService);
@@ -158,6 +160,7 @@ export class AdminEvents implements OnInit {
 
     this.events.set(merged);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Tab / filter helpers ─────────────────────────────────────

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -51,6 +52,7 @@ const TABS: { id: ReportTab; label: string; icon: string }[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminReports implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly reportService = inject(ReportService);
   private readonly fb = inject(FormBuilder);
 

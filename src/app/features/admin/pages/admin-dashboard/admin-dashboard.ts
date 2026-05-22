@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -20,6 +21,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDashboard implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly contractService = inject(ContractService);
   private readonly reportService   = inject(ReportService);
 
@@ -66,6 +68,7 @@ export class AdminDashboard implements OnInit {
     this.upcomingEvents.set(upcoming);
     this.dashData.set(dash);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   getStatusClass(estado: string): string {

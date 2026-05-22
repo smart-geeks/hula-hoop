@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -22,6 +23,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPos implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly posService       = inject(PosService);
   private readonly inventoryService = inject(InventoryService);
   private readonly contractService  = inject(ContractService);
@@ -89,6 +91,7 @@ export class AdminPos implements OnInit {
     this.inventory.set(inventory);
     this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   // ── Session management ────────────────────────────────────────

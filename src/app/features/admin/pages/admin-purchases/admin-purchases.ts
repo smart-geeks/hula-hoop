@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -32,6 +33,7 @@ const STATUS_CONFIG: Record<PurchaseStatus, { label: string; classes: string }> 
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPurchases implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly purchaseService  = inject(PurchaseService);
   private readonly supplierService  = inject(SupplierService);
   private readonly contractService  = inject(ContractService);
@@ -97,6 +99,7 @@ export class AdminPurchases implements OnInit {
     this.suppliers.set(suppliers);
     this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   private buildItemGroup() {

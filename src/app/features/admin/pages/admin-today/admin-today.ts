@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -40,6 +41,7 @@ interface StatusConfig {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminToday implements OnInit {
+  private readonly cdr             = inject(ChangeDetectorRef);
   private readonly contractService = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly reportService = inject(ReportService);
@@ -111,6 +113,7 @@ export class AdminToday implements OnInit {
     );
     this.overdueCount.set(overdue.length);
     this.loading.set(false);
+    this.cdr.markForCheck();
   }
 
   getStatusConfig(status: string): StatusConfig {
