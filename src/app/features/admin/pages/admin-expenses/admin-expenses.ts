@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -27,6 +28,7 @@ type DrawerMode = 'create' | 'edit';
 })
 export class AdminExpenses implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly expenseService  = inject(ExpenseService);
   private readonly contractService = inject(ContractService);
   private readonly supplierService = inject(SupplierService);
@@ -81,9 +83,11 @@ export class AdminExpenses implements OnInit {
     ]);
     this.expenses.set(expenses);
     this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-    this.suppliers.set(suppliers);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.suppliers.set(suppliers);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   onSearch(event: Event): void {

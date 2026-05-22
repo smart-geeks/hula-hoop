@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -21,6 +22,7 @@ type DrawerMode = 'create' | 'edit';
 })
 export class AdminClients implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly clientService = inject(ClientService);
   private readonly fb = inject(FormBuilder);
 
@@ -60,9 +62,11 @@ export class AdminClients implements OnInit {
   private async loadClients(): Promise<void> {
     this.loading.set(true);
     const data = await this.clientService.getAll();
-    this.clients.set(data);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.clients.set(data);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   onSearch(event: Event): void {

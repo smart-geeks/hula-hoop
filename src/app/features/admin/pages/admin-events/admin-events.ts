@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -40,6 +41,7 @@ type DetailTab = 'info' | 'tareas' | 'pagos';
 })
 export class AdminEvents implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService    = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly eventTaskService   = inject(EventTaskService);
@@ -158,9 +160,11 @@ export class AdminEvents implements OnInit {
       b.fecha.localeCompare(a.fecha),
     );
 
-    this.events.set(merged);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.events.set(merged);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   // ── Tab / filter helpers ─────────────────────────────────────

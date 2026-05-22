@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -53,6 +54,7 @@ const TABS: { id: ReportTab; label: string; icon: string }[] = [
 })
 export class AdminReports implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly reportService = inject(ReportService);
   private readonly fb = inject(FormBuilder);
 

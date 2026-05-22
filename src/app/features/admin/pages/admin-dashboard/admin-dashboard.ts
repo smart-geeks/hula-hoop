@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -22,6 +23,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
 })
 export class AdminDashboard implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService = inject(ContractService);
   private readonly reportService   = inject(ReportService);
 
@@ -65,10 +67,12 @@ export class AdminDashboard implements OnInit {
       this.contractService.getUpcoming(30),
       this.reportService.getDashboard(),
     ]);
-    this.upcomingEvents.set(upcoming);
-    this.dashData.set(dash);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.upcomingEvents.set(upcoming);
+      this.dashData.set(dash);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   getStatusClass(estado: string): string {

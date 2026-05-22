@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -22,6 +23,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
 })
 export class AdminEventChecklist implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly eventTaskService = inject(EventTaskService);
   private readonly contractService = inject(ContractService);
   private readonly route = inject(ActivatedRoute);
@@ -51,17 +53,18 @@ export class AdminEventChecklist implements OnInit {
       this.eventTaskService.getByContract(id),
     ]);
 
-    this.contract.set(contract);
-    this.tasks.set(
-      [...tasks].sort((a, b) => {
-        if (!a.hora_inicio && !b.hora_inicio) return 0;
-        if (!a.hora_inicio) return 1;
-        if (!b.hora_inicio) return -1;
-        return a.hora_inicio.localeCompare(b.hora_inicio);
-      }),
-    );
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+      this.contract.set(contract);
+      this.tasks.set(
+        [...tasks].sort((a, b) => {
+          if (!a.hora_inicio && !b.hora_inicio) return 0;
+          if (!a.hora_inicio) return 1;
+          if (!b.hora_inicio) return -1;
+          return a.hora_inicio.localeCompare(b.hora_inicio);
+        }),
+      );
+      this.loading.set(false);
+    });
   }
 
   async toggleTask(task: EventTask): Promise<void> {

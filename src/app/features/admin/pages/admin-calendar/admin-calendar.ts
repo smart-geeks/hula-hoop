@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -28,6 +29,7 @@ interface CalendarDay {
 })
 export class AdminCalendar implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService = inject(ContractService);
 
   readonly loading           = signal(true);
@@ -88,9 +90,11 @@ export class AdminCalendar implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const data = await this.contractService.getAll();
-    this.contracts.set(data);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.contracts.set(data);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   prevMonth(): void {

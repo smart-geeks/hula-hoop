@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  NgZone,
   Component,
   computed,
   inject,
@@ -34,6 +35,7 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; classes: string; do
 })
 export class AdminContracts implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService = inject(ContractService);
   private readonly clientService   = inject(ClientService);
   private readonly quoteService    = inject(QuoteService);
@@ -128,11 +130,12 @@ export class AdminContracts implements OnInit {
       this.clientService.getAll(),
       this.quoteService.getAll(),
     ]);
-    this.contracts.set(contracts);
-    this.allClients.set(clients);
-    this.approvedQuotes.set(quotes.filter((q) => q.estado === 'aprobada'));
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+      this.contracts.set(contracts);
+      this.allClients.set(clients);
+      this.approvedQuotes.set(quotes.filter((q) => q.estado === 'aprobada'));
+      this.loading.set(false);
+    });
   }
 
   // ── Client selector ──────────────────────────────────────────
@@ -252,7 +255,7 @@ export class AdminContracts implements OnInit {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   async onAddPayment(): Promise<void> {
@@ -284,7 +287,7 @@ export class AdminContracts implements OnInit {
       this.showToast('error', 'No se pudo registrar el pago');
     }
     this.savingPayment.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   confirmDelete(contract: Contract): void { this.deleteTarget.set(contract); }
@@ -301,7 +304,7 @@ export class AdminContracts implements OnInit {
       this.showToast('error', 'No se pudo eliminar el contrato');
     }
     this.deleteTarget.set(null);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   // ── Helpers ──────────────────────────────────────────────────
@@ -314,7 +317,7 @@ export class AdminContracts implements OnInit {
 
   private async refreshContracts(): Promise<void> {
     this.contracts.set(await this.contractService.getAll());
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   private resetForm(): void {

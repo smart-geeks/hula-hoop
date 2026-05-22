@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   inject,
+  NgZone,
   OnInit,
   signal,
 } from '@angular/core';
@@ -59,6 +60,7 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
 })
 export class AdminQuotes implements OnInit {
   private readonly cdr                = inject(ChangeDetectorRef);
+  private readonly ngZone             = inject(NgZone);
   private readonly quoteService       = inject(QuoteService);
   private readonly clientService      = inject(ClientService);
   private readonly contractService    = inject(ContractService);
@@ -232,14 +234,16 @@ export class AdminQuotes implements OnInit {
       this.snackOptionService.getActiveSnackOptions(),
       this.timeSlotService.getActiveSlots(),
     ]);
-    this.quotes.set(quotes);
-    this.allClients.set(clients);
-    this.packages.set(packages);
-    this.extras.set(extras);
-    this.snackOptions.set(snacks);
-    this.allSlots.set(slots);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.quotes.set(quotes);
+      this.allClients.set(clients);
+      this.packages.set(packages);
+      this.extras.set(extras);
+      this.snackOptions.set(snacks);
+      this.allSlots.set(slots);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   // ── Wizard navigation ─────────────────────────────────────
@@ -371,7 +375,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo crear el cliente');
     }
     this.savingNewClient.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   // ── Step 2: Date & Slot ───────────────────────────────────
@@ -404,7 +408,7 @@ export class AdminQuotes implements OnInit {
       if (match && !match.blocked) this.selectedSlot.set(match.slot);
     }
     this.loadingSlots.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   selectSlot(availability: SlotAvailability): void {
@@ -492,7 +496,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   // ── Status actions ────────────────────────────────────────
@@ -502,7 +506,7 @@ export class AdminQuotes implements OnInit {
       this.quotes.update((list) => list.map((q) => (q.id === quote.id ? { ...q, estado } : q)));
       this.showToast('success', `Estado: ${STATUS_CONFIG[estado].label}`);
     }
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   confirmDelete(quote: Quote): void { this.deleteTarget.set(quote); }
@@ -519,7 +523,7 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo eliminar');
     }
     this.deleteTarget.set(null);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   // ── Anticipo dialog — convert quote to signed contract ────
@@ -582,7 +586,7 @@ export class AdminQuotes implements OnInit {
     this.closeAnticoDialog();
     this.showToast('success', `Contrato ${contract.folio} creado — anticipo registrado`);
     this.anticoSaving.set(false);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   // ── Send (WhatsApp / Email) ───────────────────────────────
@@ -822,7 +826,7 @@ export class AdminQuotes implements OnInit {
   private async refreshQuotes(): Promise<void> {
     const quotes = await this.quoteService.getAll();
     this.quotes.set(quotes);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   private resetWizard(): void {

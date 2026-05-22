@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -42,6 +43,7 @@ interface StatusConfig {
 })
 export class AdminToday implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly reportService = inject(ReportService);
@@ -111,9 +113,11 @@ export class AdminToday implements OnInit {
     const overdue = contracts.filter(
       (c) => c.saldo_pendiente > 0 && c.estado !== 'cancelado' && c.fecha_evento < this.todayStr,
     );
-    this.overdueCount.set(overdue.length);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.overdueCount.set(overdue.length);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   getStatusConfig(status: string): StatusConfig {

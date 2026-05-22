@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -34,6 +35,7 @@ const STATUS_CONFIG: Record<PurchaseStatus, { label: string; classes: string }> 
 })
 export class AdminPurchases implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly purchaseService  = inject(PurchaseService);
   private readonly supplierService  = inject(SupplierService);
   private readonly contractService  = inject(ContractService);
@@ -95,11 +97,12 @@ export class AdminPurchases implements OnInit {
       this.supplierService.getAll(),
       this.contractService.getAll(),
     ]);
-    this.purchases.set(purchases);
-    this.suppliers.set(suppliers);
-    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+      this.purchases.set(purchases);
+      this.suppliers.set(suppliers);
+      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+      this.loading.set(false);
+    });
   }
 
   private buildItemGroup() {

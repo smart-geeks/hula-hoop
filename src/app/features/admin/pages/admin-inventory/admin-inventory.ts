@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -26,6 +27,7 @@ const UNIT_OPTIONS = ['pieza', 'kg', 'litro', 'caja', 'paquete', 'metro', 'par',
 })
 export class AdminInventory implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly inventoryService = inject(InventoryService);
   private readonly fb = inject(FormBuilder);
 
@@ -87,9 +89,11 @@ export class AdminInventory implements OnInit {
   private async loadItems(): Promise<void> {
     this.loading.set(true);
     const data = await this.inventoryService.getAll(this.showInactive());
-    this.items.set(data);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.items.set(data);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   async toggleShowInactive(): Promise<void> {

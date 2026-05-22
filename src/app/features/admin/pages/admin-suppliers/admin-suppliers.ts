@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -35,6 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 })
 export class AdminSuppliers implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly supplierService = inject(SupplierService);
   private readonly fb = inject(FormBuilder);
 
@@ -81,9 +83,11 @@ export class AdminSuppliers implements OnInit {
   private async loadSuppliers(): Promise<void> {
     this.loading.set(true);
     const data = await this.supplierService.getAll(this.showInactive());
-    this.suppliers.set(data);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+  this.suppliers.set(data);
+      this.loading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   async toggleShowInactive(): Promise<void> {

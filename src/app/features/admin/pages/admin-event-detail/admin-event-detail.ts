@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -31,6 +32,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 })
 export class AdminEventDetail implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly contractService  = inject(ContractService);
   private readonly quoteService     = inject(QuoteService);
   private readonly taskService      = inject(EventTaskService);
@@ -124,19 +126,19 @@ export class AdminEventDetail implements OnInit {
       return;
     }
 
-    this.contract.set(contract);
-    this.tasks.set(this.sortTasks(tasks));
-    this.expenses.set(expenses);
-    this.payMonto.set(Math.max(0, contract.total_contrato - contract.deposito_pagado));
-
-    // Load associated quote if any
+    let quote = null;
     if (contract.quote_id) {
-      const q = await this.quoteService.getById(contract.quote_id);
-      this.quote.set(q);
+      quote = await this.quoteService.getById(contract.quote_id);
     }
 
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+      this.contract.set(contract);
+      this.tasks.set(this.sortTasks(tasks));
+      this.expenses.set(expenses);
+      this.payMonto.set(Math.max(0, contract.total_contrato - contract.deposito_pagado));
+      if (quote) this.quote.set(quote);
+      this.loading.set(false);
+    });
   }
 
   // ── Tabs ──────────────────────────────────────────────────

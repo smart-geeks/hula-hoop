@@ -1,4 +1,5 @@
 import {
+  NgZone,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
@@ -24,6 +25,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
 })
 export class AdminPos implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly ngZone           = inject(NgZone);
   private readonly posService       = inject(PosService);
   private readonly inventoryService = inject(InventoryService);
   private readonly contractService  = inject(ContractService);
@@ -82,16 +84,20 @@ export class AdminPos implements OnInit {
       this.contractService.getAll(),
     ]);
 
+    let sales: PosSale[] = [];
     if (sessions.length > 0) {
-      this.activeSession.set(sessions[0]);
-      const sales = await this.posService.getSalesBySession(sessions[0].id);
-      this.salesHistory.set(sales);
+      sales = await this.posService.getSalesBySession(sessions[0].id);
     }
 
-    this.inventory.set(inventory);
-    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    this.ngZone.run(() => {
+      if (sessions.length > 0) {
+        this.activeSession.set(sessions[0]);
+        this.salesHistory.set(sales);
+      }
+      this.inventory.set(inventory);
+      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+      this.loading.set(false);
+    });
   }
 
   // ── Session management ────────────────────────────────────────
