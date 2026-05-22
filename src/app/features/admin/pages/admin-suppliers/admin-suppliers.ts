@@ -84,9 +84,8 @@ export class AdminSuppliers implements OnInit {
     this.loading.set(true);
     const data = await this.supplierService.getAll(this.showInactive());
     this.ngZone.run(() => {
-  this.suppliers.set(data);
+      this.suppliers.set(data);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

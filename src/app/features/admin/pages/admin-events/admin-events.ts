@@ -161,9 +161,8 @@ export class AdminEvents implements OnInit {
     );
 
     this.ngZone.run(() => {
-  this.events.set(merged);
+      this.events.set(merged);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

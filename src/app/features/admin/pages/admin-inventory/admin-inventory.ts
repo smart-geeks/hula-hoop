@@ -90,9 +90,8 @@ export class AdminInventory implements OnInit {
     this.loading.set(true);
     const data = await this.inventoryService.getAll(this.showInactive());
     this.ngZone.run(() => {
-  this.items.set(data);
+      this.items.set(data);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

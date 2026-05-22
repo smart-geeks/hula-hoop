@@ -81,12 +81,11 @@ export class AdminExpenses implements OnInit {
       this.contractService.getAll(),
       this.supplierService.getAll(),
     ]);
-    this.expenses.set(expenses);
-    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
     this.ngZone.run(() => {
-  this.suppliers.set(suppliers);
+      this.expenses.set(expenses);
+      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+      this.suppliers.set(suppliers);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

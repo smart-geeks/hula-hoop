@@ -235,14 +235,13 @@ export class AdminQuotes implements OnInit {
       this.timeSlotService.getActiveSlots(),
     ]);
     this.ngZone.run(() => {
-  this.quotes.set(quotes);
+      this.quotes.set(quotes);
       this.allClients.set(clients);
       this.packages.set(packages);
       this.extras.set(extras);
       this.snackOptions.set(snacks);
       this.allSlots.set(slots);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

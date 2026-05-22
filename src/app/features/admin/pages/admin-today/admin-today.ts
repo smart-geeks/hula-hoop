@@ -79,8 +79,6 @@ export class AdminToday implements OnInit {
     ]);
     this.slotsMap = new Map(slots.map((s) => [s.id, s]));
 
-    this.todayContracts.set(contracts.filter((c) => c.fecha_evento === this.todayStr));
-
     const allPrivate: TodayReservation[] = privateRes
       .filter((r) => r.reservation_date === this.todayStr)
       .map((r) => ({
@@ -107,16 +105,16 @@ export class AdminToday implements OnInit {
         paid_deposit_cents: r.paid_deposit_cents ?? 0,
       }));
 
-    this.todayReservations.set([...allPrivate, ...allPlaydate]);
-    this.lowStockCount.set(dash?.low_stock_count ?? 0);
-
     const overdue = contracts.filter(
       (c) => c.saldo_pendiente > 0 && c.estado !== 'cancelado' && c.fecha_evento < this.todayStr,
     );
+
     this.ngZone.run(() => {
-  this.overdueCount.set(overdue.length);
+      this.todayContracts.set(contracts.filter((c) => c.fecha_evento === this.todayStr));
+      this.todayReservations.set([...allPrivate, ...allPlaydate]);
+      this.lowStockCount.set(dash?.low_stock_count ?? 0);
+      this.overdueCount.set(overdue.length);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

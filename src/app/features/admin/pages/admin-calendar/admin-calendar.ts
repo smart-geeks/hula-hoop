@@ -91,9 +91,8 @@ export class AdminCalendar implements OnInit {
   async ngOnInit(): Promise<void> {
     const data = await this.contractService.getAll();
     this.ngZone.run(() => {
-  this.contracts.set(data);
+      this.contracts.set(data);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

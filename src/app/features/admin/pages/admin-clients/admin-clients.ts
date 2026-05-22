@@ -63,9 +63,8 @@ export class AdminClients implements OnInit {
     this.loading.set(true);
     const data = await this.clientService.getAll();
     this.ngZone.run(() => {
-  this.clients.set(data);
+      this.clients.set(data);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

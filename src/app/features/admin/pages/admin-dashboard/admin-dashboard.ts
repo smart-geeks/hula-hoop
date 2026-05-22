@@ -68,10 +68,9 @@ export class AdminDashboard implements OnInit {
       this.reportService.getDashboard(),
     ]);
     this.ngZone.run(() => {
-  this.upcomingEvents.set(upcoming);
+      this.upcomingEvents.set(upcoming);
       this.dashData.set(dash);
       this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 

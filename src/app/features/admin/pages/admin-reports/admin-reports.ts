@@ -130,28 +130,39 @@ export class AdminReports implements OnInit {
     this.loading.set(true);
     const tab = this.activeTab();
 
+    let updateFn: (() => void) | null = null;
+
     try {
       if (tab === 'eventos') {
-        this.eventosData.set(await this.reportService.getEventos(f, t, estado || undefined));
+        const data = await this.reportService.getEventos(f, t, estado || undefined);
+        updateFn = () => this.eventosData.set(data);
       } else if (tab === 'pl_global') {
-        this.plData.set(await this.reportService.getPLGlobal(f, t));
+        const data = await this.reportService.getPLGlobal(f, t);
+        updateFn = () => this.plData.set(data);
       } else if (tab === 'pipeline') {
-        this.pipelineData.set(await this.reportService.getPipeline(f, t));
+        const data = await this.reportService.getPipeline(f, t);
+        updateFn = () => this.pipelineData.set(data);
       } else if (tab === 'clientes') {
-        this.clientesData.set(await this.reportService.getClientes(f, t));
+        const data = await this.reportService.getClientes(f, t);
+        updateFn = () => this.clientesData.set(data);
       } else if (tab === 'proveedores') {
-        this.proveedoresData.set(await this.reportService.getProveedores(f, t));
+        const data = await this.reportService.getProveedores(f, t);
+        updateFn = () => this.proveedoresData.set(data);
       } else if (tab === 'inventario') {
-        this.inventarioData.set(await this.reportService.getInventario(categoria || undefined));
+        const data = await this.reportService.getInventario(categoria || undefined);
+        updateFn = () => this.inventarioData.set(data);
       } else if (tab === 'gastos') {
         const result = await this.reportService.getGastos(f, t, categoria || undefined);
-        this.gastosRows.set(result.rows);
-        this.gastosCat.set(result.byCategory);
+        updateFn = () => { this.gastosRows.set(result.rows); this.gastosCat.set(result.byCategory); };
       } else if (tab === 'flujo_caja') {
-        this.flujoCajaData.set(await this.reportService.getFlujoCaja(f, t));
+        const data = await this.reportService.getFlujoCaja(f, t);
+        updateFn = () => this.flujoCajaData.set(data);
       }
     } finally {
-      this.loading.set(false);
+      this.ngZone.run(() => {
+        if (updateFn) updateFn();
+        this.loading.set(false);
+      });
     }
   }
 
