@@ -4,6 +4,7 @@ import {
   computed,
   DestroyRef,
   inject,
+  NgZone,
   OnDestroy,
   signal,
 } from '@angular/core';
@@ -48,6 +49,7 @@ interface NavSection {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLayout implements OnDestroy {
+  private readonly ngZone = inject(NgZone);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly supabase = inject(SupabaseService);
@@ -167,10 +169,12 @@ export class AdminLayout implements OnDestroy {
   }
 
   private showNotification(name: string, type: string): void {
-    this.newReservationNotif.set({ name, type });
-    this.notifVisible.set(true);
-    if (this.notifTimer) clearTimeout(this.notifTimer);
-    this.notifTimer = setTimeout(() => this.notifVisible.set(false), 7000);
+    this.ngZone.run(() => {
+      this.newReservationNotif.set({ name, type });
+      this.notifVisible.set(true);
+      if (this.notifTimer) clearTimeout(this.notifTimer);
+      this.notifTimer = setTimeout(() => this.ngZone.run(() => this.notifVisible.set(false)), 7000);
+    });
   }
 
   dismissNotif(): void {

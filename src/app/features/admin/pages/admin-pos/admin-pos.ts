@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -23,36 +20,30 @@ import type { Contract } from '../../../../core/interfaces/contract';
   imports: [FormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminPos implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminPos {
   private readonly posService       = inject(PosService);
   private readonly inventoryService = inject(InventoryService);
   private readonly contractService  = inject(ContractService);
 
-  // ── State ────────────────────────────────────────────────────
-  readonly loading         = signal(true);
-  readonly processing      = signal(false);
-  readonly activeSession   = signal<PosSession | null>(null);
-  readonly salesHistory    = signal<PosSale[]>([]);
-  readonly inventory       = signal<InventoryItem[]>([]);
-  readonly contracts       = signal<Contract[]>([]);
-  readonly cart            = signal<CartItem[]>([]);
-  readonly searchQuery     = signal('');
-  readonly paymentMethod   = signal<PaymentMethod>('efectivo');
-  readonly categoryFilter  = signal('all');
-  readonly toast           = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly loading       = signal(true);
+  readonly processing    = signal(false);
+  readonly activeSession = signal<PosSession | null>(null);
+  readonly salesHistory  = signal<PosSale[]>([]);
+  readonly inventory     = signal<InventoryItem[]>([]);
+  readonly contracts     = signal<Contract[]>([]);
+  readonly cart          = signal<CartItem[]>([]);
+  readonly searchQuery   = signal('');
+  readonly paymentMethod = signal<PaymentMethod>('efectivo');
+  readonly categoryFilter = signal('all');
+  readonly toast         = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Session setup
   readonly selectedContractId = signal('');
   readonly showNewSession     = signal(false);
 
-  // ── Computed ─────────────────────────────────────────────────
   readonly filteredInventory = computed(() => {
     const q   = this.searchQuery().toLowerCase().trim();
     const cat = this.categoryFilter();
     let list  = this.inventory().filter((i) => i.precio_venta > 0 && i.stock_actual > 0);
-
     if (cat !== 'all') list = list.filter((i) => i.categoria === cat);
     if (q) list = list.filter(
       (i) => i.nombre.toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q),
@@ -77,7 +68,11 @@ export class AdminPos implements OnInit {
     return Array.from(cats) as string[];
   });
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadAll();
+  }
+
+  private async loadAll(): Promise<void> {
     const [sessions, inventory, contracts] = await Promise.all([
       this.posService.getActiveSessions(),
       this.inventoryService.getAll(),
@@ -89,18 +84,15 @@ export class AdminPos implements OnInit {
       sales = await this.posService.getSalesBySession(sessions[0].id);
     }
 
-    this.ngZone.run(() => {
-      if (sessions.length > 0) {
-        this.activeSession.set(sessions[0]);
-        this.salesHistory.set(sales);
-      }
-      this.inventory.set(inventory);
-      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-      this.loading.set(false);
-    });
+    if (sessions.length > 0) {
+      this.activeSession.set(sessions[0]);
+      this.salesHistory.set(sales);
+    }
+    this.inventory.set(inventory);
+    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+    this.loading.set(false);
   }
 
-  // ── Session management ────────────────────────────────────────
   async openSession(): Promise<void> {
     this.processing.set(true);
     const contractId = this.selectedContractId() || undefined;
@@ -132,7 +124,6 @@ export class AdminPos implements OnInit {
     this.processing.set(false);
   }
 
-  // ── Cart management ──────────────────────────────────────────
   addToCart(item: InventoryItem): void {
     const existing = this.cart().find((c) => c.item_id === item.id);
     if (existing) {
@@ -180,7 +171,6 @@ export class AdminPos implements OnInit {
 
   clearCart(): void { this.cart.set([]); }
 
-  // ── Checkout ─────────────────────────────────────────────────
   async checkout(): Promise<void> {
     const session = this.activeSession();
     if (!session || this.cart().length === 0 || this.processing()) return;
@@ -200,21 +190,17 @@ export class AdminPos implements OnInit {
     });
 
     if (sale) {
-      // Discount stock for each sold item
       for (const cartItem of cartSnapshot) {
         await this.inventoryService.registerMovement({
-          item_id:  cartItem.item_id,
-          tipo:     'salida',
-          cantidad: cartItem.cantidad,
-          motivo:   `Venta POS ${sale.folio}`,
+          item_id:     cartItem.item_id,
+          tipo:        'salida',
+          cantidad:    cartItem.cantidad,
+          motivo:      `Venta POS ${sale.folio}`,
           contract_id: session.contract_id ?? undefined,
         });
       }
-
-      // Refresh inventory stock
       const updatedInventory = await this.inventoryService.getAll();
       this.inventory.set(updatedInventory);
-
       this.salesHistory.update((list) => [sale, ...list]);
       this.cart.set([]);
       this.showToast('success', `Venta registrada — ${this.formatCurrency(sale.total)}`);
@@ -224,7 +210,6 @@ export class AdminPos implements OnInit {
     this.processing.set(false);
   }
 
-  // ── Helpers ──────────────────────────────────────────────────
   onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }

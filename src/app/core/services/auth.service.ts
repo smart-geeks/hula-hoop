@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { computed, inject, Injectable, NgZone, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { AuthResponse, AuthError, User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
@@ -16,6 +16,7 @@ export interface RegisterData {
 export class AuthService {
   private readonly supabase = inject(SupabaseService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly ngZone = inject(NgZone);
 
   readonly currentUser = signal<User | null>(null);
   readonly userProfile = signal<UserProfile | null>(null);
@@ -111,32 +112,34 @@ export class AuthService {
     // onAuthStateChange fires INITIAL_SESSION on setup — no need for a separate getSession() call.
     // This avoids a duplicate token refresh that can trigger 429 rate-limits.
     client.auth.onAuthStateChange((event, session) => {
-      const user = session?.user ?? null;
+      this.ngZone.run(() => {
+        const user = session?.user ?? null;
 
-      if (event === 'PASSWORD_RECOVERY') {
-        this.isPasswordRecovery.set(true);
-      }
+        if (event === 'PASSWORD_RECOVERY') {
+          this.isPasswordRecovery.set(true);
+        }
 
-      if (!user) {
-        // Signed out or session expired
-        this.currentUser.set(null);
-        this.userProfile.set(null);
-        this.loadedProfileUserId = null;
-        return;
-      }
+        if (!user) {
+          // Signed out or session expired
+          this.currentUser.set(null);
+          this.userProfile.set(null);
+          this.loadedProfileUserId = null;
+          return;
+        }
 
-      this.currentUser.set(user);
+        this.currentUser.set(user);
 
-      // Only fetch profile on events that establish or change the session.
-      // Skip TOKEN_REFRESHED if we already have the profile for this user.
-      const needsProfileFetch =
-        event === 'SIGNED_IN' ||
-        event === 'INITIAL_SESSION' ||
-        (event === 'TOKEN_REFRESHED' && this.loadedProfileUserId !== user.id);
+        // Only fetch profile on events that establish or change the session.
+        // Skip TOKEN_REFRESHED if we already have the profile for this user.
+        const needsProfileFetch =
+          event === 'SIGNED_IN' ||
+          event === 'INITIAL_SESSION' ||
+          (event === 'TOKEN_REFRESHED' && this.loadedProfileUserId !== user.id);
 
-      if (needsProfileFetch) {
-        this.fetchProfile(user.id);
-      }
+        if (needsProfileFetch) {
+          this.fetchProfile(user.id);
+        }
+      });
     });
   }
 
@@ -162,8 +165,10 @@ export class AuthService {
       }
 
       if (data) {
-        this.userProfile.set(data as UserProfile);
-        this.loadedProfileUserId = userId;
+        this.ngZone.run(() => {
+          this.userProfile.set(data as UserProfile);
+          this.loadedProfileUserId = userId;
+        });
       }
     } catch (err) {
       console.error('Unexpected error fetching profile:', err);

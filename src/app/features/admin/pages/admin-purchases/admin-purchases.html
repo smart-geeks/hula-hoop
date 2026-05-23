@@ -92,7 +92,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 text-right font-semibold text-slate-800">
-                  {{ purchase.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ purchase.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center justify-end gap-1">
@@ -219,7 +219,7 @@
                   </div>
                   <div class="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
                     <span class="hidden sm:block text-xs text-slate-400">
-                      {{ getItemSubtotal(i) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ getItemSubtotal(i) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </span>
                     <button type="button" (click)="removeItem(i)" [disabled]="items.length === 1"
                       class="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Eliminar concepto">
@@ -246,7 +246,7 @@
         <div class="px-6 py-3 bg-slate-50 flex justify-end">
           <div class="text-right">
             <p class="text-xs text-slate-400">Total de la compra</p>
-            <p class="text-lg font-bold text-slate-800">{{ total() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            <p class="text-lg font-bold text-slate-800">{{ total() | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
           </div>
         </div>
         <div class="px-6 py-4 flex gap-3">

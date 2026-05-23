@@ -93,14 +93,14 @@
               <div>
                 <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
                 @if (item.cantidad > 1) {
-                  <p class="text-xs text-slate-400 mt-0.5">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
                 }
               </div>
               <p class="font-semibold text-slate-800 shrink-0 ml-4">
                 @if (item.precio_unitario === 0) {
                   <span class="text-emerald-600 text-sm">Incluido</span>
                 } @else {
-                  {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 }
               </p>
             </div>
@@ -115,28 +115,28 @@
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span class="text-slate-500">Subtotal</span>
-          <span class="font-medium text-slate-700">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span class="font-medium text-slate-700">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         @if (q.descuento > 0) {
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Descuento</span>
-            <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
         }
         <hr class="border-slate-100 my-2" />
         <div class="flex justify-between text-lg font-bold text-slate-800">
           <span>Total</span>
-          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         @if ((q.deposit_amount ?? 0) > 0) {
           <div class="flex justify-between text-sm font-bold text-rojo-brillante pt-1">
             <span>Anticipo requerido</span>
-            <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           @if (q.total - (q.deposit_amount ?? 0) > 0) {
             <div class="flex justify-between text-sm text-slate-500">
               <span>Saldo restante al evento</span>
-              <span class="font-medium">{{ (q.total - (q.deposit_amount ?? 0)) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+              <span class="font-medium">{{ (q.total - (q.deposit_amount ?? 0)) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
             </div>
           }
         }

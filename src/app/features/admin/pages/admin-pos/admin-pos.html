@@ -96,7 +96,7 @@
                 <div class="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl text-sm">
                   <span class="text-slate-600 font-mono text-xs">{{ sale.folio }}</span>
                   <span class="text-slate-500 text-xs capitalize">{{ sale.pagado_con }}</span>
-                  <span class="font-semibold text-slate-800">{{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                  <span class="font-semibold text-slate-800">{{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
                 </div>
               }
             </div>
@@ -158,7 +158,7 @@
                 }
                 <div class="flex items-center justify-between">
                   <p class="font-bold text-rojo-brillante text-sm">
-                    {{ item.precio_venta | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ item.precio_venta | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                   <p class="text-xs text-slate-400">
                     <span [class]="item.stock_actual <= 3 ? 'text-amber-600 font-semibold' : ''">{{ item.stock_actual }}</span>
@@ -205,7 +205,7 @@
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-slate-800 truncate">{{ cartItem.nombre }}</p>
                   <p class="text-xs text-slate-400">
-                    {{ cartItem.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }} c/u
+                    {{ cartItem.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }} c/u
                   </p>
                 </div>
                 <!-- Qty controls -->
@@ -223,7 +223,7 @@
                 <!-- Subtotal + remove -->
                 <div class="text-right shrink-0">
                   <p class="text-sm font-bold text-slate-800">
-                    {{ cartItem.subtotal | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ cartItem.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                   <button (click)="removeFromCart(cartItem.item_id)"
                     class="text-xs text-slate-300 hover:text-red-500 transition-colors">
@@ -239,7 +239,7 @@
             <div class="flex items-center justify-between mb-4">
               <span class="text-sm text-slate-500 font-medium">Total</span>
               <span class="text-2xl font-bold text-slate-800">
-                {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </span>
             </div>
 
@@ -266,7 +266,7 @@
               } @else {
                 <i class="pi pi-check-circle"></i>
               }
-              Cobrar {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              Cobrar {{ cartTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
             </button>
           </div>
         }
@@ -286,7 +286,7 @@
                   <span class="text-slate-400 font-mono">{{ sale.folio }}</span>
                   <span class="text-slate-500 capitalize">{{ sale.pagado_con }}</span>
                   <span class="font-bold text-slate-700">
-                    {{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
               }
@@ -294,7 +294,7 @@
             <div class="px-5 py-3 border-t border-slate-100 flex justify-between text-sm">
               <span class="text-slate-500 font-medium">Total sesión</span>
               <span class="font-bold text-slate-800">
-                {{ sessionTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ sessionTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </span>
             </div>
           </div>

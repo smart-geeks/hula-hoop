@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -25,9 +22,7 @@ const UNIT_OPTIONS = ['pieza', 'kg', 'litro', 'caja', 'paquete', 'metro', 'par',
   imports: [ReactiveFormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminInventory implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminInventory {
   private readonly inventoryService = inject(InventoryService);
   private readonly fb = inject(FormBuilder);
 
@@ -49,19 +44,19 @@ export class AdminInventory implements OnInit {
     motivo:   [''],
   });
 
-  readonly loading          = signal(true);
-  readonly saving           = signal(false);
-  readonly savingMovement   = signal(false);
-  readonly items            = signal<InventoryItem[]>([]);
-  readonly searchQuery      = signal('');
-  readonly categoryFilter   = signal('all');
-  readonly showInactive     = signal(false);
-  readonly activePanel      = signal<ActivePanel>('items');
-  readonly drawerOpen       = signal(false);
-  readonly drawerMode       = signal<DrawerMode>('create');
-  readonly selectedItem     = signal<InventoryItem | null>(null);
-  readonly deleteTarget     = signal<InventoryItem | null>(null);
-  readonly toast            = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly loading        = signal(true);
+  readonly saving         = signal(false);
+  readonly savingMovement = signal(false);
+  readonly items          = signal<InventoryItem[]>([]);
+  readonly searchQuery    = signal('');
+  readonly categoryFilter = signal('all');
+  readonly showInactive   = signal(false);
+  readonly activePanel    = signal<ActivePanel>('items');
+  readonly drawerOpen     = signal(false);
+  readonly drawerMode     = signal<DrawerMode>('create');
+  readonly selectedItem   = signal<InventoryItem | null>(null);
+  readonly deleteTarget   = signal<InventoryItem | null>(null);
+  readonly toast          = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
   readonly categories = INVENTORY_CATEGORIES;
   readonly unitOptions = UNIT_OPTIONS;
@@ -70,7 +65,6 @@ export class AdminInventory implements OnInit {
     const q   = this.searchQuery().toLowerCase().trim();
     const cat = this.categoryFilter();
     let list  = this.items();
-
     if (cat !== 'all') list = list.filter((i) => i.categoria === cat);
     if (q) list = list.filter(
       (i) => i.nombre.toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q),
@@ -82,17 +76,15 @@ export class AdminInventory implements OnInit {
     this.items().filter((i) => i.stock_actual <= i.stock_minimo && i.activo).length,
   );
 
-  async ngOnInit(): Promise<void> {
-    await this.loadItems();
+  constructor() {
+    this.loadItems();
   }
 
   private async loadItems(): Promise<void> {
     this.loading.set(true);
     const data = await this.inventoryService.getAll(this.showInactive());
-    this.ngZone.run(() => {
-      this.items.set(data);
-      this.loading.set(false);
-    });
+    this.items.set(data);
+    this.loading.set(false);
   }
 
   async toggleShowInactive(): Promise<void> {

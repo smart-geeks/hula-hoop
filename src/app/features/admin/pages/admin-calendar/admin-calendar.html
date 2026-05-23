@@ -40,7 +40,7 @@
         </div>
         <div>
           <p class="text-lg font-bold text-slate-800">
-            {{ monthStats().total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+            {{ monthStats().total | currency:'MXN':'symbol-narrow':'1.0-0' }}
           </p>
           <p class="text-xs text-slate-400">Contratado</p>
         </div>
@@ -218,14 +218,14 @@
                   <div>
                     <p class="text-[10px] text-slate-400">Total</p>
                     <p class="text-xs font-bold text-slate-800">
-                      {{ ev.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ ev.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </p>
                   </div>
                   @if (ev.saldo_pendiente > 0) {
                     <div>
                       <p class="text-[10px] text-slate-400">Por cobrar</p>
                       <p class="text-xs font-bold text-amber-600">
-                        {{ ev.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ ev.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </p>
                     </div>
                   } @else {
@@ -304,7 +304,7 @@
                 {{ getStatusLabel(ev.estado) }}
               </span>
               <p class="text-sm font-bold text-slate-700">
-                {{ ev.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ ev.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
           </div>

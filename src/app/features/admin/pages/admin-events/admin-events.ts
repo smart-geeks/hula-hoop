@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -39,15 +36,12 @@ type DetailTab = 'info' | 'tareas' | 'pagos';
   imports: [RouterLink, CurrencyPipe, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminEvents implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminEvents {
   private readonly contractService    = inject(ContractService);
   private readonly reservationService = inject(ReservationService);
   private readonly eventTaskService   = inject(EventTaskService);
   private readonly router             = inject(Router);
 
-  // ── State ────────────────────────────────────────────────────
   readonly loading       = signal(true);
   readonly events        = signal<EventItem[]>([]);
   readonly activeTab     = signal<ActiveTab>('all');
@@ -63,7 +57,6 @@ export class AdminEvents implements OnInit {
     () => this.tasks().filter((t) => t.estado === 'completado').length,
   );
 
-  // ── Computed: KPIs ───────────────────────────────────────────
   readonly todayCount = computed(() => {
     const today = this.todayStr();
     return this.events().filter((e) => e.fecha === today).length;
@@ -78,11 +71,9 @@ export class AdminEvents implements OnInit {
     this.events().filter((e) => (e.saldo ?? 0) > 0 || e.estado === 'pending_payment').length,
   );
 
-  // ── Computed: Tab counts ─────────────────────────────────────
   readonly contractsCount    = computed(() => this.events().filter((e) => e.type === 'contract').length);
   readonly reservationsCount = computed(() => this.events().filter((e) => e.type === 'reservation').length);
 
-  // ── Computed: Status options ─────────────────────────────────
   readonly statusOptions = computed(() => {
     const tab = this.activeTab();
     if (tab === 'contratos') {
@@ -107,16 +98,15 @@ export class AdminEvents implements OnInit {
     return [{ value: 'all', label: 'Todos los estados' }];
   });
 
-  // ── Computed: Filtered list ──────────────────────────────────
   readonly filteredEvents = computed(() => {
     const tab    = this.activeTab();
     const status = this.statusFilter();
     const query  = this.searchQuery().toLowerCase().trim();
 
     return this.events().filter((e) => {
-      if (tab === 'contratos'    && e.type !== 'contract')     return false;
-      if (tab === 'reservaciones' && e.type !== 'reservation') return false;
-      if (status !== 'all' && e.estado !== status)             return false;
+      if (tab === 'contratos'     && e.type !== 'contract')     return false;
+      if (tab === 'reservaciones' && e.type !== 'reservation')  return false;
+      if (status !== 'all' && e.estado !== status)              return false;
       if (query) {
         const haystack = `${e.cliente} ${e.folio} ${e.fecha}`.toLowerCase();
         if (!haystack.includes(query)) return false;
@@ -125,23 +115,26 @@ export class AdminEvents implements OnInit {
     });
   });
 
-  // ── Lifecycle ────────────────────────────────────────────────
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadEvents();
+  }
+
+  private async loadEvents(): Promise<void> {
     const [contracts, reservations] = await Promise.all([
       this.contractService.getAll(),
       this.reservationService.getAllPrivateReservations(),
     ]);
 
     const contractItems: EventItem[] = contracts.map((c) => ({
-      id:     c.id,
-      type:   'contract',
-      fecha:  c.fecha_evento,
+      id:      c.id,
+      type:    'contract',
+      fecha:   c.fecha_evento,
       cliente: c.client?.nombre ?? 'Sin cliente',
-      estado: c.estado,
-      total:  c.total_contrato,
-      folio:  c.folio,
-      saldo:  c.saldo_pendiente,
-      raw:    c,
+      estado:  c.estado,
+      total:   c.total_contrato,
+      folio:   c.folio,
+      saldo:   c.saldo_pendiente,
+      raw:     c,
     }));
 
     const reservationItems: EventItem[] = reservations.map((r) => ({
@@ -160,21 +153,16 @@ export class AdminEvents implements OnInit {
       b.fecha.localeCompare(a.fecha),
     );
 
-    this.ngZone.run(() => {
-      this.events.set(merged);
-      this.loading.set(false);
-    });
+    this.events.set(merged);
+    this.loading.set(false);
   }
 
-  // ── Tab / filter helpers ─────────────────────────────────────
   setTab(tab: ActiveTab): void {
     this.activeTab.set(tab);
     this.statusFilter.set('all');
   }
 
-  setStatusFilter(value: string): void {
-    this.statusFilter.set(value);
-  }
+  setStatusFilter(value: string): void { this.statusFilter.set(value); }
 
   onSearchInput(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
@@ -189,7 +177,6 @@ export class AdminEvents implements OnInit {
       void this.router.navigate(['/admin/evento', item.id]);
       return;
     }
-    // Reservations: keep side panel
     this.selectedEvent.set(item);
     this.detailTab.set('info');
     this.tasks.set([]);
@@ -222,8 +209,7 @@ export class AdminEvents implements OnInit {
 
   async toggleTask(task: EventTask): Promise<void> {
     if (this.taskSaving() === task.id) return;
-    const newStatus: TaskStatus =
-      task.estado === 'completado' ? 'pendiente' : 'completado';
+    const newStatus: TaskStatus = task.estado === 'completado' ? 'pendiente' : 'completado';
     this.taskSaving.set(task.id);
     const ok = await this.eventTaskService.updateStatus(task.id, newStatus);
     if (ok) {
@@ -242,22 +228,18 @@ export class AdminEvents implements OnInit {
     return `${hour12}:${m} ${ampm}`;
   }
 
-  // ── Badge helpers ────────────────────────────────────────────
   getStatusBadge(estado: string, type: 'contract' | 'reservation'): string {
-    const cfgType = type === 'contract' ? 'contract' : 'reservation';
-    return getStatusCfg(estado, cfgType).classes;
+    return getStatusCfg(estado, type === 'contract' ? 'contract' : 'reservation').classes;
   }
 
   getStatusLabel(estado: string, type: 'contract' | 'reservation'): string {
-    const cfgType = type === 'contract' ? 'contract' : 'reservation';
-    return getStatusCfg(estado, cfgType).label;
+    return getStatusCfg(estado, type === 'contract' ? 'contract' : 'reservation').label;
   }
 
   getTypeIcon(type: 'contract' | 'reservation'): string {
     return type === 'contract' ? 'pi-file-edit' : 'pi-calendar';
   }
 
-  // Cast helpers for detail panel (template cannot use type assertions)
   asContract(raw: Contract | PrivateReservation): Contract {
     return raw as Contract;
   }
@@ -268,37 +250,25 @@ export class AdminEvents implements OnInit {
 
   formatDate(dateStr: string): string {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('es-MX', {
-      day:   '2-digit',
-      month: 'short',
-      year:  'numeric',
-    });
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  // ── Private utilities ────────────────────────────────────────
   private todayStr(): string {
     const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private thisWeekRange(): { start: string; end: string } {
-    const now   = new Date();
-    const day   = now.getDay(); // 0 = Sun
-    const diff  = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const now  = new Date();
+    const day  = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     const start = new Date(now);
     start.setDate(diff);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
 
-    const fmt = (d: Date) => {
-      const y  = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, '0');
-      const da = String(d.getDate()).padStart(2, '0');
-      return `${y}-${mo}-${da}`;
-    };
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     return { start: fmt(start), end: fmt(end) };
   }

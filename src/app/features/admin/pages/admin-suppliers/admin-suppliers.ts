@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,16 +13,16 @@ import { SUPPLIER_CATEGORIES } from '../../../../core/interfaces/supplier';
 type DrawerMode = 'create' | 'edit';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Catering':            'bg-amber-100 text-amber-700',
-  'Decoración':          'bg-pink-100 text-pink-700',
-  'Audio y Video':       'bg-purple-100 text-purple-700',
-  'Fotografía':          'bg-blue-100 text-blue-700',
-  'Entretenimiento':     'bg-lime-100 text-lime-700',
-  'Mobiliario':          'bg-orange-100 text-orange-700',
-  'Limpieza':            'bg-cyan-100 text-cyan-700',
-  'Seguridad':           'bg-slate-100 text-slate-700',
-  'Flores':              'bg-rose-100 text-rose-700',
-  'Pasteles':            'bg-yellow-100 text-yellow-700',
+  'Catering':        'bg-amber-100 text-amber-700',
+  'Decoración':      'bg-pink-100 text-pink-700',
+  'Audio y Video':   'bg-purple-100 text-purple-700',
+  'Fotografía':      'bg-blue-100 text-blue-700',
+  'Entretenimiento': 'bg-lime-100 text-lime-700',
+  'Mobiliario':      'bg-orange-100 text-orange-700',
+  'Limpieza':        'bg-cyan-100 text-cyan-700',
+  'Seguridad':       'bg-slate-100 text-slate-700',
+  'Flores':          'bg-rose-100 text-rose-700',
+  'Pasteles':        'bg-yellow-100 text-yellow-700',
 };
 
 @Component({
@@ -34,9 +31,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminSuppliers implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminSuppliers {
   private readonly supplierService = inject(SupplierService);
   private readonly fb = inject(FormBuilder);
 
@@ -50,16 +45,16 @@ export class AdminSuppliers implements OnInit {
     activo:    [true],
   });
 
-  readonly loading           = signal(true);
-  readonly saving            = signal(false);
-  readonly suppliers         = signal<Supplier[]>([]);
-  readonly showInactive      = signal(false);
-  readonly searchQuery       = signal('');
-  readonly drawerOpen        = signal(false);
-  readonly drawerMode        = signal<DrawerMode>('create');
-  readonly selectedSupplier  = signal<Supplier | null>(null);
-  readonly deleteTarget      = signal<Supplier | null>(null);
-  readonly toast             = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly loading          = signal(true);
+  readonly saving           = signal(false);
+  readonly suppliers        = signal<Supplier[]>([]);
+  readonly showInactive     = signal(false);
+  readonly searchQuery      = signal('');
+  readonly drawerOpen       = signal(false);
+  readonly drawerMode       = signal<DrawerMode>('create');
+  readonly selectedSupplier = signal<Supplier | null>(null);
+  readonly deleteTarget     = signal<Supplier | null>(null);
+  readonly toast            = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
   readonly categories = SUPPLIER_CATEGORIES;
   readonly CATEGORY_COLORS = CATEGORY_COLORS;
@@ -76,17 +71,15 @@ export class AdminSuppliers implements OnInit {
     );
   });
 
-  async ngOnInit(): Promise<void> {
-    await this.loadSuppliers();
+  constructor() {
+    this.loadSuppliers();
   }
 
   private async loadSuppliers(): Promise<void> {
     this.loading.set(true);
     const data = await this.supplierService.getAll(this.showInactive());
-    this.ngZone.run(() => {
-      this.suppliers.set(data);
-      this.loading.set(false);
-    });
+    this.suppliers.set(data);
+    this.loading.set(false);
   }
 
   async toggleShowInactive(): Promise<void> {

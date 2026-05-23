@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
@@ -21,25 +18,23 @@ import type { Contract } from '../../../../core/interfaces/contract';
   imports: [CurrencyPipe, DatePipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminDashboard implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminDashboard {
   private readonly contractService = inject(ContractService);
   private readonly reportService   = inject(ReportService);
 
-  readonly loading         = signal(true);
-  readonly upcomingEvents  = signal<Contract[]>([]);
-  readonly dashData        = signal<DashboardData | null>(null);
+  readonly loading        = signal(true);
+  readonly upcomingEvents = signal<Contract[]>([]);
+  readonly dashData       = signal<DashboardData | null>(null);
 
   readonly alerts = computed(() => {
     const d = this.dashData();
     const list: { icon: string; text: string; color: string; link: string }[] = [];
     if (d && d.low_stock_count > 0) {
       list.push({
-        icon: 'pi-box',
-        text: `${d.low_stock_count} artículo${d.low_stock_count !== 1 ? 's' : ''} bajo stock mínimo`,
+        icon:  'pi-box',
+        text:  `${d.low_stock_count} artículo${d.low_stock_count !== 1 ? 's' : ''} bajo stock mínimo`,
         color: 'text-amber-600',
-        link: '../inventario',
+        link:  '../inventario',
       });
     }
     const vencidos = this.upcomingEvents().filter((c) => {
@@ -48,10 +43,10 @@ export class AdminDashboard implements OnInit {
     });
     if (vencidos.length > 0) {
       list.push({
-        icon: 'pi-clock',
-        text: `${vencidos.length} evento${vencidos.length !== 1 ? 's' : ''} con saldo sin liquidar`,
+        icon:  'pi-clock',
+        text:  `${vencidos.length} evento${vencidos.length !== 1 ? 's' : ''} con saldo sin liquidar`,
         color: 'text-red-600',
-        link: '../contratos',
+        link:  '../contratos',
       });
     }
     return list;
@@ -62,16 +57,18 @@ export class AdminDashboard implements OnInit {
     return Math.max(...chart.map((p) => Math.max(p.ingresos, p.gastos)), 1);
   });
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadDashboard();
+  }
+
+  private async loadDashboard(): Promise<void> {
     const [upcoming, dash] = await Promise.all([
       this.contractService.getUpcoming(30),
       this.reportService.getDashboard(),
     ]);
-    this.ngZone.run(() => {
-      this.upcomingEvents.set(upcoming);
-      this.dashData.set(dash);
-      this.loading.set(false);
-    });
+    this.upcomingEvents.set(upcoming);
+    this.dashData.set(dash);
+    this.loading.set(false);
   }
 
   getStatusClass(estado: string): string {

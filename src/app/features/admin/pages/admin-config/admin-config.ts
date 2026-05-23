@@ -53,8 +53,8 @@ export class AdminConfig {
       this.config.set(data);
       this.form.patchValue({
         max_capacity_per_slot: data.max_capacity_per_slot,
-        playdate_ticket_price_cents: data.playdate_ticket_price_cents / 100, // centavos → pesos
-        playdate_extra_adult_price_cents: data.playdate_extra_adult_price_cents / 100, // centavos → pesos
+        playdate_ticket_price_cents: data.playdate_ticket_price_cents / 100,
+        playdate_extra_adult_price_cents: data.playdate_extra_adult_price_cents / 100,
         min_hours_before_private: data.min_hours_before_private,
         private_booking_horizon_date: data.private_booking_horizon_date
           ? new Date(data.private_booking_horizon_date + 'T00:00:00')

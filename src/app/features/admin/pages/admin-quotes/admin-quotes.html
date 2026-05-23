@@ -92,9 +92,9 @@
               </span>
             </td>
             <td class="px-6 py-4 text-right">
-              <p class="font-bold text-slate-800">{{ quote.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="font-bold text-slate-800">{{ quote.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
               @if ((quote.deposit_amount ?? 0) > 0) {
-              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
               }
             </td>
             <td class="px-6 py-4">
@@ -489,7 +489,7 @@
               </div>
             </div>
             <div class="text-right shrink-0">
-              <p class="text-lg font-bold text-slate-800">{{ pkg.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="text-lg font-bold text-slate-800">{{ pkg.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
               <p class="text-xs text-slate-400 mt-0.5">{{ formatDepositLabel(pkg) }}</p>
             </div>
           </div>
@@ -574,7 +574,7 @@
             <p class="font-semibold text-slate-800 text-sm">{{ extra.name }}</p>
             @if (extra.description) { <p class="text-xs text-slate-400 mt-0.5 truncate">{{ extra.description }}</p> }
             <div class="flex items-center gap-3 mt-1">
-              <p class="text-sm font-bold text-rojo-brillante">{{ extra.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+              <p class="text-sm font-bold text-rojo-brillante">{{ extra.price_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
               @if (extra.pay_at_venue) { <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Pago en sitio</span> }
             </div>
           </div>
@@ -647,10 +647,10 @@
               <div>
                 <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
                 @if (item.precio_unitario === 0) { <p class="text-xs text-emerald-600">Incluido en el paquete</p> }
-                @else if (item.cantidad > 1) { <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p> }
+                @else if (item.cantidad > 1) { <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }}</p> }
               </div>
               <p class="font-semibold text-slate-800">
-                {{ item.precio_unitario === 0 ? '—' : (item.cantidad * item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') }}
+                {{ item.precio_unitario === 0 ? '—' : (item.cantidad * item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0') }}
               </p>
             </div>
             }
@@ -665,27 +665,27 @@
         <div class="bg-slate-50 rounded-2xl p-5 space-y-2.5">
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Subtotal</span>
-            <span class="font-semibold text-slate-700">{{ subtotalAmount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-semibold text-slate-700">{{ subtotalAmount() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           @if (discount() > 0) {
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Descuento</span>
-            <span class="font-semibold text-red-500">− {{ discount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-semibold text-red-500">− {{ discount() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           }
           <div class="flex justify-between text-base font-bold text-slate-800 pt-2 border-t border-slate-200">
             <span>Total</span>
-            <span>{{ totalAmount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span>{{ totalAmount() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           @if (depositAmount() > 0) {
           <div class="flex justify-between text-sm font-bold text-rojo-brillante">
             <span>Anticipo requerido</span>
-            <span>{{ depositAmount() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span>{{ depositAmount() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           @if (balanceDue() > 0) {
           <div class="flex justify-between text-sm text-slate-500">
             <span>Saldo al evento</span>
-            <span class="font-medium">{{ balanceDue() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-medium">{{ balanceDue() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           }
           }
@@ -757,12 +757,12 @@
         <div class="mt-4 bg-white rounded-xl p-4">
           <div class="flex justify-between text-sm mb-1">
             <span class="text-slate-500">Total cotización</span>
-            <span class="font-bold text-slate-800">{{ anticoDialog()!.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-bold text-slate-800">{{ anticoDialog()!.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           @if ((anticoDialog()!.deposit_amount ?? 0) > 0) {
           <div class="flex justify-between text-xs">
             <span class="text-slate-400">Anticipo sugerido</span>
-            <span class="font-medium text-rojo-brillante">{{ (anticoDialog()!.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+            <span class="font-medium text-rojo-brillante">{{ (anticoDialog()!.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
           </div>
           }
         </div>

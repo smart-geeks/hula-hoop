@@ -1,11 +1,8 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   computed,
   inject,
-  NgZone,
-  OnInit,
   signal,
 } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
@@ -58,9 +55,7 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
   imports: [CurrencyPipe, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminQuotes implements OnInit {
-  private readonly cdr                = inject(ChangeDetectorRef);
-  private readonly ngZone             = inject(NgZone);
+export class AdminQuotes {
   private readonly quoteService       = inject(QuoteService);
   private readonly clientService      = inject(ClientService);
   private readonly contractService    = inject(ContractService);
@@ -224,8 +219,11 @@ export class AdminQuotes implements OnInit {
   readonly step3Valid = computed(() => this.selectedPackage() !== null);
   readonly step4Valid = computed(() => true);
 
-  // ── Lifecycle ─────────────────────────────────────────────
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadAll();
+  }
+
+  private async loadAll(): Promise<void> {
     const [quotes, clients, packages, extras, snacks, slots] = await Promise.all([
       this.quoteService.getAll(),
       this.clientService.getAll(),
@@ -234,15 +232,13 @@ export class AdminQuotes implements OnInit {
       this.snackOptionService.getActiveSnackOptions(),
       this.timeSlotService.getActiveSlots(),
     ]);
-    this.ngZone.run(() => {
-      this.quotes.set(quotes);
-      this.allClients.set(clients);
-      this.packages.set(packages);
-      this.extras.set(extras);
-      this.snackOptions.set(snacks);
-      this.allSlots.set(slots);
-      this.loading.set(false);
-    });
+    this.quotes.set(quotes);
+    this.allClients.set(clients);
+    this.packages.set(packages);
+    this.extras.set(extras);
+    this.snackOptions.set(snacks);
+    this.allSlots.set(slots);
+    this.loading.set(false);
   }
 
   // ── Wizard navigation ─────────────────────────────────────
@@ -374,7 +370,6 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo crear el cliente');
     }
     this.savingNewClient.set(false);
-    this.cdr.detectChanges();
   }
 
   // ── Step 2: Date & Slot ───────────────────────────────────
@@ -407,7 +402,6 @@ export class AdminQuotes implements OnInit {
       if (match && !match.blocked) this.selectedSlot.set(match.slot);
     }
     this.loadingSlots.set(false);
-    this.cdr.detectChanges();
   }
 
   selectSlot(availability: SlotAvailability): void {
@@ -495,7 +489,6 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);
-    this.cdr.detectChanges();
   }
 
   // ── Status actions ────────────────────────────────────────
@@ -505,7 +498,6 @@ export class AdminQuotes implements OnInit {
       this.quotes.update((list) => list.map((q) => (q.id === quote.id ? { ...q, estado } : q)));
       this.showToast('success', `Estado: ${STATUS_CONFIG[estado].label}`);
     }
-    this.cdr.detectChanges();
   }
 
   confirmDelete(quote: Quote): void { this.deleteTarget.set(quote); }
@@ -522,7 +514,6 @@ export class AdminQuotes implements OnInit {
       this.showToast('error', 'No se pudo eliminar');
     }
     this.deleteTarget.set(null);
-    this.cdr.detectChanges();
   }
 
   // ── Anticipo dialog — convert quote to signed contract ────
@@ -581,11 +572,9 @@ export class AdminQuotes implements OnInit {
     this.quotes.update((list) =>
       list.map((q) => (q.id === quote.id ? { ...q, estado: 'aprobada' as QuoteStatus } : q)),
     );
-
     this.closeAnticoDialog();
     this.showToast('success', `Contrato ${contract.folio} creado — anticipo registrado`);
     this.anticoSaving.set(false);
-    this.cdr.detectChanges();
   }
 
   // ── Send (WhatsApp / Email) ───────────────────────────────
@@ -825,7 +814,6 @@ export class AdminQuotes implements OnInit {
   private async refreshQuotes(): Promise<void> {
     const quotes = await this.quoteService.getAll();
     this.quotes.set(quotes);
-    this.cdr.detectChanges();
   }
 
   private resetWizard(): void {

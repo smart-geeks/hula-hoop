@@ -208,14 +208,14 @@
 
                   <!-- Total -->
                   <td class="px-6 py-4 text-right font-semibold text-slate-800 hidden md:table-cell whitespace-nowrap">
-                    {{ event.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ event.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </td>
 
                   <!-- Saldo -->
                   <td class="px-6 py-4 text-right hidden lg:table-cell whitespace-nowrap">
                     @if ((event.saldo ?? 0) > 0) {
                       <span class="text-amber-600 font-semibold">
-                        {{ event.saldo! | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ event.saldo! | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </span>
                     } @else {
                       <span class="text-emerald-600 font-medium text-xs">Liquidado</span>
@@ -382,20 +382,20 @@
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Total contrato</dt>
                 <dd class="text-slate-800 font-bold text-xs text-right">
-                  {{ asContract(selectedEvent()!.raw).total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ asContract(selectedEvent()!.raw).total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </dd>
               </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Pagado</dt>
                 <dd class="text-emerald-600 font-semibold text-xs text-right">
-                  {{ asContract(selectedEvent()!.raw).deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ asContract(selectedEvent()!.raw).deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </dd>
               </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Saldo</dt>
                 <dd [class]="'font-semibold text-xs text-right ' + (asContract(selectedEvent()!.raw).saldo_pendiente > 0 ? 'text-amber-600' : 'text-emerald-600')">
                   @if (asContract(selectedEvent()!.raw).saldo_pendiente > 0) {
-                    {{ asContract(selectedEvent()!.raw).saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ asContract(selectedEvent()!.raw).saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   } @else {
                     Liquidado
                   }
@@ -428,26 +428,26 @@
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Total</dt>
                 <dd class="text-slate-800 font-bold text-xs text-right">
-                  {{ (asReservation(selectedEvent()!.raw).total_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ (asReservation(selectedEvent()!.raw).total_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </dd>
               </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Anticipo req.</dt>
                 <dd class="text-slate-700 text-xs text-right">
-                  {{ (asReservation(selectedEvent()!.raw).deposit_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ (asReservation(selectedEvent()!.raw).deposit_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </dd>
               </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Pagado</dt>
                 <dd class="text-emerald-600 font-semibold text-xs text-right">
-                  {{ ((asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0) / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ ((asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0) / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </dd>
               </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-slate-500 text-xs shrink-0">Saldo</dt>
                 <dd [class]="'font-semibold text-xs text-right ' + ((selectedEvent()!.saldo ?? 0) > 0 ? 'text-amber-600' : 'text-emerald-600')">
                   @if ((selectedEvent()!.saldo ?? 0) > 0) {
-                    {{ selectedEvent()!.saldo! | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ selectedEvent()!.saldo! | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   } @else {
                     Liquidado
                   }
@@ -463,27 +463,27 @@
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-slate-500">Total reserva</span>
                   <span class="font-bold text-slate-800">
-                    {{ (asReservation(selectedEvent()!.raw).total_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ (asReservation(selectedEvent()!.raw).total_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-slate-500">Anticipo requerido</span>
                   <span class="font-medium text-slate-700">
-                    {{ (asReservation(selectedEvent()!.raw).deposit_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ (asReservation(selectedEvent()!.raw).deposit_cents / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <hr class="border-slate-200" />
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-slate-500">Pagado</span>
                   <span class="font-semibold text-emerald-600">
-                    {{ ((asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0) / 100) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ ((asReservation(selectedEvent()!.raw).paid_deposit_cents ?? 0) / 100) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-slate-500">Saldo pendiente</span>
                   @if ((selectedEvent()!.saldo ?? 0) > 0) {
                     <span class="font-bold text-amber-600">
-                      {{ selectedEvent()!.saldo! | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ selectedEvent()!.saldo! | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </span>
                   } @else {
                     <span class="font-semibold text-emerald-600 text-xs">Liquidado ✓</span>

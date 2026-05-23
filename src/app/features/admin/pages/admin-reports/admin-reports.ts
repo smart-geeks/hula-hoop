@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
@@ -36,14 +33,14 @@ export type ReportTab =
   | 'flujo_caja';
 
 const TABS: { id: ReportTab; label: string; icon: string }[] = [
-  { id: 'eventos',     label: 'Eventos',          icon: 'pi-calendar' },
-  { id: 'pl_global',  label: 'P&L Global',        icon: 'pi-chart-bar' },
-  { id: 'pipeline',   label: 'Pipeline',           icon: 'pi-filter' },
-  { id: 'clientes',   label: 'Clientes',           icon: 'pi-users' },
-  { id: 'proveedores',label: 'Proveedores',        icon: 'pi-truck' },
-  { id: 'inventario', label: 'Inventario',         icon: 'pi-box' },
-  { id: 'gastos',     label: 'Gastos',             icon: 'pi-wallet' },
-  { id: 'flujo_caja', label: 'Flujo de Caja',      icon: 'pi-arrow-right-arrow-left' },
+  { id: 'eventos',      label: 'Eventos',       icon: 'pi-calendar' },
+  { id: 'pl_global',   label: 'P&L Global',     icon: 'pi-chart-bar' },
+  { id: 'pipeline',    label: 'Pipeline',        icon: 'pi-filter' },
+  { id: 'clientes',    label: 'Clientes',        icon: 'pi-users' },
+  { id: 'proveedores', label: 'Proveedores',     icon: 'pi-truck' },
+  { id: 'inventario',  label: 'Inventario',      icon: 'pi-box' },
+  { id: 'gastos',      label: 'Gastos',          icon: 'pi-wallet' },
+  { id: 'flujo_caja',  label: 'Flujo de Caja',   icon: 'pi-arrow-right-arrow-left' },
 ];
 
 @Component({
@@ -52,29 +49,25 @@ const TABS: { id: ReportTab; label: string; icon: string }[] = [
   imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, DecimalPipe, PercentPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminReports implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminReports {
   private readonly reportService = inject(ReportService);
   private readonly fb = inject(FormBuilder);
 
   readonly tabs = TABS;
-  readonly expenseCategories = EXPENSE_CATEGORIES;
+  readonly expenseCategories   = EXPENSE_CATEGORIES;
   readonly inventoryCategories = INVENTORY_CATEGORIES;
 
-  readonly activeTab     = signal<ReportTab>('eventos');
-  readonly loading       = signal(false);
-  readonly toast         = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly activeTab = signal<ReportTab>('eventos');
+  readonly loading   = signal(false);
+  readonly toast     = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // ── Date range filter ──
   readonly filterForm = this.fb.group({
-    from: [this.firstOfMonth()],
-    to:   [this.today()],
+    from:      [this.firstOfMonth()],
+    to:        [this.today()],
     estado:    [''],
     categoria: [''],
   });
 
-  // ── Report data ──
   readonly eventosData     = signal<EventoRow[]>([]);
   readonly plData          = signal<PLGlobalRow | null>(null);
   readonly pipelineData    = signal<PipelineRow[]>([]);
@@ -85,7 +78,6 @@ export class AdminReports implements OnInit {
   readonly gastosCat       = signal<GastoCategoriaRow[]>([]);
   readonly flujoCajaData   = signal<FlujoCajaRow[]>([]);
 
-  // ── Computed summaries ──
   readonly eventosTotal = computed(() =>
     this.eventosData().reduce((s, r) => s + r.total_contrato, 0));
 
@@ -113,8 +105,8 @@ export class AdminReports implements OnInit {
   readonly pipelineTotalItems = computed(() =>
     this.pipelineData().reduce((s, r) => s + r.cantidad, 0));
 
-  async ngOnInit(): Promise<void> {
-    await this.loadActiveReport();
+  constructor() {
+    this.loadActiveReport();
   }
 
   async setTab(tab: ReportTab): Promise<void> {
@@ -130,43 +122,38 @@ export class AdminReports implements OnInit {
     this.loading.set(true);
     const tab = this.activeTab();
 
-    let updateFn: (() => void) | null = null;
-
     try {
       if (tab === 'eventos') {
         const data = await this.reportService.getEventos(f, t, estado || undefined);
-        updateFn = () => this.eventosData.set(data);
+        this.eventosData.set(data);
       } else if (tab === 'pl_global') {
         const data = await this.reportService.getPLGlobal(f, t);
-        updateFn = () => this.plData.set(data);
+        this.plData.set(data);
       } else if (tab === 'pipeline') {
         const data = await this.reportService.getPipeline(f, t);
-        updateFn = () => this.pipelineData.set(data);
+        this.pipelineData.set(data);
       } else if (tab === 'clientes') {
         const data = await this.reportService.getClientes(f, t);
-        updateFn = () => this.clientesData.set(data);
+        this.clientesData.set(data);
       } else if (tab === 'proveedores') {
         const data = await this.reportService.getProveedores(f, t);
-        updateFn = () => this.proveedoresData.set(data);
+        this.proveedoresData.set(data);
       } else if (tab === 'inventario') {
         const data = await this.reportService.getInventario(categoria || undefined);
-        updateFn = () => this.inventarioData.set(data);
+        this.inventarioData.set(data);
       } else if (tab === 'gastos') {
         const result = await this.reportService.getGastos(f, t, categoria || undefined);
-        updateFn = () => { this.gastosRows.set(result.rows); this.gastosCat.set(result.byCategory); };
+        this.gastosRows.set(result.rows);
+        this.gastosCat.set(result.byCategory);
       } else if (tab === 'flujo_caja') {
         const data = await this.reportService.getFlujoCaja(f, t);
-        updateFn = () => this.flujoCajaData.set(data);
+        this.flujoCajaData.set(data);
       }
     } finally {
-      this.ngZone.run(() => {
-        if (updateFn) updateFn();
-        this.loading.set(false);
-      });
+      this.loading.set(false);
     }
   }
 
-  // ── Export Excel ──
   async exportExcel(): Promise<void> {
     const { utils, writeFile } = await import('xlsx');
     const tab = this.activeTab();
@@ -178,75 +165,52 @@ export class AdminReports implements OnInit {
     if (tab === 'eventos') {
       ws = utils.json_to_sheet(
         this.eventosData().map((r) => ({
-          Folio: r.folio,
-          Cliente: r.cliente,
-          'Fecha Evento': r.fecha_evento,
-          Estado: r.estado,
-          'Total Contrato': fmt(r.total_contrato),
-          'Depósito Pagado': fmt(r.deposito_pagado),
-          'Saldo Pendiente': fmt(r.saldo_pendiente),
+          Folio: r.folio, Cliente: r.cliente, 'Fecha Evento': r.fecha_evento,
+          Estado: r.estado, 'Total Contrato': fmt(r.total_contrato),
+          'Depósito Pagado': fmt(r.deposito_pagado), 'Saldo Pendiente': fmt(r.saldo_pendiente),
         })),
       );
       filename = 'reporte-eventos.xlsx';
     } else if (tab === 'clientes') {
       ws = utils.json_to_sheet(
         this.clientesData().map((r) => ({
-          Cliente: r.nombre,
-          Email: r.email,
-          Teléfono: r.telefono,
-          Eventos: r.num_eventos,
-          'Total Facturado': fmt(r.total_facturado),
-          'Último Evento': r.ultimo_evento,
+          Cliente: r.nombre, Email: r.email, Teléfono: r.telefono,
+          Eventos: r.num_eventos, 'Total Facturado': fmt(r.total_facturado), 'Último Evento': r.ultimo_evento,
         })),
       );
       filename = 'reporte-clientes.xlsx';
     } else if (tab === 'proveedores') {
       ws = utils.json_to_sheet(
         this.proveedoresData().map((r) => ({
-          Proveedor: r.nombre,
-          Categoría: r.categoria,
-          Compras: r.num_compras,
-          'Total Compras': fmt(r.total_compras),
-          'Última Compra': r.ultima_compra,
+          Proveedor: r.nombre, Categoría: r.categoria,
+          Compras: r.num_compras, 'Total Compras': fmt(r.total_compras), 'Última Compra': r.ultima_compra,
         })),
       );
       filename = 'reporte-proveedores.xlsx';
     } else if (tab === 'inventario') {
       ws = utils.json_to_sheet(
         this.inventarioData().map((r) => ({
-          Nombre: r.nombre,
-          SKU: r.sku,
-          Categoría: r.categoria,
-          Unidad: r.unidad,
-          'Stock Actual': r.stock_actual,
-          'Stock Mínimo': r.stock_minimo,
-          'Precio Costo': fmt(r.precio_costo),
-          'Precio Venta': fmt(r.precio_venta),
-          'Valor Inventario': fmt(r.valor_inventario),
-          Alerta: r.alerta ? 'Sí' : 'No',
+          Nombre: r.nombre, SKU: r.sku, Categoría: r.categoria, Unidad: r.unidad,
+          'Stock Actual': r.stock_actual, 'Stock Mínimo': r.stock_minimo,
+          'Precio Costo': fmt(r.precio_costo), 'Precio Venta': fmt(r.precio_venta),
+          'Valor Inventario': fmt(r.valor_inventario), Alerta: r.alerta ? 'Sí' : 'No',
         })),
       );
       filename = 'reporte-inventario.xlsx';
     } else if (tab === 'gastos') {
       ws = utils.json_to_sheet(
         this.gastosRows().map((r) => ({
-          Fecha: r.fecha,
-          Categoría: r.categoria,
-          Descripción: r.descripcion,
-          Monto: fmt(r.monto),
-          Evento: r.evento,
-          Proveedor: r.proveedor,
+          Fecha: r.fecha, Categoría: r.categoria, Descripción: r.descripcion,
+          Monto: fmt(r.monto), Evento: r.evento, Proveedor: r.proveedor,
         })),
       );
       filename = 'reporte-gastos.xlsx';
     } else if (tab === 'flujo_caja') {
       ws = utils.json_to_sheet(
         this.flujoCajaData().map((r) => ({
-          Fecha: r.fecha,
-          Concepto: r.concepto,
+          Fecha: r.fecha, Concepto: r.concepto,
           Tipo: r.tipo === 'entrada' ? 'Entrada' : 'Salida',
-          Monto: fmt(r.monto),
-          'Saldo Acumulado': fmt(r.saldo_acumulado ?? 0),
+          Monto: fmt(r.monto), 'Saldo Acumulado': fmt(r.saldo_acumulado ?? 0),
         })),
       );
       filename = 'flujo-de-caja.xlsx';
@@ -261,7 +225,6 @@ export class AdminReports implements OnInit {
     this.showToast('success', 'Archivo Excel descargado');
   }
 
-  // ── Export PDF ──
   async exportPdf(): Promise<void> {
     const el = document.getElementById('report-print-area');
     if (!el) return;
@@ -273,22 +236,22 @@ export class AdminReports implements OnInit {
 
     this.loading.set(true);
     try {
-      const canvas = await (html2canvas as any)(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas  = await (html2canvas as any)(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new (jsPDF as any)({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * pageW) / canvas.width;
+      const pdf     = new (jsPDF as any)({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW   = pdf.internal.pageSize.getWidth();
+      const pageH   = pdf.internal.pageSize.getHeight();
+      const imgW    = pageW;
+      const imgH    = (canvas.height * pageW) / canvas.width;
       let y = 0;
       if (imgH <= pageH) {
         pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
       } else {
         let offset = 0;
         while (offset < canvas.height) {
-          const sliceH = Math.min(canvas.height - offset, (pageH / pageW) * canvas.width);
+          const sliceH      = Math.min(canvas.height - offset, (pageH / pageW) * canvas.width);
           const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = canvas.width;
+          sliceCanvas.width  = canvas.width;
           sliceCanvas.height = sliceH;
           sliceCanvas.getContext('2d')!.drawImage(canvas, 0, -offset);
           if (y > 0) pdf.addPage();
@@ -337,9 +300,7 @@ export class AdminReports implements OnInit {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   }
 
-  private today(): string {
-    return new Date().toISOString().split('T')[0];
-  }
+  private today(): string { return new Date().toISOString().split('T')[0]; }
 
   private showToast(type: 'success' | 'error', message: string): void {
     this.toast.set({ type, message });

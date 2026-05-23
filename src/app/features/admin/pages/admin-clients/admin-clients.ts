@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -20,9 +17,7 @@ type DrawerMode = 'create' | 'edit';
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminClients implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminClients {
   private readonly clientService = inject(ClientService);
   private readonly fb = inject(FormBuilder);
 
@@ -55,17 +50,15 @@ export class AdminClients implements OnInit {
     );
   });
 
-  async ngOnInit(): Promise<void> {
-    await this.loadClients();
+  constructor() {
+    this.loadClients();
   }
 
   private async loadClients(): Promise<void> {
     this.loading.set(true);
     const data = await this.clientService.getAll();
-    this.ngZone.run(() => {
-      this.clients.set(data);
-      this.loading.set(false);
-    });
+    this.clients.set(data);
+    this.loading.set(false);
   }
 
   onSearch(event: Event): void {
@@ -103,19 +96,18 @@ export class AdminClients implements OnInit {
     this.saving.set(true);
     const raw = this.form.getRawValue();
     const payload = {
-      nombre: raw.nombre!.trim(),
+      nombre:   raw.nombre!.trim(),
       telefono: raw.telefono?.trim() || undefined,
-      email: raw.email?.trim() || undefined,
-      rfc: raw.rfc?.trim() || undefined,
-      notas: raw.notas?.trim() || undefined,
+      email:    raw.email?.trim() || undefined,
+      rfc:      raw.rfc?.trim() || undefined,
+      notas:    raw.notas?.trim() || undefined,
     };
 
     let result: Client | null = null;
     if (this.drawerMode() === 'create') {
       result = await this.clientService.create(payload);
     } else {
-      const id = this.selectedClient()!.id;
-      result = await this.clientService.update(id, payload);
+      result = await this.clientService.update(this.selectedClient()!.id, payload);
     }
 
     if (result) {
@@ -128,13 +120,8 @@ export class AdminClients implements OnInit {
     this.saving.set(false);
   }
 
-  confirmDelete(client: Client): void {
-    this.deleteTarget.set(client);
-  }
-
-  cancelDelete(): void {
-    this.deleteTarget.set(null);
-  }
+  confirmDelete(client: Client): void { this.deleteTarget.set(client); }
+  cancelDelete(): void                { this.deleteTarget.set(null); }
 
   async executeDelete(): Promise<void> {
     const target = this.deleteTarget();
@@ -150,12 +137,7 @@ export class AdminClients implements OnInit {
   }
 
   getInitials(nombre: string): string {
-    return nombre
-      .split(' ')
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase();
+    return nombre.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   }
 
   private showToast(type: 'success' | 'error', message: string): void {

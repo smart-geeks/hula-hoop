@@ -128,11 +128,11 @@
                 </div>
                 <div class="text-right shrink-0">
                   <p class="text-sm font-bold text-slate-700">
-                    {{ contract.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ contract.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                   @if (contract.saldo_pendiente > 0) {
                     <p class="text-xs text-amber-600 font-medium">
-                      Debe {{ contract.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      Debe {{ contract.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </p>
                   } @else {
                     <p class="text-xs text-emerald-600 font-medium">Liquidado ✓</p>
@@ -211,7 +211,7 @@
                 </div>
                 <div class="text-right shrink-0">
                   <p class="text-sm font-bold text-slate-700">
-                    {{ res.total_cents | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ res.total_cents | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                   @if (res.paid_deposit_cents < res.total_cents) {
                     <p class="text-xs text-amber-600 font-medium">Saldo pendiente</p>

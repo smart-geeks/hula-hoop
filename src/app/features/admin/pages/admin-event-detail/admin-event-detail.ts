@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
@@ -30,9 +27,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
   imports: [CurrencyPipe, DatePipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminEventDetail implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminEventDetail {
   private readonly contractService  = inject(ContractService);
   private readonly quoteService     = inject(QuoteService);
   private readonly taskService      = inject(EventTaskService);
@@ -106,8 +101,11 @@ export class AdminEventDetail implements OnInit {
     return getStatusCfg(c.estado, 'contract');
   });
 
-  // ── Lifecycle ─────────────────────────────────────────────
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadData();
+  }
+
+  private async loadData(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) { void this.router.navigate(['/admin/eventos']); return; }
 
@@ -131,14 +129,12 @@ export class AdminEventDetail implements OnInit {
       quote = await this.quoteService.getById(contract.quote_id);
     }
 
-    this.ngZone.run(() => {
-      this.contract.set(contract);
-      this.tasks.set(this.sortTasks(tasks));
-      this.expenses.set(expenses);
-      this.payMonto.set(Math.max(0, contract.total_contrato - contract.deposito_pagado));
-      if (quote) this.quote.set(quote);
-      this.loading.set(false);
-    });
+    this.contract.set(contract);
+    this.tasks.set(this.sortTasks(tasks));
+    this.expenses.set(expenses);
+    this.payMonto.set(Math.max(0, contract.total_contrato - contract.deposito_pagado));
+    if (quote) this.quote.set(quote);
+    this.loading.set(false);
   }
 
   // ── Tabs ──────────────────────────────────────────────────

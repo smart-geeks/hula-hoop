@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -26,9 +23,7 @@ type DrawerMode = 'create' | 'edit';
   imports: [ReactiveFormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminExpenses implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminExpenses {
   private readonly expenseService  = inject(ExpenseService);
   private readonly contractService = inject(ContractService);
   private readonly supplierService = inject(SupplierService);
@@ -60,10 +55,9 @@ export class AdminExpenses implements OnInit {
   readonly categories = EXPENSE_CATEGORIES;
 
   readonly filteredExpenses = computed(() => {
-    const cat = this.categoryFilter();
-    const q   = this.searchQuery().toLowerCase().trim();
-    let list  = this.expenses();
-
+    const cat  = this.categoryFilter();
+    const q    = this.searchQuery().toLowerCase().trim();
+    let list   = this.expenses();
     if (cat !== 'all') list = list.filter((e) => e.categoria === cat);
     if (q) list = list.filter(
       (e) => e.descripcion.toLowerCase().includes(q) || e.categoria.toLowerCase().includes(q),
@@ -75,18 +69,20 @@ export class AdminExpenses implements OnInit {
     this.filteredExpenses().reduce((s, e) => s + e.monto, 0),
   );
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadAll();
+  }
+
+  private async loadAll(): Promise<void> {
     const [expenses, contracts, suppliers] = await Promise.all([
       this.expenseService.getAll(),
       this.contractService.getAll(),
       this.supplierService.getAll(),
     ]);
-    this.ngZone.run(() => {
-      this.expenses.set(expenses);
-      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-      this.suppliers.set(suppliers);
-      this.loading.set(false);
-    });
+    this.expenses.set(expenses);
+    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+    this.suppliers.set(suppliers);
+    this.loading.set(false);
   }
 
   onSearch(event: Event): void {

@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { Location } from '@angular/common';
@@ -21,9 +18,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminEventChecklist implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminEventChecklist {
   private readonly eventTaskService = inject(EventTaskService);
   private readonly contractService = inject(ContractService);
   private readonly route = inject(ActivatedRoute);
@@ -44,7 +39,11 @@ export class AdminEventChecklist implements OnInit {
       : 0,
   );
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadData();
+  }
+
+  private async loadData(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
@@ -53,18 +52,16 @@ export class AdminEventChecklist implements OnInit {
       this.eventTaskService.getByContract(id),
     ]);
 
-    this.ngZone.run(() => {
-      this.contract.set(contract);
-      this.tasks.set(
-        [...tasks].sort((a, b) => {
-          if (!a.hora_inicio && !b.hora_inicio) return 0;
-          if (!a.hora_inicio) return 1;
-          if (!b.hora_inicio) return -1;
-          return a.hora_inicio.localeCompare(b.hora_inicio);
-        }),
-      );
-      this.loading.set(false);
-    });
+    this.contract.set(contract);
+    this.tasks.set(
+      [...tasks].sort((a, b) => {
+        if (!a.hora_inicio && !b.hora_inicio) return 0;
+        if (!a.hora_inicio) return 1;
+        if (!b.hora_inicio) return -1;
+        return a.hora_inicio.localeCompare(b.hora_inicio);
+      }),
+    );
+    this.loading.set(false);
   }
 
   async toggleTask(task: EventTask): Promise<void> {

@@ -1,11 +1,8 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  NgZone,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -21,10 +18,10 @@ type DrawerMode = 'create' | 'edit';
 type Panel = 'detail' | 'payment';
 
 const STATUS_CONFIG: Record<ContractStatus, { label: string; classes: string; dot: string }> = {
-  borrador:  { label: 'Borrador',    classes: 'bg-slate-100 text-slate-600',    dot: 'bg-slate-400' },
-  firmado:   { label: 'Contratado',  classes: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500' },
-  liquidado: { label: 'Liquidado',   classes: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  cancelado: { label: 'Cancelado',   classes: 'bg-red-100 text-red-700',        dot: 'bg-red-400' },
+  borrador:  { label: 'Borrador',   classes: 'bg-slate-100 text-slate-600',    dot: 'bg-slate-400' },
+  firmado:   { label: 'Contratado', classes: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500' },
+  liquidado: { label: 'Liquidado',  classes: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  cancelado: { label: 'Cancelado',  classes: 'bg-red-100 text-red-700',        dot: 'bg-red-400' },
 };
 
 @Component({
@@ -33,15 +30,12 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; classes: string; do
   imports: [ReactiveFormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminContracts implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminContracts {
   private readonly contractService = inject(ContractService);
   private readonly clientService   = inject(ClientService);
   private readonly quoteService    = inject(QuoteService);
   private readonly fb              = inject(FormBuilder);
 
-  // ── Forms ────────────────────────────────────────────────────
   readonly form = this.fb.group({
     client_id:       [''],
     quote_id:        [''],
@@ -62,27 +56,24 @@ export class AdminContracts implements OnInit {
     notas:  [''],
   });
 
-  // ── State ────────────────────────────────────────────────────
-  readonly loading         = signal(true);
-  readonly saving          = signal(false);
-  readonly savingPayment   = signal(false);
-  readonly contracts       = signal<Contract[]>([]);
-  readonly allClients      = signal<Client[]>([]);
-  readonly approvedQuotes  = signal<Quote[]>([]);
-  readonly statusFilter    = signal<ContractStatus | 'all'>('all');
-  readonly drawerOpen      = signal(false);
-  readonly drawerMode      = signal<DrawerMode>('create');
+  readonly loading          = signal(true);
+  readonly saving           = signal(false);
+  readonly savingPayment    = signal(false);
+  readonly contracts        = signal<Contract[]>([]);
+  readonly allClients       = signal<Client[]>([]);
+  readonly approvedQuotes   = signal<Quote[]>([]);
+  readonly statusFilter     = signal<ContractStatus | 'all'>('all');
+  readonly drawerOpen       = signal(false);
+  readonly drawerMode       = signal<DrawerMode>('create');
   readonly selectedContract = signal<Contract | null>(null);
-  readonly activePanel     = signal<Panel>('detail');
-  readonly deleteTarget    = signal<Contract | null>(null);
-  readonly toast           = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly activePanel      = signal<Panel>('detail');
+  readonly deleteTarget     = signal<Contract | null>(null);
+  readonly toast            = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Client selector
   readonly clientQuery        = signal('');
   readonly clientDropdownOpen = signal(false);
   readonly selectedClientName = signal('');
 
-  // ── Computed ─────────────────────────────────────────────────
   readonly filteredContracts = computed(() => {
     const f = this.statusFilter();
     return f === 'all' ? this.contracts() : this.contracts().filter((c) => c.estado === f);
@@ -102,7 +93,7 @@ export class AdminContracts implements OnInit {
   });
 
   readonly saldoPendiente = computed(() => {
-    const total   = +(this.form.get('total_contrato')!.value ?? 0);
+    const total    = +(this.form.get('total_contrato')!.value ?? 0);
     const deposito = +(this.form.get('deposito_pagado')!.value ?? 0);
     return Math.max(0, total - deposito);
   });
@@ -123,22 +114,22 @@ export class AdminContracts implements OnInit {
 
   readonly STATUS_CONFIG = STATUS_CONFIG;
 
-  // ── Lifecycle ────────────────────────────────────────────────
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadAll();
+  }
+
+  private async loadAll(): Promise<void> {
     const [contracts, clients, quotes] = await Promise.all([
       this.contractService.getAll(),
       this.clientService.getAll(),
       this.quoteService.getAll(),
     ]);
-    this.ngZone.run(() => {
-      this.contracts.set(contracts);
-      this.allClients.set(clients);
-      this.approvedQuotes.set(quotes.filter((q) => q.estado === 'aprobada'));
-      this.loading.set(false);
-    });
+    this.contracts.set(contracts);
+    this.allClients.set(clients);
+    this.approvedQuotes.set(quotes.filter((q) => q.estado === 'aprobada'));
+    this.loading.set(false);
   }
 
-  // ── Client selector ──────────────────────────────────────────
   onClientInput(event: Event): void {
     const val = (event.target as HTMLInputElement).value;
     this.clientQuery.set(val);
@@ -162,10 +153,9 @@ export class AdminContracts implements OnInit {
     this.clientQuery.set('');
   }
 
-  // ── Quote prefill ─────────────────────────────────────────────
   onQuoteSelected(event: Event): void {
     const quoteId = (event.target as HTMLSelectElement).value;
-    const quote = this.approvedQuotes().find((q) => q.id === quoteId);
+    const quote   = this.approvedQuotes().find((q) => q.id === quoteId);
     if (!quote) return;
 
     this.form.patchValue({
@@ -183,7 +173,6 @@ export class AdminContracts implements OnInit {
     }
   }
 
-  // ── CRUD ─────────────────────────────────────────────────────
   openCreate(): void {
     this.resetForm();
     this.drawerMode.set('create');
@@ -240,8 +229,9 @@ export class AdminContracts implements OnInit {
       notas:           raw.notas?.trim() || undefined,
     };
 
+    const isCreate = this.drawerMode() === 'create';
     let result: Contract | null = null;
-    if (this.drawerMode() === 'create') {
+    if (isCreate) {
       result = await this.contractService.create(payload);
     } else {
       result = await this.contractService.update(this.selectedContract()!.id, payload);
@@ -250,12 +240,11 @@ export class AdminContracts implements OnInit {
     if (result) {
       await this.refreshContracts();
       this.closeDrawer();
-      this.showToast('success', this.drawerMode() === 'create' ? 'Contrato creado' : 'Contrato actualizado');
+      this.showToast('success', isCreate ? 'Contrato creado' : 'Contrato actualizado');
     } else {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);
-    this.cdr.detectChanges();
   }
 
   async onAddPayment(): Promise<void> {
@@ -277,9 +266,7 @@ export class AdminContracts implements OnInit {
       const updated = await this.contractService.getById(contract.id);
       if (updated) {
         this.selectedContract.set(updated);
-        this.contracts.update((list) =>
-          list.map((c) => (c.id === updated.id ? updated : c)),
-        );
+        this.contracts.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
       }
       this.paymentForm.reset({ fecha: this.today(), metodo: 'efectivo', monto: 0 });
       this.showToast('success', 'Pago registrado');
@@ -287,7 +274,6 @@ export class AdminContracts implements OnInit {
       this.showToast('error', 'No se pudo registrar el pago');
     }
     this.savingPayment.set(false);
-    this.cdr.detectChanges();
   }
 
   confirmDelete(contract: Contract): void { this.deleteTarget.set(contract); }
@@ -304,20 +290,16 @@ export class AdminContracts implements OnInit {
       this.showToast('error', 'No se pudo eliminar el contrato');
     }
     this.deleteTarget.set(null);
-    this.cdr.detectChanges();
   }
 
-  // ── Helpers ──────────────────────────────────────────────────
   setStatusFilter(val: ContractStatus | 'all'): void { this.statusFilter.set(val); }
   setActivePanel(p: Panel): void                     { this.activePanel.set(p); }
 
-  private today(): string {
-    return new Date().toISOString().split('T')[0];
-  }
+  private today(): string { return new Date().toISOString().split('T')[0]; }
 
   private async refreshContracts(): Promise<void> {
-    this.contracts.set(await this.contractService.getAll());
-    this.cdr.detectChanges();
+    const contracts = await this.contractService.getAll();
+    this.contracts.set(contracts);
   }
 
   private resetForm(): void {

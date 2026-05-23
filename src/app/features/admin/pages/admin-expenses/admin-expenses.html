@@ -15,7 +15,7 @@
       <h1 class="text-2xl font-bold text-slate-800">Gastos</h1>
       <p class="text-slate-500 text-sm mt-0.5">
         {{ filteredExpenses().length }} gasto{{ filteredExpenses().length !== 1 ? 's' : '' }}
-        · Total: <span class="font-semibold text-slate-700">{{ totalFiltered() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+        · Total: <span class="font-semibold text-slate-700">{{ totalFiltered() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
       </p>
     </div>
     <button (click)="openCreate()"
@@ -104,7 +104,7 @@
                 </td>
                 <td class="px-6 py-4 text-slate-500 hidden md:table-cell">{{ expense.fecha }}</td>
                 <td class="px-6 py-4 text-right font-semibold text-slate-800">
-                  {{ expense.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                  {{ expense.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center justify-end gap-1">
@@ -129,7 +129,7 @@
                 Total
               </td>
               <td class="px-6 py-3 text-right font-bold text-slate-800">
-                {{ totalFiltered() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ totalFiltered() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </td>
               <td class="px-6 py-3"></td>
             </tr>

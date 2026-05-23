@@ -55,9 +55,9 @@
       <!-- Financial summary chip -->
       <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm text-right shrink-0">
         <p class="text-xs text-slate-400 mb-0.5">Total del contrato</p>
-        <p class="text-2xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        <p class="text-2xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         @if (saldoPendiente() > 0) {
-          <p class="text-sm font-semibold text-amber-600 mt-0.5">Saldo: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          <p class="text-sm font-semibold text-amber-600 mt-0.5">Saldo: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         } @else {
           <p class="text-sm font-semibold text-emerald-600 mt-0.5">Liquidado ✓</p>
         }
@@ -135,16 +135,16 @@
         <hr class="border-slate-100" />
         <div class="flex justify-between gap-2">
           <dt class="text-slate-400">Total contrato</dt>
-          <dd class="font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</dd>
+          <dd class="font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</dd>
         </div>
         <div class="flex justify-between gap-2">
           <dt class="text-slate-400">Pagado</dt>
-          <dd class="font-semibold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</dd>
+          <dd class="font-semibold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</dd>
         </div>
         <div class="flex justify-between gap-2">
           <dt class="text-slate-400">Saldo</dt>
           <dd [class]="'font-semibold ' + (saldoPendiente() > 0 ? 'text-amber-600' : 'text-emerald-600')">
-            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : 'Liquidado ✓' }}
+            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0') : 'Liquidado ✓' }}
           </dd>
         </div>
         <!-- Progress -->
@@ -244,16 +244,16 @@
       <div class="grid grid-cols-3 gap-4 mb-5">
         <div class="text-center">
           <p class="text-xs text-slate-400 mb-1">Total</p>
-          <p class="text-xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          <p class="text-xl font-bold text-slate-800">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         </div>
         <div class="text-center border-x border-slate-100">
           <p class="text-xs text-slate-400 mb-1">Pagado</p>
-          <p class="text-xl font-bold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          <p class="text-xl font-bold text-emerald-600">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         </div>
         <div class="text-center">
           <p class="text-xs text-slate-400 mb-1">Saldo</p>
           <p [class]="'text-xl font-bold ' + (saldoPendiente() > 0 ? 'text-amber-600' : 'text-emerald-600')">
-            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : '—' }}
+            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0') : '—' }}
           </p>
         </div>
       </div>
@@ -302,7 +302,7 @@
               @if (pay.notas) { <p class="text-xs text-slate-400 italic">{{ pay.notas }}</p> }
             </div>
           </div>
-          <p class="text-base font-bold text-emerald-700">+{{ pay.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+          <p class="text-base font-bold text-emerald-700">+{{ pay.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         </div>
         }
       </div>
@@ -354,14 +354,14 @@
           <div>
             <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
             @if (item.cantidad > 1) {
-            <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
             }
           </div>
           <p class="font-semibold text-slate-700 shrink-0 ml-4">
             @if (item.precio_unitario === 0) {
               <span class="text-emerald-600 text-xs">Incluido</span>
             } @else {
-              {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+              {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0' }}
             }
           </p>
         </div>
@@ -376,23 +376,23 @@
       <div class="space-y-2 text-sm">
         <div class="flex justify-between">
           <span class="text-slate-500">Subtotal</span>
-          <span class="font-medium">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span class="font-medium">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         @if (q.descuento > 0) {
         <div class="flex justify-between">
           <span class="text-slate-500">Descuento</span>
-          <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         }
         <hr class="border-slate-100" />
         <div class="flex justify-between text-base font-bold text-slate-800">
           <span>Total</span>
-          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         @if ((q.deposit_amount ?? 0) > 0) {
         <div class="flex justify-between font-semibold text-rojo-brillante">
           <span>Anticipo</span>
-          <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+          <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
         }
       </div>
@@ -488,7 +488,7 @@
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
       <div>
         <p class="text-xs text-slate-400 mb-0.5">Total gastos del evento</p>
-        <p class="text-2xl font-bold text-slate-800">{{ totalExpenses() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        <p class="text-2xl font-bold text-slate-800">{{ totalExpenses() | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         <p class="text-xs text-slate-400 mt-0.5">{{ expenses().length }} gasto{{ expenses().length !== 1 ? 's' : '' }} registrado{{ expenses().length !== 1 ? 's' : '' }}</p>
       </div>
       <button (click)="openExpDialog()"
@@ -524,7 +524,7 @@
             <p class="text-xs text-slate-400 mt-0.5">{{ exp.fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
           </div>
           <div class="flex items-center gap-3 shrink-0 ml-4">
-            <p class="font-bold text-slate-700">{{ exp.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+            <p class="font-bold text-slate-700">{{ exp.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
             <button (click)="deleteExpense(exp)"
               class="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
               aria-label="Eliminar gasto">
@@ -552,7 +552,7 @@
       <div>
         <h3 class="font-bold text-slate-800 text-lg">Registrar pago</h3>
         @if (contract()) {
-        <p class="text-sm text-slate-500 mt-0.5">Saldo pendiente: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</p>
+        <p class="text-sm text-slate-500 mt-0.5">Saldo pendiente: {{ saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
         }
       </div>
       <button (click)="closePayDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-100 text-slate-400 transition-colors">

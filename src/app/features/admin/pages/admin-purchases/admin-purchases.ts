@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -33,20 +30,18 @@ const STATUS_CONFIG: Record<PurchaseStatus, { label: string; classes: string }> 
   imports: [ReactiveFormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminPurchases implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
-  private readonly purchaseService  = inject(PurchaseService);
-  private readonly supplierService  = inject(SupplierService);
-  private readonly contractService  = inject(ContractService);
-  private readonly fb               = inject(FormBuilder);
+export class AdminPurchases {
+  private readonly purchaseService = inject(PurchaseService);
+  private readonly supplierService = inject(SupplierService);
+  private readonly contractService = inject(ContractService);
+  private readonly fb              = inject(FormBuilder);
 
   readonly form = this.fb.group({
-    supplier_id:  [''],
-    contract_id:  [''],
-    fecha:        [this.today(), Validators.required],
-    estado:       ['pendiente' as PurchaseStatus],
-    notas:        [''],
+    supplier_id: [''],
+    contract_id: [''],
+    fecha:       [this.today(), Validators.required],
+    estado:      ['pendiente' as PurchaseStatus],
+    notas:       [''],
     items: this.fb.array([this.buildItemGroup()]),
   });
 
@@ -62,18 +57,18 @@ export class AdminPurchases implements OnInit {
     ),
   );
 
-  readonly loading         = signal(true);
-  readonly saving          = signal(false);
-  readonly purchases       = signal<Purchase[]>([]);
-  readonly suppliers       = signal<Supplier[]>([]);
-  readonly contracts       = signal<Contract[]>([]);
-  readonly statusFilter    = signal<PurchaseStatus | 'all'>('all');
-  readonly drawerOpen      = signal(false);
-  readonly drawerMode      = signal<DrawerMode>('create');
+  readonly loading          = signal(true);
+  readonly saving           = signal(false);
+  readonly purchases        = signal<Purchase[]>([]);
+  readonly suppliers        = signal<Supplier[]>([]);
+  readonly contracts        = signal<Contract[]>([]);
+  readonly statusFilter     = signal<PurchaseStatus | 'all'>('all');
+  readonly drawerOpen       = signal(false);
+  readonly drawerMode       = signal<DrawerMode>('create');
   readonly selectedPurchase = signal<Purchase | null>(null);
-  readonly deleteTarget    = signal<Purchase | null>(null);
-  readonly toast           = signal<{ type: 'success' | 'error'; message: string } | null>(null);
-  readonly itemCount       = signal(1);
+  readonly deleteTarget     = signal<Purchase | null>(null);
+  readonly toast            = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly itemCount        = signal(1);
 
   readonly filteredPurchases = computed(() => {
     const f = this.statusFilter();
@@ -91,18 +86,20 @@ export class AdminPurchases implements OnInit {
 
   get items(): FormArray { return this.form.get('items') as FormArray; }
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadAll();
+  }
+
+  private async loadAll(): Promise<void> {
     const [purchases, suppliers, contracts] = await Promise.all([
       this.purchaseService.getAll(),
       this.supplierService.getAll(),
       this.contractService.getAll(),
     ]);
-    this.ngZone.run(() => {
-      this.purchases.set(purchases);
-      this.suppliers.set(suppliers);
-      this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
-      this.loading.set(false);
-    });
+    this.purchases.set(purchases);
+    this.suppliers.set(suppliers);
+    this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
+    this.loading.set(false);
   }
 
   private buildItemGroup() {

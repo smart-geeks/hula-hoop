@@ -199,7 +199,6 @@ export class AdminReservations {
     if (state?.openPaymentFor) {
       const row = rows.find(r => r.id === state.openPaymentFor);
       if (row) {
-        // Prevent opening again on page reload
         window.history.replaceState({}, '');
         this.openPayment(row);
       }

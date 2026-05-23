@@ -124,13 +124,13 @@
             <div class="bg-emerald-50 rounded-xl p-4 text-center">
               <p class="text-xs text-slate-500 mb-1">Total Contratado</p>
               <p class="text-xl font-bold text-emerald-700">
-                {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
             <div class="bg-amber-50 rounded-xl p-4 text-center">
               <p class="text-xs text-slate-500 mb-1">Saldo Pendiente</p>
               <p class="text-xl font-bold text-amber-700">
-                {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
           </div>
@@ -166,14 +166,14 @@
                         </span>
                       </td>
                       <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ row.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                       <td class="px-4 py-3 text-right text-emerald-700 font-medium">
-                        {{ row.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                       <td class="px-4 py-3 text-right font-semibold"
                         [class]="row.saldo_pendiente > 0 ? 'text-amber-700' : 'text-slate-400'">
-                        {{ row.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                     </tr>
                   }
@@ -182,11 +182,11 @@
                   <tr>
                     <td colspan="4" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total</td>
                     <td class="px-4 py-3 text-right font-bold text-slate-800">
-                      {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ eventosTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                     <td></td>
                     <td class="px-4 py-3 text-right font-bold text-amber-700">
-                      {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ eventosSaldo() | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                   </tr>
                 </tfoot>
@@ -210,19 +210,19 @@
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600">Pagos de contratos</span>
                   <span class="font-semibold text-slate-800">
-                    {{ plData()!.ingresos_contratos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.ingresos_contratos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600">Ventas POS</span>
                   <span class="font-semibold text-slate-800">
-                    {{ plData()!.ventas_pos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.ventas_pos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm font-bold border-t border-emerald-200 pt-2 mt-2">
                   <span class="text-emerald-700">Total Ingresos</span>
                   <span class="text-emerald-700 text-base">
-                    {{ plData()!.total_ingresos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.total_ingresos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
               </div>
@@ -234,19 +234,19 @@
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600">Compras recibidas</span>
                   <span class="font-semibold text-slate-800">
-                    {{ plData()!.compras | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.compras | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600">Gastos administrativos</span>
                   <span class="font-semibold text-slate-800">
-                    {{ plData()!.gastos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.gastos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm font-bold border-t border-red-200 pt-2 mt-2">
                   <span class="text-red-700">Total Egresos</span>
                   <span class="text-red-700 text-base">
-                    {{ plData()!.total_egresos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.total_egresos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </span>
                 </div>
               </div>
@@ -262,7 +262,7 @@
                   </p>
                   <p class="text-3xl font-bold"
                     [class]="plData()!.utilidad_neta >= 0 ? 'text-blue-700' : 'text-red-700'">
-                    {{ plData()!.utilidad_neta | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ plData()!.utilidad_neta | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                 </div>
                 @if (plData()!.total_ingresos > 0) {
@@ -296,7 +296,7 @@
                   </span>
                   <p class="text-2xl font-bold text-slate-800">{{ row.cantidad }}</p>
                   <p class="text-xs text-slate-400 mt-1">
-                    {{ row.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ row.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                 </div>
               }
@@ -308,7 +308,7 @@
                 <div class="space-y-1">
                   <div class="flex justify-between text-xs text-slate-600">
                     <span class="capitalize font-medium">{{ row.estado }}</span>
-                    <span class="font-semibold">{{ row.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                    <span class="font-semibold">{{ row.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
                   </div>
                   <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                     <div class="h-3 rounded-full bg-rojo-brillante transition-all"
@@ -318,7 +318,7 @@
               }
               <div class="flex justify-between text-sm font-bold border-t border-slate-100 pt-3">
                 <span class="text-slate-700">{{ pipelineTotalItems() }} cotizaciones — Total</span>
-                <span class="text-slate-800">{{ pipelineTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}</span>
+                <span class="text-slate-800">{{ pipelineTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
               </div>
             </div>
           </div>
@@ -357,10 +357,10 @@
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right font-bold text-slate-800">
-                      {{ row.total_facturado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ row.total_facturado | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                     <td class="px-4 py-3 text-right text-slate-600">
-                      {{ row.num_eventos > 0 ? (row.total_facturado / row.num_eventos | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX') : '—' }}
+                      {{ row.num_eventos > 0 ? (row.total_facturado / row.num_eventos | currency:'MXN':'symbol-narrow':'1.0-0') : '—' }}
                     </td>
                     <td class="px-4 py-3 text-right text-slate-500 text-xs">
                       {{ row.ultimo_evento | date:'dd/MM/yyyy':'':'es-MX' }}
@@ -402,7 +402,7 @@
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right font-bold text-slate-800">
-                      {{ row.total_compras | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ row.total_compras | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                     <td class="px-4 py-3 text-right text-slate-500 text-xs">
                       {{ row.ultima_compra | date:'dd/MM/yyyy':'':'es-MX' }}
@@ -425,7 +425,7 @@
             <div class="bg-emerald-50 rounded-xl p-4 text-center">
               <p class="text-xs text-slate-500 mb-1">Valor en inventario</p>
               <p class="text-xl font-bold text-emerald-700">
-                {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
             <div [class]="'rounded-xl p-4 text-center ' + (inventarioAlertas() > 0 ? 'bg-red-50' : 'bg-slate-50')">
@@ -469,13 +469,13 @@
                       </td>
                       <td class="px-4 py-3 text-center text-slate-500 text-xs">{{ row.stock_minimo | number:'1.0-2' }}</td>
                       <td class="px-4 py-3 text-right text-slate-600 text-xs">
-                        {{ row.precio_costo | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                        {{ row.precio_costo | currency:'MXN':'symbol-narrow':'1.2-2' }}
                       </td>
                       <td class="px-4 py-3 text-right text-slate-600 text-xs">
-                        {{ row.precio_venta | currency:'MXN':'symbol-narrow':'1.2-2':'es-MX' }}
+                        {{ row.precio_venta | currency:'MXN':'symbol-narrow':'1.2-2' }}
                       </td>
                       <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ row.valor_inventario | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.valor_inventario | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                       <td class="px-4 py-3 text-center">
                         @if (row.alerta) {
@@ -489,7 +489,7 @@
                   <tr>
                     <td colspan="7" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Valor total inventario</td>
                     <td class="px-4 py-3 text-right font-bold text-slate-800">
-                      {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ inventarioValor() | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                     <td></td>
                   </tr>
@@ -508,7 +508,7 @@
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <p class="text-xs text-slate-500 mb-1 truncate">{{ cat.categoria }}</p>
                   <p class="text-lg font-bold text-slate-800">
-                    {{ cat.total | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                    {{ cat.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                   </p>
                   <p class="text-xs text-slate-400 mt-0.5">{{ cat.cantidad }} gasto{{ cat.cantidad !== 1 ? 's' : '' }}</p>
                 </div>
@@ -547,7 +547,7 @@
                       <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ row.evento }}</td>
                       <td class="px-4 py-3 text-slate-500 text-xs">{{ row.proveedor }}</td>
                       <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                     </tr>
                   }
@@ -556,7 +556,7 @@
                   <tr>
                     <td colspan="5" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total gastos</td>
                     <td class="px-4 py-3 text-right font-bold text-red-700">
-                      {{ gastosTotal() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                      {{ gastosTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </td>
                   </tr>
                 </tfoot>
@@ -572,13 +572,13 @@
             <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
               <p class="text-xs text-slate-500 mb-1">Total Entradas</p>
               <p class="text-xl font-bold text-emerald-700">
-                {{ flujoCajaTotalEntradas() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ flujoCajaTotalEntradas() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
             <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
               <p class="text-xs text-slate-500 mb-1">Total Salidas</p>
               <p class="text-xl font-bold text-red-700">
-                {{ flujoCajaTotalSalidas() | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ flujoCajaTotalSalidas() | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
             <div [class]="'border-2 rounded-xl p-4 text-center '
@@ -588,7 +588,7 @@
               <p class="text-xs text-slate-500 mb-1">Flujo Neto</p>
               <p class="text-xl font-bold"
                 [class]="(flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) >= 0 ? 'text-blue-700' : 'text-red-700'">
-                {{ (flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                {{ (flujoCajaTotalEntradas() - flujoCajaTotalSalidas()) | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
           </div>
@@ -625,11 +625,11 @@
                       </td>
                       <td class="px-4 py-3 text-right font-semibold"
                         [class]="row.tipo === 'entrada' ? 'text-emerald-700' : 'text-red-700'">
-                        {{ row.tipo === 'entrada' ? '+' : '-' }}{{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.tipo === 'entrada' ? '+' : '-' }}{{ row.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                       <td class="px-4 py-3 text-right font-bold"
                         [class]="(row.saldo_acumulado ?? 0) >= 0 ? 'text-slate-800' : 'text-red-600'">
-                        {{ row.saldo_acumulado | currency:'MXN':'symbol-narrow':'1.0-0':'es-MX' }}
+                        {{ row.saldo_acumulado | currency:'MXN':'symbol-narrow':'1.0-0' }}
                       </td>
                     </tr>
                   }

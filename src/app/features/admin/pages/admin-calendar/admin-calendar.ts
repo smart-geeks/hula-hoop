@@ -1,11 +1,8 @@
 import {
-  NgZone,
-  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
@@ -27,32 +24,30 @@ interface CalendarDay {
   imports: [DatePipe, CurrencyPipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminCalendar implements OnInit {
-  private readonly cdr             = inject(ChangeDetectorRef);
-  private readonly ngZone           = inject(NgZone);
+export class AdminCalendar {
   private readonly contractService = inject(ContractService);
 
-  readonly loading           = signal(true);
-  readonly contracts         = signal<Contract[]>([]);
-  readonly currentDate       = signal(new Date());
-  readonly selectedDay       = signal<CalendarDay | null>(null);
+  readonly loading     = signal(true);
+  readonly contracts   = signal<Contract[]>([]);
+  readonly currentDate = signal(new Date());
+  readonly selectedDay = signal<CalendarDay | null>(null);
 
   readonly weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
   readonly calendarDays = computed<CalendarDay[]>(() => {
-    const ref = this.currentDate();
-    const year = ref.getFullYear();
+    const ref   = this.currentDate();
+    const year  = ref.getFullYear();
     const month = ref.getMonth();
     const today = new Date();
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay  = new Date(year, month + 1, 0);
-    const startOffset = firstDay.getDay(); // 0=Sun
-    const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
+    const firstDay    = new Date(year, month, 1);
+    const lastDay     = new Date(year, month + 1, 0);
+    const startOffset = firstDay.getDay();
+    const totalCells  = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
 
     const days: CalendarDay[] = [];
     for (let i = 0; i < totalCells; i++) {
-      const date = new Date(year, month, 1 - startOffset + i);
+      const date           = new Date(year, month, 1 - startOffset + i);
       const isCurrentMonth = date.getMonth() === month;
       const isToday =
         date.getDate() === today.getDate() &&
@@ -60,7 +55,7 @@ export class AdminCalendar implements OnInit {
         date.getFullYear() === today.getFullYear();
 
       const dateStr = date.toISOString().split('T')[0];
-      const events = this.contracts().filter((c) => c.fecha_evento === dateStr);
+      const events  = this.contracts().filter((c) => c.fecha_evento === dateStr);
 
       days.push({ date, dayNum: date.getDate(), isCurrentMonth, isToday, events });
     }
@@ -72,8 +67,8 @@ export class AdminCalendar implements OnInit {
   );
 
   readonly eventsThisMonth = computed(() => {
-    const ref = this.currentDate();
-    const year = ref.getFullYear();
+    const ref   = this.currentDate();
+    const year  = ref.getFullYear();
     const month = ref.getMonth();
     return this.contracts().filter((c) => {
       const d = new Date(c.fecha_evento + 'T12:00:00');
@@ -82,18 +77,20 @@ export class AdminCalendar implements OnInit {
   });
 
   readonly monthStats = computed(() => {
-    const evs = this.eventsThisMonth();
-    const total = evs.reduce((s, c) => s + c.total_contrato, 0);
+    const evs         = this.eventsThisMonth();
+    const total       = evs.reduce((s, c) => s + c.total_contrato, 0);
     const confirmados = evs.filter((c) => c.estado === 'firmado' || c.estado === 'liquidado').length;
     return { count: evs.length, total, confirmados };
   });
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.loadContracts();
+  }
+
+  private async loadContracts(): Promise<void> {
     const data = await this.contractService.getAll();
-    this.ngZone.run(() => {
-      this.contracts.set(data);
-      this.loading.set(false);
-    });
+    this.contracts.set(data);
+    this.loading.set(false);
   }
 
   prevMonth(): void {
