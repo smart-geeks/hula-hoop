@@ -6,14 +6,14 @@ import type { PosSession, PosSale, CreateSaleData } from '../interfaces/pos';
 export class PosService {
   private readonly supabase = inject(SupabaseService);
 
-  async openSession(contractId?: string): Promise<PosSession | null> {
+  async openSession(contractId?: string, cashierId?: string): Promise<PosSession | null> {
     const client = this.supabase.client;
     if (!client) return null;
 
     const { data, error } = await client
       .from('pos_sessions')
-      .insert({ contract_id: contractId ?? null })
-      .select()
+      .insert({ contract_id: contractId ?? null, cashier_id: cashierId ?? null })
+      .select('*, contract:contracts(folio, fecha_evento), cashier:cashier_profiles(nombre)')
       .single();
 
     if (error) {
@@ -45,7 +45,7 @@ export class PosService {
 
     const { data, error } = await client
       .from('pos_sessions')
-      .select('*, contract:contracts(folio, fecha_evento)')
+      .select('*, contract:contracts(folio, fecha_evento), cashier:cashier_profiles(nombre)')
       .is('closed_at', null)
       .order('opened_at', { ascending: false });
 
@@ -66,7 +66,7 @@ export class PosService {
     const { data: sale, error } = await client
       .from('pos_sales')
       .insert({ ...saleData, folio })
-      .select()
+      .select('*, cashier:cashier_profiles(nombre)')
       .single();
 
     if (error || !sale) {
@@ -89,7 +89,7 @@ export class PosService {
 
     const { data, error } = await client
       .from('pos_sales')
-      .select('*, items:pos_sale_items(*, item:inventory_items(nombre, sku))')
+      .select('*, cashier:cashier_profiles(nombre), items:pos_sale_items(*, item:inventory_items(nombre, sku))')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false });
 

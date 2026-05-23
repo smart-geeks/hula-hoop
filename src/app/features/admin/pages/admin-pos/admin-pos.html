@@ -10,36 +10,158 @@
   }
 
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Punto de Venta</h1>
       <p class="text-slate-500 text-sm mt-0.5">
-        @if (activeSession()) {
-          Sesión activa
-          @if (activeSession()!.contract) {
-            · Evento {{ activeSession()!.contract!.folio }}
-          }
+        @if (activeCashier()) {
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            Cajero: <strong class="text-slate-700">{{ activeCashier()!.nombre }}</strong>
+            @if (activeSession()?.contract) {
+              · Evento {{ activeSession()!.contract!.folio }}
+            }
+          </span>
         } @else {
-          Sin sesión activa
+          Selecciona un cajero para comenzar
         }
       </p>
     </div>
-    @if (activeSession()) {
-      <button (click)="closeSession()" [disabled]="processing()"
-        class="flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors">
-        <i class="pi pi-power-off text-red-500"></i>
-        Cerrar sesión
-      </button>
-    }
+    <div class="flex items-center gap-2">
+      @if (activeCashier()) {
+        <button (click)="changeCashier()"
+          class="flex items-center gap-2 border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors">
+          <i class="pi pi-user-edit"></i>
+          Cambiar cajero
+        </button>
+      }
+      @if (activeSession()) {
+        <button (click)="closeSession()" [disabled]="processing()"
+          class="flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors">
+          <i class="pi pi-power-off text-red-500"></i>
+          Cerrar sesión
+        </button>
+      }
+    </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════
+       ESTADO: Cargando
+  ════════════════════════════════════════════════════════ -->
   @if (loading()) {
-    <div class="flex items-center justify-center py-20">
+    <div class="flex items-center justify-center py-24">
       <div class="w-8 h-8 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
     </div>
 
-  } @else if (!activeSession()) {
-    <!-- ── SIN SESIÓN: pantalla de inicio ─── -->
+  <!-- ═══════════════════════════════════════════════════════
+       ESTADO: Selección de cajero
+  ════════════════════════════════════════════════════════ -->
+  } @else if (!activeCashier() && !selectedCashier()) {
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="flex flex-col items-center justify-center py-12 px-6 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-rojo-brillante/10 flex items-center justify-center mb-5">
+          <i class="pi pi-users text-2xl text-rojo-brillante"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-1">¿Quién está en caja?</h2>
+        <p class="text-slate-500 text-sm mb-8">Selecciona tu nombre para ingresar con tu PIN</p>
+
+        @if (cashiers().length === 0) {
+          <div class="text-center text-slate-400 py-4">
+            <i class="pi pi-info-circle text-2xl block mb-2 text-slate-300"></i>
+            <p class="text-sm font-medium text-slate-500">No hay cajeros configurados</p>
+            <p class="text-xs mt-1">Ve a <strong>Configuración</strong> para agregar cajeros con su PIN</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-md">
+            @for (cashier of cashiers(); track cashier.id) {
+              <button (click)="selectCashier(cashier)"
+                class="flex flex-col items-center gap-2.5 p-5 bg-slate-50 hover:bg-rojo-brillante/5 border border-slate-200 hover:border-rojo-brillante/30 rounded-2xl transition-all active:scale-95 group">
+                <div class="w-12 h-12 rounded-full bg-rojo-brillante/10 group-hover:bg-rojo-brillante/20 flex items-center justify-center text-rojo-brillante font-bold text-lg transition-colors">
+                  {{ getCashierInitial(cashier.nombre) }}
+                </div>
+                <span class="text-sm font-semibold text-slate-700 text-center leading-tight">{{ cashier.nombre }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       ESTADO: Entrada de PIN
+  ════════════════════════════════════════════════════════ -->
+  } @else if (!activeCashier() && selectedCashier()) {
+    <div class="flex justify-center">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm w-full max-w-xs overflow-hidden">
+
+        <!-- Cajero seleccionado -->
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <button (click)="backToCashierSelect()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+            <i class="pi pi-arrow-left text-sm"></i>
+          </button>
+          <div class="w-8 h-8 rounded-full bg-rojo-brillante/10 flex items-center justify-center text-rojo-brillante font-bold text-sm">
+            {{ getCashierInitial(selectedCashier()!.nombre) }}
+          </div>
+          <span class="font-semibold text-slate-800 text-sm">{{ selectedCashier()!.nombre }}</span>
+        </div>
+
+        <div class="px-6 py-6">
+          <!-- Label -->
+          <p class="text-center text-sm text-slate-500 mb-5">Ingresa tu PIN de 4 dígitos</p>
+
+          <!-- Indicadores de PIN -->
+          <div class="flex justify-center gap-3 mb-6">
+            @for (filled of pinDots(); track $index) {
+              <div [class]="'w-4 h-4 rounded-full border-2 transition-all duration-150 '
+                + (pinError()
+                    ? 'border-red-400 ' + (filled ? 'bg-red-400' : 'bg-transparent')
+                    : filled
+                      ? 'border-rojo-brillante bg-rojo-brillante'
+                      : 'border-slate-300 bg-transparent')">
+              </div>
+            }
+          </div>
+
+          @if (pinError()) {
+            <p class="text-center text-xs text-red-500 font-medium mb-4 -mt-2">PIN incorrecto. Inténtalo de nuevo.</p>
+          }
+
+          <!-- Teclado numérico -->
+          <div class="grid grid-cols-3 gap-2">
+            @for (key of ['1','2','3','4','5','6','7','8','9','⌫','0','✓']; track key) {
+              @if (key === '⌫') {
+                <button (click)="removePin()" [disabled]="pinValidating()"
+                  class="h-14 rounded-xl border border-slate-200 text-slate-600 text-lg font-medium hover:bg-slate-50 active:bg-slate-100 transition-colors flex items-center justify-center disabled:opacity-40">
+                  <i class="pi pi-delete-left"></i>
+                </button>
+              } @else if (key === '✓') {
+                <button (click)="submitPin()" [disabled]="pinInput().length === 0 || pinValidating()"
+                  [class]="'h-14 rounded-xl text-sm font-bold flex items-center justify-center transition-all ' +
+                    (pinInput().length === 0 || pinValidating()
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-rojo-brillante text-white hover:bg-rojo-brillante/90 active:scale-95 shadow-sm')">
+                  @if (pinValidating()) {
+                    <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                  } @else {
+                    <i class="pi pi-check text-base"></i>
+                  }
+                </button>
+              } @else {
+                <button (click)="addPin(key)" [disabled]="pinInput().length >= 4 || pinValidating()"
+                  class="h-14 rounded-xl border border-slate-200 text-slate-800 text-xl font-semibold hover:bg-slate-50 active:bg-slate-100 transition-colors disabled:opacity-40">
+                  {{ key }}
+                </button>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       ESTADO: Cajero autenticado — Sin sesión activa
+  ════════════════════════════════════════════════════════ -->
+  } @else if (activeCashier() && !activeSession()) {
     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
         <div class="w-20 h-20 rounded-2xl bg-rojo-brillante/10 flex items-center justify-center mb-6">
@@ -47,7 +169,7 @@
         </div>
         <h2 class="text-xl font-bold text-slate-800 mb-2">Iniciar sesión de venta</h2>
         <p class="text-slate-500 text-sm max-w-sm mb-8">
-          Abre una nueva sesión para comenzar a registrar ventas. Puedes vincularla a un evento para que aparezca en el P&L.
+          Hola <strong>{{ activeCashier()!.nombre }}</strong>. Abre una nueva sesión para comenzar a registrar ventas.
         </p>
 
         @if (!showNewSession()) {
@@ -86,49 +208,48 @@
             </div>
           </div>
         }
-
-        <!-- Historial de sesiones recientes si existen ventas -->
-        @if (salesHistory().length > 0) {
-          <div class="mt-8 w-full max-w-lg">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 text-left">Ventas de esta sesión</p>
-            <div class="space-y-2">
-              @for (sale of salesHistory(); track sale.id) {
-                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl text-sm">
-                  <span class="text-slate-600 font-mono text-xs">{{ sale.folio }}</span>
-                  <span class="text-slate-500 text-xs capitalize">{{ sale.pagado_con }}</span>
-                  <span class="font-semibold text-slate-800">{{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
-                </div>
-              }
-            </div>
-          </div>
-        }
       </div>
     </div>
 
-  } @else {
-    <!-- ── SESIÓN ACTIVA: layout POS ─── -->
+  <!-- ═══════════════════════════════════════════════════════
+       ESTADO: Sesión activa — Layout POS completo
+  ════════════════════════════════════════════════════════ -->
+  } @else if (activeCashier() && activeSession()) {
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-      <!-- ── Izquierda: catálogo de productos ──────────────────── -->
+      <!-- ── Izquierda: catálogo ─────────────────────────── -->
       <div class="lg:col-span-2 space-y-4">
 
-        <!-- Búsqueda y filtro de categoría -->
-        <div class="flex gap-3 flex-col sm:flex-row">
-          <div class="relative flex-1">
-            <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
-            <input type="search" placeholder="Buscar producto…" (input)="onSearch($event)"
-              class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
-          </div>
-          <select (change)="categoryFilter.set($any($event.target).value)"
-            class="px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 transition-all appearance-none cursor-pointer">
-            <option value="all">Todas</option>
-            @for (cat of categories(); track cat) {
-              <option [value]="cat">{{ cat }}</option>
-            }
-          </select>
+        <!-- Barra de búsqueda -->
+        <div class="relative">
+          <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+          <input type="search" placeholder="Buscar producto o SKU…" (input)="onSearch($event)"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
         </div>
 
-        <!-- Grid de productos -->
+        <!-- Pills de categorías -->
+        <div class="flex gap-2 flex-wrap">
+          <button (click)="categoryFilter.set('all')"
+            class="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all"
+            [class]="categoryFilter() === 'all'
+              ? 'bg-rojo-brillante text-white border-rojo-brillante shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'">
+            Todas
+          </button>
+          @for (cat of productCategories(); track cat.id) {
+            <button (click)="categoryFilter.set(cat.nombre)"
+              class="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all"
+              [style.background-color]="categoryFilter() === cat.nombre ? cat.color : 'transparent'"
+              [style.color]="categoryFilter() === cat.nombre ? '#ffffff' : cat.color"
+              [style.border-color]="cat.color">
+              @if (cat.icono) {
+                <i [class]="cat.icono + ' mr-1 text-[10px]'"></i>
+              }
+              {{ cat.nombre }}
+            </button>
+          }
+        </div>
+
         @if (filteredInventory().length === 0) {
           <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400">
             <i class="pi pi-box text-3xl mb-3 block text-slate-300"></i>
@@ -141,14 +262,11 @@
               <button (click)="addToCart(item)"
                 [class]="'relative bg-white border rounded-2xl p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-rojo-brillante/30 active:scale-95 '
                   + (getCartQty(item.id) > 0 ? 'border-rojo-brillante/40 bg-rojo-brillante/3' : 'border-slate-200')">
-
-                <!-- Badge cantidad en carrito -->
                 @if (getCartQty(item.id) > 0) {
                   <div class="absolute -top-2 -right-2 w-6 h-6 bg-rojo-brillante text-white rounded-full text-xs font-bold flex items-center justify-center shadow-sm">
                     {{ getCartQty(item.id) }}
                   </div>
                 }
-
                 <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
                   <i class="pi pi-box text-slate-400"></i>
                 </div>
@@ -171,10 +289,9 @@
         }
       </div>
 
-      <!-- ── Derecha: carrito y cobro ──────────────────────────── -->
+      <!-- ── Derecha: carrito y cobro ─────────────────────── -->
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm sticky top-4">
 
-        <!-- Carrito header -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h2 class="font-bold text-slate-800 flex items-center gap-2">
             <i class="pi pi-shopping-cart text-rojo-brillante"></i>
@@ -192,7 +309,6 @@
           }
         </div>
 
-        <!-- Items del carrito -->
         @if (cart().length === 0) {
           <div class="px-5 py-10 text-center text-slate-400">
             <i class="pi pi-shopping-cart text-3xl text-slate-200 block mb-2"></i>
@@ -208,19 +324,17 @@
                     {{ cartItem.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }} c/u
                   </p>
                 </div>
-                <!-- Qty controls -->
                 <div class="flex items-center gap-1">
                   <button (click)="updateQty(cartItem.item_id, -1)"
-                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors text-sm">
+                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">
                     <i class="pi pi-minus" style="font-size: 0.6rem"></i>
                   </button>
                   <span class="w-8 text-center text-sm font-semibold text-slate-800">{{ cartItem.cantidad }}</span>
                   <button (click)="updateQty(cartItem.item_id, 1)"
-                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors text-sm">
+                    class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">
                     <i class="pi pi-plus" style="font-size: 0.6rem"></i>
                   </button>
                 </div>
-                <!-- Subtotal + remove -->
                 <div class="text-right shrink-0">
                   <p class="text-sm font-bold text-slate-800">
                     {{ cartItem.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}
@@ -234,7 +348,6 @@
             }
           </div>
 
-          <!-- Total -->
           <div class="px-5 py-4 border-t border-slate-100 bg-slate-50">
             <div class="flex items-center justify-between mb-4">
               <span class="text-sm text-slate-500 font-medium">Total</span>
@@ -243,7 +356,6 @@
               </span>
             </div>
 
-            <!-- Método de pago -->
             <div class="grid grid-cols-3 gap-2 mb-4">
               @for (m of [['efectivo','Efectivo','pi-money-bill'],['tarjeta','Tarjeta','pi-credit-card'],['transferencia','Transfer.','pi-send']]; track m[0]) {
                 <button (click)="paymentMethod.set($any(m[0]))"
@@ -257,7 +369,6 @@
               }
             </div>
 
-            <!-- Cobrar -->
             <button (click)="checkout()" [disabled]="processing()"
               class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all"
               [class]="processing() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90 active:scale-95 shadow-sm'">
@@ -284,6 +395,7 @@
               @for (sale of salesHistory(); track sale.id) {
                 <div class="flex items-center justify-between px-5 py-2.5 text-xs">
                   <span class="text-slate-400 font-mono">{{ sale.folio }}</span>
+                  <span class="text-slate-400">{{ sale.cashier?.nombre ?? '—' }}</span>
                   <span class="text-slate-500 capitalize">{{ sale.pagado_con }}</span>
                   <span class="font-bold text-slate-700">
                     {{ sale.total | currency:'MXN':'symbol-narrow':'1.0-0' }}

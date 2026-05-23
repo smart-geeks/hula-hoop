@@ -74,3 +74,537 @@
 } @else {
   <p class="text-neutro-500">No se encontró la configuración. Verifica que exista la fila en venue_config.</p>
 }
+
+<!-- ═══════════════════════════════════════════════════════════
+     Sección: Cajeros del POS
+════════════════════════════════════════════════════════════ -->
+<div class="mt-10 max-w-lg">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-800">Cajeros del Punto de Venta</h2>
+      <p class="text-sm text-slate-500 mt-0.5">Gestiona quién puede operar el POS y sus PINs de acceso</p>
+    </div>
+    <button (click)="openCreateDialog()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nuevo cajero
+    </button>
+  </div>
+
+  @if (cashierLoading()) {
+    <div class="flex justify-center py-8">
+      <div class="w-6 h-6 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  } @else if (cashiers().length === 0) {
+    <div class="border border-dashed border-slate-300 rounded-2xl p-8 text-center">
+      <i class="pi pi-users text-2xl text-slate-300 block mb-2"></i>
+      <p class="text-sm text-slate-500">Aún no hay cajeros registrados</p>
+      <p class="text-xs text-slate-400 mt-1">Agrega el primero con el botón de arriba</p>
+    </div>
+  } @else {
+    <div class="space-y-2">
+      @for (cashier of cashiers(); track cashier.id) {
+        <div class="flex items-center gap-4 px-4 py-3.5 bg-white border border-slate-200 rounded-xl">
+          <!-- Avatar inicial -->
+          <div [class]="'w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 '
+            + (cashier.activo ? 'bg-rojo-brillante/10 text-rojo-brillante' : 'bg-slate-100 text-slate-400')">
+            {{ cashier.nombre.charAt(0).toUpperCase() }}
+          </div>
+
+          <!-- Nombre + badge -->
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-slate-800 text-sm">{{ cashier.nombre }}</p>
+            <span [class]="'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full '
+              + (cashier.activo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500')">
+              <span [class]="'w-1.5 h-1.5 rounded-full ' + (cashier.activo ? 'bg-emerald-500' : 'bg-slate-400')"></span>
+              {{ cashier.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+
+          <!-- Acciones -->
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button (click)="openPinDialog(cashier)" title="Cambiar PIN"
+              class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm">
+              <i class="pi pi-lock"></i>
+            </button>
+            <button (click)="toggleCashierActivo(cashier)"
+              [class]="'p-2 rounded-lg transition-colors text-sm '
+                + (cashier.activo
+                  ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                  : 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50')"
+              [title]="cashier.activo ? 'Desactivar cajero' : 'Activar cajero'">
+              <i [class]="'pi ' + (cashier.activo ? 'pi-eye-slash' : 'pi-eye')"></i>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- ── Modal: Nuevo cajero ──────────────────────────────────── -->
+@if (showCreateDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">Nuevo cajero</h3>
+        <button (click)="closeCreateDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre del cajero *</label>
+          <input type="text" placeholder="Ej: María García"
+            [value]="newNombre()"
+            (input)="newNombre.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">PIN de 4 dígitos *</label>
+          <input type="password" inputmode="numeric" maxlength="4" placeholder="••••"
+            [value]="newPin()"
+            (input)="newPin.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all tracking-widest" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Confirmar PIN *</label>
+          <input type="password" inputmode="numeric" maxlength="4" placeholder="••••"
+            [value]="newPinConfirm()"
+            (input)="newPinConfirm.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all tracking-widest" />
+        </div>
+
+        @if (createError()) {
+          <p class="text-xs text-red-600 font-medium flex items-center gap-1.5">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ createError() }}
+          </p>
+        }
+      </div>
+
+      <div class="flex gap-3 px-6 pb-5">
+        <button (click)="closeCreateDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button (click)="createCashier()" [disabled]="cashierSaving()"
+          class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-bold hover:bg-rojo-brillante/90 flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+          @if (cashierSaving()) {
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          }
+          Crear cajero
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════
+     Sección: Impresora de tickets
+════════════════════════════════════════════════════════════ -->
+<div class="mt-10 max-w-lg">
+  <div class="mb-4">
+    <h2 class="text-lg font-semibold text-slate-800">Impresora de tickets</h2>
+    <p class="text-sm text-slate-500 mt-0.5">Configuración del dispositivo de impresión (por equipo)</p>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
+
+    <!-- Tipo de conexión -->
+    <div>
+      <p class="text-sm font-medium text-slate-700 mb-2">Tipo de conexión</p>
+      <div class="grid grid-cols-2 gap-2">
+        @for (opt of [['bluetooth','Bluetooth','pi-bluetooth'],['ip','Red / IP','pi-wifi']]; track opt[0]) {
+          <button (click)="updatePrinter('connectionType', $any(opt[0]))"
+            [class]="'flex items-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-medium transition-all '
+              + (printerConfig().connectionType === opt[0]
+                ? 'bg-rojo-brillante text-white border-rojo-brillante shadow-sm'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+            <i [class]="'pi ' + opt[2]"></i>
+            {{ opt[1] }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Bluetooth -->
+    @if (printerConfig().connectionType === 'bluetooth') {
+      <div class="space-y-3">
+        <!-- Dispositivo seleccionado -->
+        @if (printerConfig().bluetoothDevice) {
+          <div class="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+              <i class="pi pi-bluetooth text-emerald-600 text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-emerald-800 truncate">{{ printerConfig().bluetoothDevice }}</p>
+              <p class="text-xs text-emerald-600">Dispositivo seleccionado</p>
+            </div>
+            <button (click)="updatePrinter('bluetoothDevice', ''); updatePrinter('bluetoothDeviceId', '')"
+              class="p-1.5 text-emerald-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="Quitar dispositivo">
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          </div>
+        }
+
+        <!-- Botón de escaneo Bluetooth -->
+        @if (bluetoothSupported) {
+          <button (click)="scanBluetoothDevice()" [disabled]="bluetoothScanning()"
+            [class]="'w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border-2 border-dashed text-sm font-semibold transition-all '
+              + (bluetoothScanning()
+                ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                : 'border-rojo-brillante/40 text-rojo-brillante hover:bg-rojo-brillante/5 hover:border-rojo-brillante active:scale-98')">
+            @if (bluetoothScanning()) {
+              <div class="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
+              Buscando dispositivos...
+            } @else {
+              <i class="pi pi-bluetooth text-base"></i>
+              {{ printerConfig().bluetoothDevice ? 'Cambiar impresora Bluetooth' : 'Buscar impresora Bluetooth' }}
+            }
+          </button>
+          <p class="text-xs text-slate-400">
+            Se abrirá el selector nativo de Bluetooth del dispositivo.
+            Asegúrate de tener el Bluetooth activado y la impresora encendida.
+          </p>
+        } @else {
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center gap-3 px-4 py-3 bg-amber-100 border-b border-amber-200">
+              <i class="pi pi-bluetooth text-amber-600 text-base shrink-0"></i>
+              <div>
+                <p class="text-sm font-bold text-amber-900">Web Bluetooth no está activado</p>
+                <p class="text-xs text-amber-700">Chrome requiere un flag experimental en escritorio</p>
+              </div>
+            </div>
+
+            <div class="px-4 py-4 space-y-4">
+
+              <!-- Pasos numerados -->
+              <ol class="space-y-3">
+                <li class="flex gap-3">
+                  <span class="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  <div class="flex-1">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">Copia esta URL y pégala en la barra de Chrome</p>
+                    <div class="flex items-center gap-2 bg-white border border-amber-300 rounded-xl px-3 py-2.5">
+                      <code class="text-xs text-slate-700 flex-1 break-all leading-relaxed">chrome://flags/#enable-experimental-web-platform-features</code>
+                      <button (click)="copyBluetoothFlag()"
+                        class="flex items-center gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition-colors shrink-0">
+                        <i class="pi pi-copy"></i>
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="flex gap-3">
+                  <span class="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  <div>
+                    <p class="text-xs font-semibold text-amber-800">Busca "Experimental Web Platform features"</p>
+                    <p class="text-xs text-amber-700 mt-0.5">Cambia el valor de <em>Default</em> a <strong>Enabled</strong></p>
+                  </div>
+                </li>
+
+                <li class="flex gap-3">
+                  <span class="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                  <div>
+                    <p class="text-xs font-semibold text-amber-800">Haz clic en "Relaunch" (reiniciar Chrome)</p>
+                    <p class="text-xs text-amber-700 mt-0.5">Regresa aquí y el botón de Bluetooth aparecerá</p>
+                  </div>
+                </li>
+              </ol>
+
+              <!-- Nota Android -->
+              <div class="flex items-center gap-2 pt-1 border-t border-amber-200">
+                <i class="pi pi-info-circle text-amber-500 text-xs shrink-0"></i>
+                <p class="text-xs text-amber-700">
+                  En <strong>Chrome Android</strong> (tu tablet de caja) esto no es necesario — Bluetooth funciona de inmediato.
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- IP / Ethernet -->
+    @if (printerConfig().connectionType === 'ip') {
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Dirección IP</label>
+          <input type="text" placeholder="192.168.1.100"
+            [value]="printerConfig().ipAddress"
+            (input)="updatePrinter('ipAddress', $any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+        <div class="w-28">
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Puerto</label>
+          <input type="number" placeholder="9100"
+            [value]="printerConfig().ipPort"
+            (input)="updatePrinter('ipPort', +$any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+      </div>
+    }
+
+    <!-- Tamaño de papel -->
+    <div>
+      <p class="text-sm font-medium text-slate-700 mb-2">Tamaño de papel</p>
+      <div class="grid grid-cols-2 gap-2">
+        @for (size of ['58mm','80mm']; track size) {
+          <button (click)="updatePrinter('paperSize', $any(size))"
+            [class]="'py-2.5 rounded-xl border text-sm font-semibold transition-all '
+              + (printerConfig().paperSize === size
+                ? 'bg-slate-800 text-white border-slate-800'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+            {{ size }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Copias -->
+    <div>
+      <p class="text-sm font-medium text-slate-700 mb-2">Copias por venta</p>
+      <div class="flex gap-2">
+        @for (n of [1, 2, 3]; track n) {
+          <button (click)="updatePrinter('copiesPerSale', n)"
+            [class]="'w-12 h-10 rounded-xl border text-sm font-semibold transition-all '
+              + (printerConfig().copiesPerSale === n
+                ? 'bg-slate-800 text-white border-slate-800'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+            {{ n }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Encabezados del ticket -->
+    <div class="space-y-3">
+      <p class="text-sm font-medium text-slate-700">Encabezado del ticket</p>
+      <input type="text" placeholder="Línea 1 — Nombre del negocio"
+        [value]="printerConfig().headerLine1"
+        (input)="updatePrinter('headerLine1', $any($event.target).value)"
+        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+      <input type="text" placeholder="Línea 2 — Teléfono o dirección"
+        [value]="printerConfig().headerLine2"
+        (input)="updatePrinter('headerLine2', $any($event.target).value)"
+        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+      <input type="text" placeholder="Pie de página — Ej: ¡Gracias por tu compra!"
+        [value]="printerConfig().footerLine"
+        (input)="updatePrinter('footerLine', $any($event.target).value)"
+        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+    </div>
+
+    <div class="pt-1">
+      <button (click)="savePrinterConfig()"
+        class="flex items-center gap-2 bg-rojo-brillante text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+        <i class="pi pi-save"></i>
+        Guardar configuración de impresora
+      </button>
+      <p class="text-xs text-slate-400 mt-2">Esta configuración se guarda en este dispositivo únicamente</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Sección: Categorías
+════════════════════════════════════════════════════════════ -->
+<div class="mt-10 max-w-lg">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-800">Categorías</h2>
+      <p class="text-sm text-slate-500 mt-0.5">Categorías con color para POS, Gastos y Proveedores</p>
+    </div>
+    <button (click)="openCategoryDialog()"
+      class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+      <i class="pi pi-plus"></i>
+      Nueva
+    </button>
+  </div>
+
+  <!-- Tabs de tipo -->
+  <div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-4">
+    @for (tab of [['producto','Productos'],['gasto','Gastos'],['proveedor','Proveedores']]; track tab[0]) {
+      <button (click)="categoryTipoTab.set($any(tab[0]))"
+        [class]="'flex-1 py-2 rounded-lg text-xs font-semibold transition-all '
+          + (categoryTipoTab() === tab[0] ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700')">
+        {{ tab[1] }}
+      </button>
+    }
+  </div>
+
+  @if (categoriesLoading()) {
+    <div class="flex justify-center py-8">
+      <div class="w-6 h-6 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  } @else if (categoriesByTipo().length === 0) {
+    <div class="border border-dashed border-slate-300 rounded-2xl p-8 text-center">
+      <i class="pi pi-tag text-2xl text-slate-300 block mb-2"></i>
+      <p class="text-sm text-slate-500">No hay categorías en este tipo</p>
+    </div>
+  } @else {
+    <div class="space-y-2">
+      @for (cat of categoriesByTipo(); track cat.id) {
+        <div class="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl">
+          <!-- Swatch de color -->
+          <div class="w-8 h-8 rounded-lg shrink-0 border border-black/10"
+            [style.background-color]="cat.color"></div>
+
+          <!-- Nombre -->
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-slate-800 text-sm">{{ cat.nombre }}</p>
+            <span [class]="'text-xs font-medium ' + (cat.activo ? 'text-emerald-600' : 'text-slate-400')">
+              {{ cat.activo ? 'Activa' : 'Inactiva' }}
+            </span>
+          </div>
+
+          <!-- Acciones -->
+          <div class="flex items-center gap-1 shrink-0">
+            <button (click)="openCategoryDialog(cat)" title="Editar"
+              class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+              <i class="pi pi-pencil text-sm"></i>
+            </button>
+            <button (click)="toggleCategory(cat)"
+              [class]="'p-2 rounded-lg transition-colors '
+                + (cat.activo
+                  ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                  : 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50')"
+              [title]="cat.activo ? 'Desactivar' : 'Activar'">
+              <i [class]="'pi ' + (cat.activo ? 'pi-eye-slash' : 'pi-eye')"></i>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- ── Modal: Crear / Editar categoría ─────────────────────── -->
+@if (showCategoryDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">
+          {{ editingCategory() ? 'Editar categoría' : 'Nueva categoría' }}
+        </h3>
+        <button (click)="closeCategoryDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre *</label>
+          <input type="text" placeholder="Ej: Bebidas"
+            [value]="catNombre()"
+            (input)="catNombre.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Color</label>
+          <div class="flex items-center gap-3">
+            <input type="color"
+              [value]="catColor()"
+              (input)="catColor.set($any($event.target).value)"
+              class="w-12 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5 bg-white" />
+            <div class="flex gap-2 flex-wrap">
+              @for (preset of ['#3b82f6','#f97316','#a855f7','#22c55e','#06b6d4','#f59e0b','#ef4444','#ec4899','#6366f1','#10b981','#9ca3af']; track preset) {
+                <button (click)="catColor.set(preset)"
+                  class="w-6 h-6 rounded-full border-2 transition-all"
+                  [style.background-color]="preset"
+                  [style.border-color]="catColor() === preset ? '#1e293b' : 'transparent'">
+                </button>
+              }
+            </div>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <div class="px-3 py-1 rounded-full text-xs font-semibold text-white"
+              [style.background-color]="catColor()">
+              {{ catNombre() || 'Vista previa' }}
+            </div>
+          </div>
+        </div>
+
+        @if (catError()) {
+          <p class="text-xs text-red-600 font-medium flex items-center gap-1.5">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ catError() }}
+          </p>
+        }
+      </div>
+
+      <div class="flex gap-3 px-6 pb-5">
+        <button (click)="closeCategoryDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button (click)="saveCategory()" [disabled]="categorySaving()"
+          class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-bold hover:bg-rojo-brillante/90 flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+          @if (categorySaving()) {
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          }
+          {{ editingCategory() ? 'Guardar' : 'Crear' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Modal: Cambiar PIN ───────────────────────────────────── -->
+@if (pinDialogCashier()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-800">Cambiar PIN</h3>
+          <p class="text-xs text-slate-500 mt-0.5">{{ pinDialogCashier()!.nombre }}</p>
+        </div>
+        <button (click)="closePinDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Nuevo PIN de 4 dígitos *</label>
+          <input type="password" inputmode="numeric" maxlength="4" placeholder="••••"
+            [value]="changePin()"
+            (input)="changePin.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all tracking-widest" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Confirmar nuevo PIN *</label>
+          <input type="password" inputmode="numeric" maxlength="4" placeholder="••••"
+            [value]="changePinConfirm()"
+            (input)="changePinConfirm.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all tracking-widest" />
+        </div>
+
+        @if (pinChangeError()) {
+          <p class="text-xs text-red-600 font-medium flex items-center gap-1.5">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ pinChangeError() }}
+          </p>
+        }
+      </div>
+
+      <div class="flex gap-3 px-6 pb-5">
+        <button (click)="closePinDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button (click)="savePinChange()" [disabled]="cashierSaving()"
+          class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-bold hover:bg-rojo-brillante/90 flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+          @if (cashierSaving()) {
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          }
+          Guardar PIN
+        </button>
+      </div>
+    </div>
+  </div>
+}
