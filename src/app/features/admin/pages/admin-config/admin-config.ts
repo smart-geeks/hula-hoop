@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -7,6 +7,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CashierService } from '../../../../core/services/cashier.service';
 import { CategoryService } from '../../../../core/services/category.service';
@@ -32,6 +33,7 @@ import type { PrinterConfig } from '../../../../core/interfaces/printer-config';
 })
 export class AdminConfig {
   private readonly configService   = inject(VenueConfigService);
+  private readonly venueService    = inject(VenueService);
   private readonly authService     = inject(AuthService);
   private readonly cashierService  = inject(CashierService);
   private readonly categoryService     = inject(CategoryService);
@@ -92,8 +94,14 @@ export class AdminConfig {
   });
 
   constructor() {
-    this.loadConfig();
-    this.loadCashiers();
+    // Re-load when the active venue changes (covers the initial async load race)
+    effect(() => {
+      const venueId = this.venueService.currentVenueId();
+      if (venueId) {
+        this.loadConfig();
+        this.loadCashiers();
+      }
+    });
     this.loadCategories();
   }
 
