@@ -4,12 +4,13 @@ import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuthDialog } from '../auth-dialog/auth-dialog';
+import { PwaInstallButton } from '../pwa-install-button/pwa-install-button';
 
 type DialogView = 'login' | 'register' | 'forgot-password';
 
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, ButtonModule, DrawerModule, AuthDialog],
+  imports: [RouterLink, ButtonModule, DrawerModule, AuthDialog, PwaInstallButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   templateUrl: './topbar.html',

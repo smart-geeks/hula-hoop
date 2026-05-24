@@ -1,0 +1,134 @@
+@if (pwa.canInstall()) {
+  <!-- ── Botón de instalación ─────────────────────────────────── -->
+  <button
+    type="button"
+    (click)="pwa.install()"
+    class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-rojo-brillante/30 text-rojo-brillante text-xs font-semibold transition-all hover:bg-rojo-brillante hover:text-white hover:border-rojo-brillante focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo-brillante"
+    [attr.aria-label]="pwa.platform() === 'ios' ? 'Ver instrucciones para instalar la app' : 'Instalar la app en tu dispositivo'"
+    title="Instalar app"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-3.5 w-3.5 shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2.5"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 3v13m0 0l-4-4m4 4l4-4" />
+    </svg>
+    <span class="hidden sm:inline">Instalar app</span>
+  </button>
+}
+
+<!-- ── Modal de instrucciones iOS ─────────────────────────────────────────── -->
+@if (pwa.showIosModal()) {
+  <!-- Overlay -->
+  <div
+    class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="ios-install-title"
+    (click)="pwa.dismissIosModal()"
+  >
+    <!-- Sheet: detiene propagación para no cerrar al hacer click adentro -->
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-7"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Cerrar -->
+      <button
+        type="button"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 rounded-full p-1"
+        (click)="pwa.dismissIosModal()"
+        aria-label="Cerrar instrucciones"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 mb-5">
+        <img
+          src="/icons/icon-96x96.png"
+          alt="Hula Hoop"
+          class="w-14 h-14 rounded-2xl shadow-md"
+        />
+        <div>
+          <h2 id="ios-install-title" class="font-bold text-gray-900 text-lg leading-tight">
+            Instalar Hula Hoop
+          </h2>
+          <p class="text-gray-500 text-sm">Agrega la app a tu pantalla de inicio</p>
+        </div>
+      </div>
+
+      <!-- Pasos -->
+      <ol class="space-y-4" aria-label="Pasos para instalar en iOS">
+
+        <li class="flex items-start gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-rojo-brillante text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+          <div>
+            <p class="text-gray-800 text-sm font-medium">Abre esta página en <strong>Safari</strong></p>
+            <p class="text-gray-500 text-xs mt-0.5">La instalación solo funciona desde Safari en iPhone e iPad.</p>
+          </div>
+        </li>
+
+        <li class="flex items-start gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-rojo-brillante text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+          <div>
+            <p class="text-gray-800 text-sm font-medium">
+              Toca el ícono
+              <span class="inline-flex items-center gap-1 mx-1 px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 text-xs font-mono">
+                <!-- Share icon inline -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M12 3v13m0-13l-3 3m3-3l3 3" />
+                </svg>
+                Compartir
+              </span>
+            </p>
+            <p class="text-gray-500 text-xs mt-0.5">Está en la barra inferior de Safari (cuadro con flecha hacia arriba).</p>
+          </div>
+        </li>
+
+        <li class="flex items-start gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-rojo-brillante text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+          <div>
+            <p class="text-gray-800 text-sm font-medium">
+              Toca
+              <span class="inline-flex items-center gap-1 mx-1 px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 text-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Agregar a pantalla de inicio
+              </span>
+            </p>
+            <p class="text-gray-500 text-xs mt-0.5">Desliza hacia arriba en el menú de opciones hasta encontrarla.</p>
+          </div>
+        </li>
+
+        <li class="flex items-start gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-rojo-brillante text-white text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+          <div>
+            <p class="text-gray-800 text-sm font-medium">Toca <strong>Agregar</strong> en la esquina superior derecha</p>
+            <p class="text-gray-500 text-xs mt-0.5">¡Listo! La app aparecerá en tu pantalla de inicio.</p>
+          </div>
+        </li>
+
+      </ol>
+
+      <!-- CTA cerrar -->
+      <button
+        type="button"
+        (click)="pwa.dismissIosModal()"
+        class="mt-6 w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+      >
+        Entendido
+      </button>
+
+      <!-- Triángulo apuntando hacia abajo (indicador de bottom sheet en móvil) -->
+      <div class="sm:hidden absolute -bottom-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-300 rounded-full"></div>
+    </div>
+  </div>
+}
