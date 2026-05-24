@@ -149,7 +149,15 @@ export class PosTicketPrintService {
     config: PrinterConfig
   ): Promise<boolean> {
     const bridgeHost = config.bridgeAddress?.trim() || 'localhost';
-    const wsUrl = `ws://${bridgeHost}:9101`;
+    let wsUrl = '';
+    if (bridgeHost.startsWith('ws://') || bridgeHost.startsWith('wss://')) {
+      wsUrl = bridgeHost;
+    } else if (bridgeHost === 'localhost' || bridgeHost === '127.0.0.1') {
+      wsUrl = `ws://${bridgeHost}:9101`;
+    } else {
+      // Use secure WSS for remote hosts via Nginx reverse proxy subpath to prevent HTTPS Mixed Content blocks
+      wsUrl = `wss://${bridgeHost}/print-bridge`;
+    }
     return new Promise<boolean>((resolve) => {
       let resolved = false;
 
