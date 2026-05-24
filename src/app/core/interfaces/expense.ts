@@ -1,5 +1,6 @@
 export interface AdminExpense {
   id: string;
+  venue_id: string;
   categoria: string;
   descripcion: string;
   monto: number;
@@ -14,6 +15,7 @@ export interface AdminExpense {
 }
 
 export interface CreateExpenseData {
+  venue_id?: string;
   categoria: string;
   descripcion: string;
   monto: number;

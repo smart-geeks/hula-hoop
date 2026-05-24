@@ -1,5 +1,6 @@
 export interface Supplier {
   id: string;
+  venue_id: string;
   nombre: string;
   categoria: string | null;
   contacto: string | null;
@@ -11,6 +12,7 @@ export interface Supplier {
 }
 
 export interface CreateSupplierData {
+  venue_id?: string;
   nombre: string;
   categoria?: string;
   contacto?: string;

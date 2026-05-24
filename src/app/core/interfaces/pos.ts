@@ -5,6 +5,7 @@ export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 // Toda validación/mutación de PIN pasa por RPCs SECURITY DEFINER en Supabase.
 export interface CashierProfile {
   id: string;
+  venue_id: string;
   nombre: string;
   activo: boolean;
   created_at: string;
@@ -14,6 +15,7 @@ export interface CashierProfile {
 // ── Sesiones ──────────────────────────────────────────────────────────────────
 export interface PosSession {
   id: string;
+  venue_id: string;
   contract_id: string | null;
   cashier_id: string | null;
   opened_at: string;

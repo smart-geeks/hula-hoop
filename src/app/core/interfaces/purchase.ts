@@ -11,6 +11,7 @@ export interface PurchaseItem {
 
 export interface Purchase {
   id: string;
+  venue_id: string;
   folio: string;
   supplier_id: string | null;
   contract_id: string | null;
@@ -26,6 +27,7 @@ export interface Purchase {
 }
 
 export interface CreatePurchaseData {
+  venue_id?: string;
   supplier_id?: string;
   contract_id?: string;
   fecha: string;

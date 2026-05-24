@@ -2,6 +2,7 @@ export type MovementType = 'entrada' | 'salida' | 'ajuste';
 
 export interface InventoryItem {
   id: string;
+  venue_id: string;
   nombre: string;
   sku: string | null;
   categoria: string | null;
@@ -29,6 +30,7 @@ export interface InventoryMovement {
 }
 
 export interface CreateInventoryItemData {
+  venue_id?: string;
   nombre: string;
   sku?: string;
   categoria?: string;

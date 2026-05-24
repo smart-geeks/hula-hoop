@@ -1,5 +1,6 @@
 export interface VenueConfig {
   id: string;
+  venue_id: string;
   max_capacity_per_slot: number;
   playdate_ticket_price_cents: number;
   playdate_extra_adult_price_cents: number;

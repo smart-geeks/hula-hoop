@@ -11,6 +11,7 @@ export interface QuoteItem {
 
 export interface Quote {
   id: string;
+  venue_id: string;
   folio: string;
   public_token: string;
   client_id: string | null;
@@ -32,6 +33,7 @@ export interface Quote {
 }
 
 export interface CreateQuoteData {
+  venue_id?: string;
   client_id?: string;
   fecha: string;
   fecha_evento?: string;

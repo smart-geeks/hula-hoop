@@ -12,6 +12,7 @@ export interface ContractPayment {
 
 export interface Contract {
   id: string;
+  venue_id: string;
   folio: string;
   quote_id: string | null;
   client_id: string | null;
@@ -33,6 +34,7 @@ export interface Contract {
 }
 
 export interface CreateContractData {
+  venue_id?: string;
   quote_id?: string;
   client_id?: string;
   fecha_evento: string;
