@@ -89,6 +89,7 @@ export class AdminLayout implements OnDestroy {
     label: 'Administración',
     items: [
       { label: 'Salones', route: 'salones', icon: 'pi-building' },
+      { label: 'Roles y Permisos', route: 'roles', icon: 'pi-key' },
     ],
   };
 

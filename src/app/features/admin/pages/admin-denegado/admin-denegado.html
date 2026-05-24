@@ -1,0 +1,22 @@
+<div class="flex flex-col items-center justify-center py-20 px-6 text-center max-w-lg mx-auto bg-white border border-slate-100 rounded-3xl shadow-sm mt-10">
+  <div class="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center mb-6">
+    <i class="pi pi-lock text-3xl text-rojo-brillante"></i>
+  </div>
+  
+  <h1 class="text-2xl font-bold font-display text-slate-800 mb-3">Acceso Restringido</h1>
+  
+  <p class="text-slate-500 text-sm leading-relaxed mb-8">
+    Tu cuenta no cuenta con los permisos o privilegios necesarios para acceder a esta sección de la sucursal. 
+    Si consideras que esto es un error, por favor comunícate con el Administrador para ajustar tu matriz de seguridad.
+  </p>
+  
+  <div class="flex flex-col sm:flex-row gap-3 w-full">
+    <button 
+      (click)="goHome()"
+      class="flex-1 bg-rojo-brillante text-white py-3 px-6 rounded-2xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm cursor-pointer"
+    >
+      <i class="pi pi-home mr-2"></i>
+      Volver a mi Sucursal
+    </button>
+  </div>
+</div>

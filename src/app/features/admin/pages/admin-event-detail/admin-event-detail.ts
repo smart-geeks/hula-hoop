@@ -202,7 +202,7 @@ export class AdminEventDetail {
         metodo:      this.payMetodo(),
         notas:       this.payNotas().trim() || null,
         created_at:  new Date().toISOString(),
-      });
+      }, this.quote());
     } else {
       this.showToast('error', 'No se pudo registrar el pago');
     }

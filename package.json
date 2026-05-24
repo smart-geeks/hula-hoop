@@ -58,6 +58,7 @@
     "@types/node": "^20.17.19",
     "jsdom": "^27.1.0",
     "postcss": "^8.5.3",
+    "supabase": "^2.101.0",
     "tailwindcss": "^4.1.12",
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "~5.9.2",

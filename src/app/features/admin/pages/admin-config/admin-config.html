@@ -367,7 +367,8 @@
 
     <!-- Copias -->
     <div>
-      <p class="text-sm font-medium text-slate-700 mb-2">Copias por venta</p>
+      <p class="text-sm font-medium text-slate-700 mb-1">Copias por impresión</p>
+      <p class="text-xs text-slate-400 mb-2.5">Determina cuántas copias del ticket se generarán de forma consecutiva (con corte automático entre cada una).</p>
       <div class="flex gap-2">
         @for (n of [1, 2, 3]; track n) {
           <button (click)="updatePrinter('copiesPerSale', n)"
