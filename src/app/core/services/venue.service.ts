@@ -41,16 +41,33 @@ export class VenueService {
     const client = this.supabase.client;
     if (!client) return null;
 
-    const { data: created, error } = await client
-      .from('venues')
-      .insert(data)
-      .select()
-      .single();
+    // RPC crea el venue + añade al creador como owner en una transacción.
+    // INSERT directo fallaría por RLS (no existe venue_users todavía).
+    const { data: venueId, error } = await client.rpc('create_venue', {
+      p_nombre:    data.nombre,
+      p_slug:      data.slug,
+      p_direccion: data.direccion ?? null,
+      p_telefono:  data.telefono  ?? null,
+      p_email:     data.email     ?? null,
+      p_logo_url:  data.logo_url  ?? null,
+    });
 
-    if (error) {
-      console.error('Error creating venue:', error.message);
+    if (error || !venueId) {
+      console.error('Error creating venue:', error?.message);
       return null;
     }
+
+    const { data: created, error: fetchErr } = await client
+      .from('venues')
+      .select('*')
+      .eq('id', venueId)
+      .single();
+
+    if (fetchErr || !created) {
+      console.error('Error fetching new venue:', fetchErr?.message);
+      return null;
+    }
+
     this.venues.update(vs => [...vs, created as Venue]);
     return created as Venue;
   }
