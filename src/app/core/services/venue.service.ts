@@ -148,7 +148,7 @@ export class VenueService {
       .from('venues')
       .select('*')
       .eq('activo', true)
-      .order('nombre');
+      .order('created_at');
 
     if (error) {
       console.error('Error loading venues:', error.message);
