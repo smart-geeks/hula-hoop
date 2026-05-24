@@ -3,8 +3,9 @@ module.exports = {
     {
       name: 'hula-hoop-ssr',
       script: 'dist/hula-hoop/server/server.mjs',
-      instances: 'max',           // Utiliza el modo cluster para aprovechar todos los núcleos del CPU
-      exec_mode: 'cluster',       // Balanceo de carga nativo
+      cwd: '/var/www/hula-hoop',   // Asegura que PM2 resuelva las rutas relativas al proyecto
+      instances: 'max',
+      exec_mode: 'cluster',
       watch: false,
       env: {
         NODE_ENV: 'production',
@@ -14,7 +15,8 @@ module.exports = {
     {
       name: 'hula-hoop-print-bridge',
       script: 'tools/printer-bridge.js',
-      interpreter: 'bun',         // Corre con Bun para la máxima velocidad y menor consumo
+      cwd: '/var/www/hula-hoop',   // Evita que PM2 busque en la carpeta home del usuario SSH
+      interpreter: 'bun',
       watch: false,
       env: {
         NODE_ENV: 'production',
