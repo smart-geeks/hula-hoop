@@ -16,7 +16,6 @@ module.exports = {
       name: 'hula-hoop-print-bridge',
       script: 'tools/printer-bridge.js',
       cwd: '/var/www/hula-hoop',   // Evita que PM2 busque en la carpeta home del usuario SSH
-      interpreter: 'bun',
       watch: false,
       env: {
         NODE_ENV: 'production',
