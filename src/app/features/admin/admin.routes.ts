@@ -147,6 +147,11 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./pages/admin-config/admin-config').then((m) => m.AdminConfig),
       },
+      {
+        path: 'salones',
+        loadComponent: () =>
+          import('./pages/admin-venues/admin-venues').then((m) => m.AdminVenues),
+      },
     ],
   },
 ];

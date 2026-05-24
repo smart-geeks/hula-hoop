@@ -17,7 +17,9 @@ import { AvatarModule } from 'primeng/avatar';
 import { BadgeModule } from 'primeng/badge';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import { GlobalSearch } from '../../components/global-search/global-search';
+import { VenueSwitcher } from '../../components/venue-switcher/venue-switcher';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface NavItem {
@@ -45,12 +47,14 @@ interface NavSection {
     AvatarModule,
     BadgeModule,
     GlobalSearch,
+    VenueSwitcher,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLayout implements OnDestroy {
   private readonly ngZone = inject(NgZone);
   private readonly auth = inject(AuthService);
+  readonly venueService = inject(VenueService);
   private readonly router = inject(Router);
   private readonly supabase = inject(SupabaseService);
   private readonly doc = inject(DOCUMENT);
@@ -81,6 +85,13 @@ export class AdminLayout implements OnDestroy {
   });
 
   // ── Navigation (task-oriented grouping) ───────────────────
+  readonly ownerNavSection: NavSection = {
+    label: 'Administración',
+    items: [
+      { label: 'Salones', route: 'salones', icon: 'pi-building' },
+    ],
+  };
+
   readonly navSections: NavSection[] = [
     {
       label: 'Operaciones',
