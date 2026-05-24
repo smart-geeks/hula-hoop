@@ -100,6 +100,9 @@ export class AdminConfig {
       if (venueId) {
         this.loadConfig();
         this.loadCashiers();
+      } else {
+        // Venues not yet loaded — keep UI unblocked
+        this.loading.set(false);
       }
     });
     this.loadCategories();

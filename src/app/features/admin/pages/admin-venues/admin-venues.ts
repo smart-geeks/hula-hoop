@@ -75,12 +75,12 @@ export class AdminVenues {
     const id   = this.editingId();
 
     if (mode === 'create') {
-      const result = await this.venue.createVenue(data);
+      const { data: result, error } = await this.venue.createVenue(data);
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Salón creado', detail: result.nombre });
         this.showModal.set(false);
       } else {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear el salón' });
+        this.messageService.add({ severity: 'error', summary: 'Error al crear salón', detail: error ?? 'Error desconocido' });
       }
     } else if (id) {
       const result = await this.venue.updateVenue(id, data);

@@ -37,12 +37,10 @@ export class VenueService {
     this.storeId(venueId);
   }
 
-  async createVenue(data: CreateVenueData): Promise<Venue | null> {
+  async createVenue(data: CreateVenueData): Promise<{ data: Venue | null; error: string | null }> {
     const client = this.supabase.client;
-    if (!client) return null;
+    if (!client) return { data: null, error: 'Sin conexión a Supabase' };
 
-    // RPC crea el venue + añade al creador como owner en una transacción.
-    // INSERT directo fallaría por RLS (no existe venue_users todavía).
     const { data: venueId, error } = await client.rpc('create_venue', {
       p_nombre:    data.nombre,
       p_slug:      data.slug,
@@ -54,7 +52,7 @@ export class VenueService {
 
     if (error || !venueId) {
       console.error('Error creating venue:', error?.message);
-      return null;
+      return { data: null, error: error?.message ?? 'RPC create_venue falló sin mensaje' };
     }
 
     const { data: created, error: fetchErr } = await client
@@ -65,11 +63,11 @@ export class VenueService {
 
     if (fetchErr || !created) {
       console.error('Error fetching new venue:', fetchErr?.message);
-      return null;
+      return { data: null, error: fetchErr?.message ?? 'No se pudo leer el venue creado' };
     }
 
     this.venues.update(vs => [...vs, created as Venue]);
-    return created as Venue;
+    return { data: created as Venue, error: null };
   }
 
   async updateVenue(id: string, data: UpdateVenueData): Promise<Venue | null> {
