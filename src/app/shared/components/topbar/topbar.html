@@ -92,14 +92,13 @@
 
     <!-- Mobile actions -->
     <div class="flex lg:hidden items-center gap-2">
-      <app-pwa-install-button />
-
       <p-button
         label="Reservar"
         [rounded]="true"
         size="small"
         (click)="onBookParty()"
       />
+      <app-pwa-install-button />
       <p-button
         icon="pi pi-bars"
         severity="secondary"
