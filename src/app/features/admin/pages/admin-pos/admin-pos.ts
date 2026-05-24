@@ -12,6 +12,7 @@ import { InventoryService } from '../../../../core/services/inventory.service';
 import { ContractService } from '../../../../core/services/contract.service';
 import { CashierService } from '../../../../core/services/cashier.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import type { PosSession, PosSale, CartItem, PaymentMethod, CashierProfile } from '../../../../core/interfaces/pos';
 import type { InventoryItem } from '../../../../core/interfaces/inventory';
 import type { Contract } from '../../../../core/interfaces/contract';
@@ -29,6 +30,7 @@ export class AdminPos {
   private readonly contractService  = inject(ContractService);
   private readonly cashierService   = inject(CashierService);
   private readonly categoryService  = inject(CategoryService);
+  private readonly ticketPrint      = inject(PosTicketPrintService);
 
   // ── Core data ─────────────────────────────────────────────
   readonly loading        = signal(true);
@@ -295,6 +297,7 @@ export class AdminPos {
       this.salesHistory.update((list) => [sale, ...list]);
       this.cart.set([]);
       this.showToast('success', `Venta registrada — ${this.fmt(sale.total)}`);
+      this.ticketPrint.printSale(sale, cartSnapshot, this.activeCashier()?.nombre ?? null);
     } else {
       this.showToast('error', 'No se pudo procesar la venta');
     }

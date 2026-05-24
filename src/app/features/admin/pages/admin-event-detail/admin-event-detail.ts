@@ -11,6 +11,7 @@ import { ContractService } from '../../../../core/services/contract.service';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { EventTaskService } from '../../../../core/services/event-task.service';
 import { ExpenseService } from '../../../../core/services/expense.service';
+import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
 import type { Contract, ContractStatus } from '../../../../core/interfaces/contract';
 import type { Quote } from '../../../../core/interfaces/quote';
@@ -32,6 +33,7 @@ export class AdminEventDetail {
   private readonly quoteService     = inject(QuoteService);
   private readonly taskService      = inject(EventTaskService);
   private readonly expenseService   = inject(ExpenseService);
+  private readonly ticketPrint      = inject(PosTicketPrintService);
   private readonly route            = inject(ActivatedRoute);
   private readonly router           = inject(Router);
 
@@ -189,6 +191,18 @@ export class AdminEventDetail {
 
       this.closePayDialog();
       this.showToast('success', `Pago de ${monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })} registrado`);
+
+      // Imprimir comprobante con datos del contrato actualizado
+      const contractForPrint = updated ?? c;
+      this.ticketPrint.printPayment(contractForPrint, {
+        id:          '',
+        contract_id: c.id,
+        monto,
+        fecha:       this.payFecha(),
+        metodo:      this.payMetodo(),
+        notas:       this.payNotas().trim() || null,
+        created_at:  new Date().toISOString(),
+      });
     } else {
       this.showToast('error', 'No se pudo registrar el pago');
     }
