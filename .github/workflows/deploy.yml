@@ -1,0 +1,58 @@
+name: Deploy Hula Hoop to Production 🚀
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código 📂
+        uses: actions/checkout@v4
+
+      - name: Instalar Bun ⚡
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache de Dependencias 💾
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Instalar Dependencias 🛠️
+        run: bun install --frozen-lockfile
+
+      - name: Compilar Proyecto (Angular SSR) 📦
+        run: bun run build
+
+      - name: Subir Archivos al VPS (SCP) 📤
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Copiamos la build de Angular SSR, la configuración de PM2, el package.json y la herramienta del puente de impresión
+          source: "dist/**,ecosystem.config.js,package.json,tools/printer-bridge.js"
+          target: "/var/www/hula-hoop"
+
+      - name: Reiniciar Servicios en VPS (SSH) 🔄
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/hula-hoop
+            # Asegurar que las dependencias de producción estén instaladas
+            bun install --production
+            # Arrancar o reiniciar los procesos de la app y del puente de impresión de forma limpia
+            pm2 startOrRestart ecosystem.config.js --env production
+            # Guardar el estado de PM2 para persistencia en reinicios del VPS
+            pm2 save
