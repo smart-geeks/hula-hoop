@@ -11,6 +11,8 @@ export interface PrinterConfig {
   ipAddress: string;
   /** IP: puerto TCP (default 9100 para ESC/POS) */
   ipPort: number;
+  /** IP del puente local (para tablets/celulares conectar con la PC del puente). Default: localhost */
+  bridgeAddress: string;
   paperSize: PaperSize;
   copiesPerSale: number;
   headerLine1: string;
@@ -24,6 +26,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   bluetoothDeviceId: '',
   ipAddress: '',
   ipPort: 9100,
+  bridgeAddress: 'localhost',
   paperSize: '80mm',
   copiesPerSale: 1,
   headerLine1: '',

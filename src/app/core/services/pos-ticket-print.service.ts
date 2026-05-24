@@ -148,7 +148,8 @@ export class PosTicketPrintService {
     fallbackHtml: string,
     config: PrinterConfig
   ): Promise<boolean> {
-    const wsUrl = 'ws://localhost:9101';
+    const bridgeHost = config.bridgeAddress?.trim() || 'localhost';
+    const wsUrl = `ws://${bridgeHost}:9101`;
     return new Promise<boolean>((resolve) => {
       let resolved = false;
 
