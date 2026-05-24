@@ -1,18 +1,22 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type { Quote, CreateQuoteData, UpdateQuoteData, QuoteStatus } from '../interfaces/quote';
 
 @Injectable({ providedIn: 'root' })
 export class QuoteService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getAll(): Promise<Quote[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('quotes')
       .select('*, client:clients(nombre, email, telefono), items:quote_items(*)')
+      .eq('venue_id', venueId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -40,15 +44,16 @@ export class QuoteService {
   }
 
   async create(data: CreateQuoteData): Promise<Quote | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
-    const folio = await this.generateFolio();
+    const folio = await this.generateFolio(venueId);
     const { items, ...quoteData } = data;
 
     const { data: created, error } = await client
       .from('quotes')
-      .insert({ ...quoteData, folio })
+      .insert({ ...quoteData, folio, venue_id: venueId })
       .select()
       .single();
 
@@ -145,17 +150,17 @@ export class QuoteService {
     return true;
   }
 
-  private async generateFolio(): Promise<string> {
-    const year = new Date().getFullYear();
+  private async generateFolio(venueId: string): Promise<string> {
+    const year   = new Date().getFullYear();
     const client = this.supabase.client;
     if (!client) return `QT-${year}-001`;
 
     const { count } = await client
       .from('quotes')
       .select('*', { count: 'exact', head: true })
+      .eq('venue_id', venueId)
       .gte('created_at', `${year}-01-01`);
 
-    const num = String((count ?? 0) + 1).padStart(3, '0');
-    return `QT-${year}-${num}`;
+    return `QT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
   }
 }

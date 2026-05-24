@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type {
   InventoryItem,
   InventoryMovement,
@@ -11,14 +12,17 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getAll(includeInactive = false): Promise<InventoryItem[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     let query = client
       .from('inventory_items')
       .select('*')
+      .eq('venue_id', venueId)
       .order('nombre', { ascending: true });
 
     if (!includeInactive) {
@@ -34,12 +38,14 @@ export class InventoryService {
   }
 
   async getLowStock(): Promise<InventoryItem[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('inventory_items')
       .select('*')
+      .eq('venue_id', venueId)
       .filter('stock_actual', 'lte', 'stock_minimo')
       .eq('activo', true);
 
@@ -68,12 +74,13 @@ export class InventoryService {
   }
 
   async create(data: CreateInventoryItemData): Promise<InventoryItem | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
     const { data: created, error } = await client
       .from('inventory_items')
-      .insert(data)
+      .insert({ ...data, venue_id: venueId })
       .select()
       .single();
 

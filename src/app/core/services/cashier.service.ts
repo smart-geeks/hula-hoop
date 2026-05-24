@@ -1,43 +1,43 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type { CashierProfile } from '../interfaces/pos';
 
 @Injectable({ providedIn: 'root' })
 export class CashierService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   /** Lista de cajeros activos para el PIN picker del POS. */
   async getActive(): Promise<CashierProfile[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('cashier_profiles')
-      .select('id, nombre, activo, created_at, updated_at')
+      .select('id, venue_id, nombre, activo, created_at, updated_at')
+      .eq('venue_id', venueId)
       .eq('activo', true)
       .order('nombre');
 
-    if (error) {
-      console.error('Error fetching cashiers:', error.message);
-      return [];
-    }
+    if (error) { console.error('Error fetching cashiers:', error.message); return []; }
     return data ?? [];
   }
 
   /** Lista completa (activos + inactivos) para la pantalla de administración. */
   async getAll(): Promise<CashierProfile[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('cashier_profiles')
-      .select('id, nombre, activo, created_at, updated_at')
+      .select('id, venue_id, nombre, activo, created_at, updated_at')
+      .eq('venue_id', venueId)
       .order('nombre');
 
-    if (error) {
-      console.error('Error fetching all cashiers:', error.message);
-      return [];
-    }
+    if (error) { console.error('Error fetching all cashiers:', error.message); return []; }
     return data ?? [];
   }
 
@@ -46,28 +46,22 @@ export class CashierService {
    * El PIN viaja en texto claro solo en el canal HTTPS y NUNCA se persiste.
    */
   async create(nombre: string, pin: string): Promise<CashierProfile | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
     const { data: cashierId, error } = await client
-      .rpc('create_cashier', { p_nombre: nombre, p_pin: pin });
+      .rpc('create_cashier', { p_nombre: nombre, p_pin: pin, p_venue_id: venueId });
 
-    if (error || !cashierId) {
-      console.error('Error creating cashier:', error?.message);
-      return null;
-    }
+    if (error || !cashierId) { console.error('Error creating cashier:', error?.message); return null; }
 
-    // Retornar el perfil recién creado
     const { data, error: fetchError } = await client
       .from('cashier_profiles')
-      .select('id, nombre, activo, created_at, updated_at')
+      .select('id, venue_id, nombre, activo, created_at, updated_at')
       .eq('id', cashierId)
       .single();
 
-    if (fetchError) {
-      console.error('Error fetching new cashier:', fetchError.message);
-      return null;
-    }
+    if (fetchError) { console.error('Error fetching new cashier:', fetchError.message); return null; }
     return data;
   }
 
@@ -83,14 +77,11 @@ export class CashierService {
     const { data: validatedId, error } = await client
       .rpc('validate_cashier_pin', { p_cashier_id: cashierId, p_pin: pin });
 
-    if (error || !validatedId) {
-      return null;
-    }
+    if (error || !validatedId) return null;
 
-    // PIN correcto: cargar el perfil completo
     const { data, error: fetchError } = await client
       .from('cashier_profiles')
-      .select('id, nombre, activo, created_at, updated_at')
+      .select('id, venue_id, nombre, activo, created_at, updated_at')
       .eq('id', validatedId)
       .single();
 
@@ -106,10 +97,7 @@ export class CashierService {
     const { data, error } = await client
       .rpc('update_cashier_pin', { p_cashier_id: cashierId, p_new_pin: newPin });
 
-    if (error) {
-      console.error('Error updating PIN:', error.message);
-      return false;
-    }
+    if (error) { console.error('Error updating PIN:', error.message); return false; }
     return data === true;
   }
 
@@ -123,10 +111,7 @@ export class CashierService {
       .update({ nombre, updated_at: new Date().toISOString() })
       .eq('id', cashierId);
 
-    if (error) {
-      console.error('Error updating cashier name:', error.message);
-      return false;
-    }
+    if (error) { console.error('Error updating cashier name:', error.message); return false; }
     return true;
   }
 
@@ -140,10 +125,7 @@ export class CashierService {
       .update({ activo, updated_at: new Date().toISOString() })
       .eq('id', cashierId);
 
-    if (error) {
-      console.error('Error updating cashier status:', error.message);
-      return false;
-    }
+    if (error) { console.error('Error updating cashier status:', error.message); return false; }
     return true;
   }
 }

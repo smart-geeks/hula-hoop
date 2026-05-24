@@ -1,18 +1,25 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type { PosSession, PosSale, CreateSaleData } from '../interfaces/pos';
 
 @Injectable({ providedIn: 'root' })
 export class PosService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async openSession(contractId?: string, cashierId?: string): Promise<PosSession | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
     const { data, error } = await client
       .from('pos_sessions')
-      .insert({ contract_id: contractId ?? null, cashier_id: cashierId ?? null })
+      .insert({
+        contract_id: contractId ?? null,
+        cashier_id: cashierId ?? null,
+        venue_id: venueId,
+      })
       .select('*, contract:contracts(folio, fecha_evento), cashier:cashier_profiles(nombre)')
       .single();
 
@@ -40,12 +47,14 @@ export class PosService {
   }
 
   async getActiveSessions(): Promise<PosSession[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('pos_sessions')
       .select('*, contract:contracts(folio, fecha_evento), cashier:cashier_profiles(nombre)')
+      .eq('venue_id', venueId)
       .is('closed_at', null)
       .order('opened_at', { ascending: false });
 

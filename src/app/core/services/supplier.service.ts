@@ -1,16 +1,23 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type { Supplier, CreateSupplierData, UpdateSupplierData } from '../interfaces/supplier';
 
 @Injectable({ providedIn: 'root' })
 export class SupplierService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getAll(includeInactive = false): Promise<Supplier[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
-    let query = client.from('suppliers').select('*').order('nombre', { ascending: true });
+    let query = client
+      .from('suppliers')
+      .select('*')
+      .eq('venue_id', venueId)
+      .order('nombre', { ascending: true });
 
     if (!includeInactive) {
       query = query.eq('activo', true);
@@ -43,12 +50,13 @@ export class SupplierService {
   }
 
   async create(data: CreateSupplierData): Promise<Supplier | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
     const { data: created, error } = await client
       .from('suppliers')
-      .insert(data)
+      .insert({ ...data, venue_id: venueId })
       .select()
       .single();
 

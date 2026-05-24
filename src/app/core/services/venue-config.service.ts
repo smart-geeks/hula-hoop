@@ -1,26 +1,25 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type { VenueConfig } from '../interfaces/venue-config';
 
 @Injectable({ providedIn: 'root' })
 export class VenueConfigService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getConfig(): Promise<VenueConfig | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
     const { data, error } = await client
       .from('venue_config')
       .select('*')
-      .limit(1)
+      .eq('venue_id', venueId)
       .single();
 
-    if (error) {
-      console.error('Error fetching venue config:', error.message);
-      return null;
-    }
-
+    if (error) { console.error('Error fetching venue config:', error.message); return null; }
     return data as VenueConfig;
   }
 
@@ -44,11 +43,7 @@ export class VenueConfigService {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error updating venue config:', error.message);
-      return null;
-    }
-
+    if (error) { console.error('Error updating venue config:', error.message); return null; }
     return data as VenueConfig;
   }
 }

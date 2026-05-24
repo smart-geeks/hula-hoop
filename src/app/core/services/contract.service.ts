@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type {
   Contract,
   ContractPayment,
@@ -10,20 +11,20 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class ContractService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getAll(): Promise<Contract[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('contracts')
       .select('*, client:clients(nombre, email, telefono)')
+      .eq('venue_id', venueId)
       .order('fecha_evento', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching contracts:', error.message);
-      return [];
-    }
+    if (error) { console.error('Error fetching contracts:', error.message); return []; }
     return data ?? [];
   }
 
@@ -37,51 +38,45 @@ export class ContractService {
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Error fetching contract:', error.message);
-      return null;
-    }
+    if (error) { console.error('Error fetching contract:', error.message); return null; }
     return data;
   }
 
   async getUpcoming(days = 30): Promise<Contract[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const from = new Date().toISOString().split('T')[0];
-    const to = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+    const to   = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
 
     const { data, error } = await client
       .from('contracts')
       .select('*, client:clients(nombre, email, telefono)')
+      .eq('venue_id', venueId)
       .gte('fecha_evento', from)
       .lte('fecha_evento', to)
       .neq('estado', 'cancelado')
       .order('fecha_evento', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching upcoming contracts:', error.message);
-      return [];
-    }
+    if (error) { console.error('Error fetching upcoming contracts:', error.message); return []; }
     return data ?? [];
   }
 
   async create(data: CreateContractData): Promise<Contract | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
-    const folio = await this.generateFolio();
+    const folio = await this.generateFolio(venueId);
 
     const { data: created, error } = await client
       .from('contracts')
-      .insert({ ...data, folio })
+      .insert({ ...data, folio, venue_id: venueId })
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating contract:', error.message);
-      return null;
-    }
+    if (error) { console.error('Error creating contract:', error.message); return null; }
     return created;
   }
 
@@ -90,11 +85,7 @@ export class ContractService {
     if (!client) return null;
 
     const { error } = await client.from('contracts').update(data).eq('id', id);
-
-    if (error) {
-      console.error('Error updating contract:', error.message);
-      return null;
-    }
+    if (error) { console.error('Error updating contract:', error.message); return null; }
     return this.getById(id);
   }
 
@@ -112,13 +103,9 @@ export class ContractService {
       .from('contract_payments')
       .insert({ ...payment, contract_id: contractId });
 
-    if (error) {
-      console.error('Error adding payment:', error.message);
-      return false;
-    }
+    if (error) { console.error('Error adding payment:', error.message); return false; }
 
-    const newDeposit = contract.deposito_pagado + payment.monto;
-    await this.update(contractId, { deposito_pagado: newDeposit });
+    await this.update(contractId, { deposito_pagado: contract.deposito_pagado + payment.monto });
     return true;
   }
 
@@ -126,24 +113,21 @@ export class ContractService {
     const client = this.supabase.client;
     if (!client) return false;
     const { error } = await client.from('contracts').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting contract:', error.message);
-      return false;
-    }
+    if (error) { console.error('Error deleting contract:', error.message); return false; }
     return true;
   }
 
-  private async generateFolio(): Promise<string> {
-    const year = new Date().getFullYear();
+  private async generateFolio(venueId: string): Promise<string> {
+    const year   = new Date().getFullYear();
     const client = this.supabase.client;
     if (!client) return `CT-${year}-001`;
 
     const { count } = await client
       .from('contracts')
       .select('*', { count: 'exact', head: true })
+      .eq('venue_id', venueId)
       .gte('created_at', `${year}-01-01`);
 
-    const num = String((count ?? 0) + 1).padStart(3, '0');
-    return `CT-${year}-${num}`;
+    return `CT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
   }
 }

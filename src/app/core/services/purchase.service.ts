@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { VenueService } from './venue.service';
 import type {
   Purchase,
   CreatePurchaseData,
@@ -10,16 +11,19 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
   private readonly supabase = inject(SupabaseService);
+  private readonly venue    = inject(VenueService);
 
   async getAll(): Promise<Purchase[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return [];
 
     const { data, error } = await client
       .from('purchases')
       .select(
         '*, supplier:suppliers(nombre), contract:contracts(folio, fecha_evento), items:purchase_items(*)',
       )
+      .eq('venue_id', venueId)
       .order('fecha', { ascending: false });
 
     if (error) {
@@ -66,15 +70,16 @@ export class PurchaseService {
   }
 
   async create(data: CreatePurchaseData): Promise<Purchase | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
+    const client  = this.supabase.client;
+    const venueId = this.venue.currentVenueId();
+    if (!client || !venueId) return null;
 
-    const folio = await this.generateFolio();
+    const folio = await this.generateFolio(venueId);
     const { items, ...purchaseData } = data;
 
     const { data: created, error } = await client
       .from('purchases')
-      .insert({ ...purchaseData, folio })
+      .insert({ ...purchaseData, folio, venue_id: venueId })
       .select()
       .single();
 
@@ -148,17 +153,17 @@ export class PurchaseService {
     return true;
   }
 
-  private async generateFolio(): Promise<string> {
-    const year = new Date().getFullYear();
+  private async generateFolio(venueId: string): Promise<string> {
+    const year   = new Date().getFullYear();
     const client = this.supabase.client;
     if (!client) return `OC-${year}-001`;
 
     const { count } = await client
       .from('purchases')
       .select('*', { count: 'exact', head: true })
+      .eq('venue_id', venueId)
       .gte('created_at', `${year}-01-01`);
 
-    const num = String((count ?? 0) + 1).padStart(3, '0');
-    return `OC-${year}-${num}`;
+    return `OC-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
   }
 }
