@@ -1,0 +1,57 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app-shell",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets-static",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/icons/**",
+          "/assets/**",
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "supabase-api",
+      "urls": [
+        "https://jzdfxbbnhkzdetrpmqdx.supabase.co/rest/**",
+        "https://jzdfxbbnhkzdetrpmqdx.supabase.co/auth/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 50,
+        "maxAge": "5m",
+        "timeout": "10s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "supabase-storage",
+      "urls": [
+        "https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 30,
+        "maxAge": "7d",
+        "strategy": "performance"
+      }
+    }
+  ]
+}

@@ -63,6 +63,8 @@
 
     <!-- Desktop actions -->
     <div class="hidden lg:flex items-center gap-3">
+      <app-pwa-install-button />
+
       @if (isLoggedIn()) {
         <p-button
           label="Cerrar sesión"
@@ -90,6 +92,8 @@
 
     <!-- Mobile actions -->
     <div class="flex lg:hidden items-center gap-2">
+      <app-pwa-install-button />
+
       <p-button
         label="Reservar"
         [rounded]="true"

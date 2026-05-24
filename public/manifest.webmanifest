@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "name": "Hula Hoop – Playground Infantil",
+  "short_name": "Hula Hoop",
+  "description": "El playground infantil más divertido de Torreón. Fiestas privadas y Play Days para tus peques.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#ffffff",
+  "theme_color": "#E30D1C",
+  "lang": "es-MX",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "kids"],
+  "icons": [
+    { "src": "/icons/icon-72x72.png",       "sizes": "72x72",   "type": "image/png" },
+    { "src": "/icons/icon-96x96.png",       "sizes": "96x96",   "type": "image/png" },
+    { "src": "/icons/icon-128x128.png",     "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-144x144.png",     "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/icon-152x152.png",     "sizes": "152x152", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png",     "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-384x384.png",     "sizes": "384x384", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png",     "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Reservar fiesta privada",
+      "short_name": "Reservar",
+      "description": "Reserva una fiesta privada para tus peques",
+      "url": "/reservar/fiesta-privada",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Play Day",
+      "short_name": "Play Day",
+      "description": "Conoce nuestros Play Days",
+      "url": "/#play-day",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Hula Hoop Playground Infantil"
+    }
+  ]
+}

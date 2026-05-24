@@ -4,10 +4,44 @@
   <meta charset="utf-8">
   <title>Hula Hoop – Playground Infantil | Fiestas y Play Day en Torreón</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Viewport: permite "Add to Home Screen" en iOS y escala correcta en todos los dispositivos -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="El playground infantil más divertido de Torreón, Coahuila. Celebra la fiesta privada de tus peques o vive un Play Day lleno de juegos y aventuras. ¡Reserva ya!">
   <meta name="robots" content="index, follow">
+
+  <!-- Theme color: afecta barra de navegación del browser en Android Chrome -->
   <meta name="theme-color" content="#E30D1C">
+
+  <!-- ── PWA – Android / Chrome ─────────────────────────────── -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- ── PWA – iOS / Safari ────────────────────────────────────
+       iOS no soporta el estándar beforeinstallprompt; se instala
+       manualmente desde Safari → Compartir → Agregar a inicio   -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Hula Hoop">
+
+  <!-- Iconos Apple Touch para distintos dispositivos iOS -->
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png">
+
+  <!-- Splash screens iOS (portrait) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- ── PWA – Windows (tile) ──────────────────────────────── -->
+  <meta name="msapplication-TileColor" content="#E30D1C">
+  <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+  <meta name="msapplication-config" content="none">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
   <!-- Open Graph (sobreescritos por SeoService en SSR) -->
   <meta property="og:type" content="website">
@@ -26,10 +60,6 @@
   <meta name="twitter:title" content="Hula Hoop – Playground Infantil | Fiestas y Play Day en Torreón">
   <meta name="twitter:description" content="El playground infantil más divertido de Torreón. Fiestas privadas, Play Days y momentos mágicos para tus peques.">
   <meta name="twitter:image" content="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/isotipo.png">
-  <link rel="apple-touch-icon" href="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/isotipo.png">
 
   <!-- Preconnects -->
   <link rel="preconnect" href="https://jzdfxbbnhkzdetrpmqdx.supabase.co">
