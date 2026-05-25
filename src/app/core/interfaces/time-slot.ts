@@ -1,5 +1,6 @@
 export interface TimeSlot {
   id: string;
+  venue_id: string;
   day_type: 'weekday' | 'weekend';
   start_time: string; // HH:MM format, local Mexico time
   end_time: string;

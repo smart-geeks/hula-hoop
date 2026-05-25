@@ -1,14 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AccordionModule } from 'primeng/accordion';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
-import type { VenueConfig } from '../../../../core/interfaces/venue-config';
-import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import { RestaurantItemService } from '../../../../core/services/restaurant-item.service';
-import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
+import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
+import type { VenueConfig } from '../../../../core/interfaces/venue-config';
+import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
 
 @Component({
   selector: 'app-play-day-section',
@@ -16,48 +17,53 @@ import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './play-day-section.html',
 })
-export class PlayDaySection implements OnInit {
-  private readonly timeSlotService = inject(TimeSlotService);
-  private readonly configService = inject(VenueConfigService);
+export class PlayDaySection {
+  private readonly timeSlotService   = inject(TimeSlotService);
+  private readonly configService     = inject(VenueConfigService);
   private readonly reservationService = inject(ReservationService);
   private readonly restaurantService = inject(RestaurantItemService);
+  private readonly publicVenue       = inject(PublicVenueService);
 
-  readonly slots = signal<AvailablePlaydateSlot[]>([]);
-  readonly loading = signal(true);
+  readonly slots          = signal<AvailablePlaydateSlot[]>([]);
+  readonly loading        = signal(true);
   readonly hasAvailability = computed(() => this.slots().length > 0);
-  readonly config = signal<VenueConfig | null>(null);
+  readonly config         = signal<VenueConfig | null>(null);
+  readonly menuCategories = signal<{ category: string; items: RestaurantItem[] }[]>([]);
 
-  readonly menuCategories = signal<{ category: string, items: RestaurantItem[] }[]>([]);
-
-  ngOnInit(): void {
-    this.loadAvailableSlots();
-    this.loadRestaurantMenu();
+  constructor() {
+    this.init();
   }
 
-  private async loadRestaurantMenu(): Promise<void> {
-    const items = await this.restaurantService.getActiveItems();
-    
-    // Group by category
+  private async init(): Promise<void> {
+    const venue = this.publicVenue.activeVenue();
+    if (!venue) {
+      this.loading.set(false);
+      return;
+    }
+    await Promise.all([
+      this.loadAvailableSlots(venue.id),
+      this.loadRestaurantMenu(venue.id),
+    ]);
+  }
+
+  private async loadRestaurantMenu(venueId: string): Promise<void> {
+    const items = await this.restaurantService.getActiveItemsByVenue(venueId);
+
     const map = new Map<string, RestaurantItem[]>();
     for (const item of items) {
-      if (!map.has(item.category)) {
-        map.set(item.category, []);
-      }
+      if (!map.has(item.category)) map.set(item.category, []);
       map.get(item.category)!.push(item);
     }
-    
-    const grouped = Array.from(map.entries()).map(([category, catItems]) => ({
-      category,
-      items: catItems,
-    }));
-    
-    this.menuCategories.set(grouped);
+
+    this.menuCategories.set(
+      Array.from(map.entries()).map(([category, catItems]) => ({ category, items: catItems })),
+    );
   }
 
-  private async loadAvailableSlots(): Promise<void> {
+  private async loadAvailableSlots(venueId: string): Promise<void> {
     const [activeSlots, config] = await Promise.all([
-      this.timeSlotService.getActiveSlots(),
-      this.configService.getConfig(),
+      this.timeSlotService.getActiveSlotsByVenue(venueId),
+      this.configService.getConfigByVenue(venueId),
     ]);
 
     this.config.set(config);

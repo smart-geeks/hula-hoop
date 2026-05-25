@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PackageService } from '../../../../core/services/package.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import { PACKAGE_COLORS } from '../../../../core/interfaces/package';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 
@@ -11,8 +12,9 @@ import type { PartyPackage } from '../../../../core/interfaces/package';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './private-events-section.html',
 })
-export class PrivateEventsSection implements OnInit {
+export class PrivateEventsSection {
   private readonly packageService = inject(PackageService);
+  private readonly publicVenue   = inject(PublicVenueService);
 
   readonly packages = signal<PartyPackage[]>([]);
 
@@ -22,12 +24,14 @@ export class PrivateEventsSection implements OnInit {
     'Piñata', 'Evento de 3 Horas',
   ];
 
-  ngOnInit(): void {
+  constructor() {
     this.loadPackages();
   }
 
-  async loadPackages(): Promise<void> {
-    const data = await this.packageService.getActivePackages();
+  private async loadPackages(): Promise<void> {
+    const venue = this.publicVenue.activeVenue();
+    if (!venue) return;
+    const data = await this.packageService.getActivePackagesByVenue(venue.id);
     this.packages.set(data);
   }
 
