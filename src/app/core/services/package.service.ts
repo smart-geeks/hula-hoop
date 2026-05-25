@@ -96,4 +96,23 @@ export class PackageService {
 
     return true;
   }
+
+  async getActivePackagesByVenue(venueId: string): Promise<PartyPackage[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('packages')
+      .select('*')
+      .eq('venue_id', venueId)
+      .eq('is_active', true)
+      .order('sort_order')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching packages by venue:', error.message);
+      return [];
+    }
+    return data as PartyPackage[];
+  }
 }

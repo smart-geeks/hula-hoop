@@ -1,0 +1,54 @@
+<main class="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-16">
+  <img
+    src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/isotipo.png"
+    alt="Hula Hoop"
+    class="h-24 w-auto mb-8"
+  />
+
+  <h1 class="text-2xl font-bold text-gray-900 mb-2 text-center">
+    Elige tu sucursal
+  </h1>
+  <p class="text-gray-500 text-sm mb-10 text-center">
+    Selecciona la sede más cercana para ver su oferta completa.
+  </p>
+
+  @if (loading()) {
+    <div class="flex flex-col items-center gap-3">
+      <span class="inline-block w-10 h-10 border-4 border-rojo-brillante border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+      <span class="text-gray-400 text-sm">Cargando sucursales…</span>
+    </div>
+  } @else {
+    <ul class="w-full max-w-sm flex flex-col gap-3" role="list">
+      @for (venue of venues(); track venue.id) {
+        <li>
+          <button
+            type="button"
+            (click)="selectVenue(venue)"
+            class="w-full flex items-center gap-4 px-5 py-4 bg-white rounded-2xl shadow-sm border border-gray-100
+                   hover:border-rojo-brillante hover:shadow-md transition-all text-left cursor-pointer
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo-brillante"
+          >
+            @if (venue.logo_url) {
+              <img
+                [src]="venue.logo_url"
+                [alt]="venue.nombre"
+                class="w-12 h-12 rounded-xl object-contain shrink-0"
+              />
+            } @else {
+              <span class="w-12 h-12 rounded-xl bg-rojo-brillante/10 flex items-center justify-center shrink-0" aria-hidden="true">
+                <i class="pi pi-map-marker text-rojo-brillante text-xl"></i>
+              </span>
+            }
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-900 truncate">{{ venue.nombre }}</p>
+              @if (venue.direccion) {
+                <p class="text-xs text-gray-500 truncate mt-0.5">{{ venue.direccion }}</p>
+              }
+            </div>
+            <i class="pi pi-chevron-right text-gray-300 text-sm shrink-0" aria-hidden="true"></i>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</main>

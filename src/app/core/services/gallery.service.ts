@@ -92,6 +92,24 @@ export class GalleryService {
     return data;
   }
 
+  async getActiveImagesByVenue(venueId: string): Promise<GalleryImage[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('gallery_images')
+      .select('*')
+      .eq('venue_id', venueId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching gallery by venue:', error.message);
+      return [];
+    }
+    return data ?? [];
+  }
+
   async deleteImage(image: GalleryImage): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;

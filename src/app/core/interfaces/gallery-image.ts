@@ -1,5 +1,6 @@
 export interface GalleryImage {
   id: string;
+  venue_id: string;
   storage_path: string;
   title: string | null;
   alt_text: string | null;

@@ -23,6 +23,7 @@ export type DepositType = 'full' | 'percentage' | 'fixed';
 
 export interface PartyPackage {
   id: string;
+  venue_id: string;
   name: string;
   description: string | null;
   min_guests: number;

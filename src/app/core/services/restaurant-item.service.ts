@@ -97,4 +97,23 @@ export class RestaurantItemService {
 
     return true;
   }
+
+  async getActiveItemsByVenue(venueId: string): Promise<RestaurantItem[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('restaurant_items')
+      .select('*')
+      .eq('venue_id', venueId)
+      .eq('is_active', true)
+      .order('category')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching menu by venue:', error.message);
+      return [];
+    }
+    return data as RestaurantItem[];
+  }
 }

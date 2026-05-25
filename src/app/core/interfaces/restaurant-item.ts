@@ -1,5 +1,6 @@
 export interface RestaurantItem {
   id: string;
+  venue_id: string;
   category: string;
   name: string;
   description: string | null;
