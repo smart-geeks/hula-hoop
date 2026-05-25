@@ -41,7 +41,15 @@ export class Topbar {
   }
 
   onBookParty(): void {
-    this.router.navigate(['/reservar/fiesta-privada']);
+    const slug = this.publicVenue.activeVenue()?.slug;
+    this.router.navigate(slug
+      ? ['/', slug, 'reservar', 'fiesta-privada']
+      : ['/']);
+  }
+
+  onChangeVenue(): void {
+    this.publicVenue.clearPreferredVenue();
+    this.router.navigate(['/']);
   }
 
   onLogin(): void {

@@ -42,6 +42,13 @@
       >
         Contacto
       </button>
+      <button
+        type="button"
+        class="px-4 py-2 text-sm font-semibold text-gray-500 rounded-lg transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
+        (click)="onChangeVenue()"
+      >
+        Cambiar sucursal
+      </button>
       @if (isLoggedIn()) {
         <a
           routerLink="/mi-cuenta/reservas"
@@ -162,6 +169,14 @@
     >
       <i class="pi pi-envelope" aria-hidden="true"></i>
       Contacto
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 text-gray-500 font-semibold rounded-lg transition-colors hover:bg-gray-100 cursor-pointer w-full text-left"
+      (click)="onChangeVenue(); drawerVisible.set(false)"
+    >
+      <i class="pi pi-sync" aria-hidden="true"></i>
+      Cambiar sucursal
     </button>
 
     @if (isLoggedIn()) {

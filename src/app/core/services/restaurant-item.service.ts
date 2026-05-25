@@ -98,6 +98,24 @@ export class RestaurantItemService {
     return true;
   }
 
+  async getAllItemsByVenue(venueId: string): Promise<RestaurantItem[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('restaurant_items')
+      .select('*')
+      .eq('venue_id', venueId)
+      .order('category')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching all items by venue:', error.message);
+      return [];
+    }
+    return data as RestaurantItem[];
+  }
+
   async getActiveItemsByVenue(venueId: string): Promise<RestaurantItem[]> {
     const client = this.supabase.client;
     if (!client) return [];

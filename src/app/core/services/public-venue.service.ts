@@ -51,6 +51,14 @@ export class PublicVenueService {
     this.writeCookie(COOKIE_KEY, venue.slug, COOKIE_DAYS);
   }
 
+  clearPreferredVenue(): void {
+    this.activeVenue.set(null);
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      document.cookie = `${COOKIE_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax`;
+    } catch {}
+  }
+
   private writeCookie(key: string, value: string, days: number): void {
     if (!isPlatformBrowser(this.platformId)) return;
     try {

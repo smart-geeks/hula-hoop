@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
@@ -13,6 +13,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { SelectModule } from 'primeng/select';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { RestaurantItemService } from '../../../../core/services/restaurant-item.service';
 import { VenueService } from '../../../../core/services/venue.service';
@@ -35,6 +36,7 @@ import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item
     ConfirmDialogModule,
     ToastModule,
     TooltipModule,
+    SelectModule,
     CurrencyMxnPipe,
   ],
   providers: [ConfirmationService, MessageService],
@@ -43,51 +45,71 @@ import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item
 export class AdminRestaurant {
   private readonly restaurantItemService = inject(RestaurantItemService);
   private readonly venueService          = inject(VenueService);
-  private readonly fb = inject(FormBuilder);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly fb                    = inject(FormBuilder);
+  private readonly confirmationService   = inject(ConfirmationService);
+  private readonly messageService        = inject(MessageService);
 
-  readonly items = signal<RestaurantItem[]>([]);
-  readonly loading = signal(true);
+  readonly venues        = this.venueService.venues;
+  readonly items         = signal<RestaurantItem[]>([]);
+  readonly loading       = signal(true);
   readonly dialogVisible = signal(false);
-  readonly editingItem = signal<RestaurantItem | null>(null);
-  readonly saving = signal(false);
+  readonly editingItem   = signal<RestaurantItem | null>(null);
+  readonly saving        = signal(false);
 
   readonly form = this.fb.nonNullable.group({
-    category: ['', Validators.required],
-    name: ['', Validators.required],
+    venue_id:    ['', Validators.required],
+    category:    ['', Validators.required],
+    name:        ['', Validators.required],
     description: [''],
     price_cents: [0, [Validators.required, Validators.min(0)]],
-    is_active: [true],
-    sort_order: [0],
+    is_active:   [true],
+    sort_order:  [0],
   });
 
   constructor() {
-    this.loadItems();
+    // Reload list reactively whenever the active venue changes
+    effect(() => {
+      const venueId = this.venueService.currentVenueId();
+      if (venueId) {
+        this.loadItems(venueId);
+      } else {
+        this.items.set([]);
+        this.loading.set(false);
+      }
+    });
   }
 
-  async loadItems(): Promise<void> {
+  async loadItems(venueId: string): Promise<void> {
     this.loading.set(true);
-    const data = await this.restaurantItemService.getAllItems();
+    const data = await this.restaurantItemService.getAllItemsByVenue(venueId);
     this.items.set(data);
     this.loading.set(false);
   }
 
   openNew(): void {
     this.editingItem.set(null);
-    this.form.reset({ category: '', name: '', description: '', price_cents: 0, is_active: true, sort_order: 0 });
+    this.form.reset({
+      venue_id:    this.venueService.currentVenueId() ?? '',
+      category:    '',
+      name:        '',
+      description: '',
+      price_cents: 0,
+      is_active:   true,
+      sort_order:  0,
+    });
     this.dialogVisible.set(true);
   }
 
   openEdit(item: RestaurantItem): void {
     this.editingItem.set(item);
     this.form.patchValue({
-      category: item.category,
-      name: item.name,
+      venue_id:    item.venue_id,
+      category:    item.category,
+      name:        item.name,
       description: item.description ?? '',
-      price_cents: item.price_cents / 100, // Convert centavos → pesos for display
-      is_active: item.is_active,
-      sort_order: item.sort_order,
+      price_cents: item.price_cents / 100,
+      is_active:   item.is_active,
+      sort_order:  item.sort_order,
     });
     this.dialogVisible.set(true);
   }
@@ -99,8 +121,7 @@ export class AdminRestaurant {
     }
 
     this.saving.set(true);
-    const raw = this.form.getRawValue();
-    // Convert pesos → centavos before saving
+    const raw    = this.form.getRawValue();
     const values = { ...raw, price_cents: Math.round(raw.price_cents * 100) };
     const editing = this.editingItem();
 
@@ -112,13 +133,7 @@ export class AdminRestaurant {
         this.messageService.add({ severity: 'error', summary: 'Error al actualizar' });
       }
     } else {
-      const venueId = this.venueService.currentVenueId();
-      if (!venueId) {
-        this.messageService.add({ severity: 'error', summary: 'Selecciona un salón primero' });
-        this.saving.set(false);
-        return;
-      }
-      const result = await this.restaurantItemService.createItem({ ...values, venue_id: venueId });
+      const result = await this.restaurantItemService.createItem(values);
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Platillo creado' });
       } else {
@@ -128,7 +143,8 @@ export class AdminRestaurant {
 
     this.saving.set(false);
     this.dialogVisible.set(false);
-    await this.loadItems();
+    const venueId = this.venueService.currentVenueId();
+    if (venueId) await this.loadItems(venueId);
   }
 
   confirmDelete(item: RestaurantItem): void {
@@ -142,7 +158,8 @@ export class AdminRestaurant {
         const ok = await this.restaurantItemService.deleteItem(item.id);
         if (ok) {
           this.messageService.add({ severity: 'success', summary: 'Platillo eliminado' });
-          await this.loadItems();
+          const venueId = this.venueService.currentVenueId();
+          if (venueId) await this.loadItems(venueId);
         } else {
           this.messageService.add({ severity: 'error', summary: 'Error al eliminar' });
         }

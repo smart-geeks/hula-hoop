@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
@@ -44,20 +44,21 @@ import type { PartyPackage, DepositType } from '../../../../core/interfaces/pack
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPackages {
-  private readonly packageService = inject(PackageService);
-  private readonly venueService   = inject(VenueService);
-  private readonly fb = inject(FormBuilder);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
+  private readonly packageService       = inject(PackageService);
+  private readonly venueService         = inject(VenueService);
+  private readonly fb                   = inject(FormBuilder);
+  private readonly confirmationService  = inject(ConfirmationService);
+  private readonly messageService       = inject(MessageService);
 
-  readonly packages = signal<PartyPackage[]>([]);
-  readonly loading = signal(true);
-  readonly dialogVisible = signal(false);
+  readonly venues         = this.venueService.venues;
+  readonly packages       = signal<PartyPackage[]>([]);
+  readonly loading        = signal(true);
+  readonly dialogVisible  = signal(false);
   readonly editingPackage = signal<PartyPackage | null>(null);
-  readonly saving = signal(false);
-
+  readonly saving         = signal(false);
   readonly inclusionInput = signal('');
-  readonly colorOptions = PACKAGE_COLORS;
+  readonly colorOptions   = PACKAGE_COLORS;
+
   readonly depositTypeOptions: { label: string; value: DepositType }[] = [
     { label: 'Pago completo (100%)', value: 'full' },
     { label: 'Porcentaje del total', value: 'percentage' },
@@ -65,27 +66,37 @@ export class AdminPackages {
   ];
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', Validators.required],
-    description: [''],
-    min_guests: [1, [Validators.required, Validators.min(1)]],
-    max_guests: [10, [Validators.required, Validators.min(1)]],
-    price_cents: [0, [Validators.required, Validators.min(0)]],
-    inclusions: [[] as string[]],
-    color: [null as string | null],
-    deposit_type: ['full' as DepositType],
-    deposit_value: [0],
+    venue_id:          ['', Validators.required],
+    name:              ['', Validators.required],
+    description:       [''],
+    min_guests:        [1, [Validators.required, Validators.min(1)]],
+    max_guests:        [10, [Validators.required, Validators.min(1)]],
+    price_cents:       [0, [Validators.required, Validators.min(0)]],
+    inclusions:        [[] as string[]],
+    color:             [null as string | null],
+    deposit_type:      ['full' as DepositType],
+    deposit_value:     [0],
     days_to_liquidate: [0, [Validators.min(0)]],
-    is_active: [true],
-    sort_order: [0],
+    is_active:         [true],
+    sort_order:        [0],
   });
 
   constructor() {
-    this.loadPackages();
+    // Reload list reactively whenever the active venue changes
+    effect(() => {
+      const venueId = this.venueService.currentVenueId();
+      if (venueId) {
+        this.loadPackages(venueId);
+      } else {
+        this.packages.set([]);
+        this.loading.set(false);
+      }
+    });
   }
 
-  async loadPackages(): Promise<void> {
+  async loadPackages(venueId: string): Promise<void> {
     this.loading.set(true);
-    const data = await this.packageService.getAllPackages();
+    const data = await this.packageService.getAllPackagesByVenue(venueId);
     this.packages.set(data);
     this.loading.set(false);
   }
@@ -93,18 +104,19 @@ export class AdminPackages {
   openNew(): void {
     this.editingPackage.set(null);
     this.form.reset({
-      name: '',
-      description: '',
-      min_guests: 1,
-      max_guests: 10,
-      price_cents: 0,
-      inclusions: [],
-      color: null,
-      deposit_type: 'full' as DepositType,
-      deposit_value: 0,
+      venue_id:          this.venueService.currentVenueId() ?? '',
+      name:              '',
+      description:       '',
+      min_guests:        1,
+      max_guests:        10,
+      price_cents:       0,
+      inclusions:        [],
+      color:             null,
+      deposit_type:      'full' as DepositType,
+      deposit_value:     0,
       days_to_liquidate: 0,
-      is_active: true,
-      sort_order: 0,
+      is_active:         true,
+      sort_order:        0,
     });
     this.inclusionInput.set('');
     this.dialogVisible.set(true);
@@ -113,18 +125,19 @@ export class AdminPackages {
   openEdit(pkg: PartyPackage): void {
     this.editingPackage.set(pkg);
     this.form.patchValue({
-      name: pkg.name,
-      description: pkg.description ?? '',
-      min_guests: pkg.min_guests,
-      max_guests: pkg.max_guests,
-      price_cents: pkg.price_cents / 100, // Convert centavos → pesos for display
-      inclusions: [...pkg.inclusions],
-      color: pkg.color,
-      deposit_type: pkg.deposit_type,
-      deposit_value: pkg.deposit_type === 'fixed' ? pkg.deposit_value / 100 : pkg.deposit_value,
+      venue_id:          pkg.venue_id,
+      name:              pkg.name,
+      description:       pkg.description ?? '',
+      min_guests:        pkg.min_guests,
+      max_guests:        pkg.max_guests,
+      price_cents:       pkg.price_cents / 100,
+      inclusions:        [...pkg.inclusions],
+      color:             pkg.color,
+      deposit_type:      pkg.deposit_type,
+      deposit_value:     pkg.deposit_type === 'fixed' ? pkg.deposit_value / 100 : pkg.deposit_value,
       days_to_liquidate: pkg.days_to_liquidate ?? 0,
-      is_active: pkg.is_active,
-      sort_order: pkg.sort_order,
+      is_active:         pkg.is_active,
+      sort_order:        pkg.sort_order,
     });
     this.inclusionInput.set('');
     this.dialogVisible.set(true);
@@ -154,14 +167,13 @@ export class AdminPackages {
 
     this.saving.set(true);
     const raw = this.form.getRawValue();
-    // Convert pesos → centavos before saving
     const values = {
       ...raw,
       price_cents: Math.round(raw.price_cents * 100),
       color: (raw.color || null) as PartyPackage['color'],
       deposit_value: raw.deposit_type === 'fixed'
-        ? Math.round(raw.deposit_value * 100)  // pesos → centavos
-        : raw.deposit_type === 'full' ? 0 : raw.deposit_value, // percentage as-is
+        ? Math.round(raw.deposit_value * 100)
+        : raw.deposit_type === 'full' ? 0 : raw.deposit_value,
     };
     const editing = this.editingPackage();
 
@@ -173,13 +185,7 @@ export class AdminPackages {
         this.messageService.add({ severity: 'error', summary: 'Error al actualizar paquete' });
       }
     } else {
-      const venueId = this.venueService.currentVenueId();
-      if (!venueId) {
-        this.messageService.add({ severity: 'error', summary: 'Selecciona un salón primero' });
-        this.saving.set(false);
-        return;
-      }
-      const result = await this.packageService.createPackage({ ...values, venue_id: venueId });
+      const result = await this.packageService.createPackage(values);
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Paquete creado' });
       } else {
@@ -189,7 +195,8 @@ export class AdminPackages {
 
     this.saving.set(false);
     this.dialogVisible.set(false);
-    await this.loadPackages();
+    const venueId = this.venueService.currentVenueId();
+    if (venueId) await this.loadPackages(venueId);
   }
 
   confirmDelete(pkg: PartyPackage): void {
@@ -203,7 +210,8 @@ export class AdminPackages {
         const ok = await this.packageService.deletePackage(pkg.id);
         if (ok) {
           this.messageService.add({ severity: 'success', summary: 'Paquete eliminado' });
-          await this.loadPackages();
+          const venueId = this.venueService.currentVenueId();
+          if (venueId) await this.loadPackages(venueId);
         } else {
           this.messageService.add({ severity: 'error', summary: 'Error al eliminar' });
         }
@@ -211,20 +219,15 @@ export class AdminPackages {
     });
   }
 
-  /** Display price in pesos from cents */
   priceToPesos(cents: number): number {
     return cents / 100;
   }
 
-  /** Display deposit config as readable string */
   depositLabel(pkg: PartyPackage): string {
     switch (pkg.deposit_type) {
-      case 'full':
-        return '100%';
-      case 'percentage':
-        return `${pkg.deposit_value}%`;
-      case 'fixed':
-        return `$${(pkg.deposit_value / 100).toLocaleString('es-MX')} MXN`;
+      case 'full':        return '100%';
+      case 'percentage':  return `${pkg.deposit_value}%`;
+      case 'fixed':       return `$${(pkg.deposit_value / 100).toLocaleString('es-MX')} MXN`;
     }
   }
 }

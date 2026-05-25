@@ -58,6 +58,20 @@
           [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '28rem' }"
           [closable]="true" [draggable]="false">
   <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
+    <div>
+      <label class="block text-sm font-medium text-neutro-700 mb-2">Sucursal *</label>
+      <p-select
+        formControlName="venue_id"
+        [options]="venues()"
+        optionLabel="nombre"
+        optionValue="id"
+        placeholder="Seleccionar sucursal"
+        styleClass="w-full" />
+      @if (form.controls.venue_id.invalid && form.controls.venue_id.touched) {
+        <small class="text-red-500">Selecciona una sucursal.</small>
+      }
+    </div>
+
     <p-floatlabel variant="on">
       <input pInputText id="item-category" formControlName="category" class="w-full" />
       <label for="item-category">Categoría (ej. Bebidas, Botanas) *</label>

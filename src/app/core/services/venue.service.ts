@@ -35,6 +35,9 @@ export class VenueService {
   switchVenue(venueId: string): void {
     this.currentVenueId.set(venueId);
     this.storeId(venueId);
+    // Sync public landing cookie so admin → landing navigation respects the active venue
+    const venue = this.venues().find(v => v.id === venueId);
+    if (venue) this.writeSlugCookie(venue.slug);
   }
 
   async createVenue(data: CreateVenueData): Promise<{ data: Venue | null; error: string | null }> {
@@ -176,5 +179,14 @@ export class VenueService {
   private storeId(id: string): void {
     if (!isPlatformBrowser(this.platformId)) return;
     try { localStorage.setItem(STORAGE_KEY, id); } catch {}
+  }
+
+  private writeSlugCookie(slug: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const expires = new Date(Date.now() + 30 * 864e5).toUTCString();
+      document.cookie =
+        `hh_preferred_venue=${encodeURIComponent(slug)};expires=${expires};path=/;SameSite=Lax`;
+    } catch {}
   }
 }
