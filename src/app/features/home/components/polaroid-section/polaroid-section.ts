@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { GalleryService } from '../../../../core/services/gallery.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { GalleryImage } from '../../../../core/interfaces/gallery-image';
 
 @Component({
@@ -8,21 +9,22 @@ import type { GalleryImage } from '../../../../core/interfaces/gallery-image';
   imports: [],
   templateUrl: './polaroid-section.html',
 })
-export class PolaroidSection implements OnInit {
+export class PolaroidSection {
   private readonly galleryService = inject(GalleryService);
+  private readonly publicVenue   = inject(PublicVenueService);
 
-  readonly images = signal<GalleryImage[]>([]);
-
+  readonly images    = signal<GalleryImage[]>([]);
   readonly polaroids = computed(() => this.images().slice(0, 3));
-
   readonly rotations = [-6, 3, -4];
 
-  ngOnInit(): void {
+  constructor() {
     this.loadImages();
   }
 
-  async loadImages(): Promise<void> {
-    const data = await this.galleryService.getActiveImages();
+  private async loadImages(): Promise<void> {
+    const venue = this.publicVenue.activeVenue();
+    if (!venue) return;
+    const data = await this.galleryService.getActiveImagesByVenue(venue.id);
     this.images.set(data);
   }
 

@@ -18,6 +18,8 @@ import { GallerySection } from '../../components/gallery-section/gallery-section
 import { HomeFooter } from '../../components/home-footer/home-footer';
 import { SeoService, SITE_URL } from '../../../../core/services/seo.service';
 import { JsonLdService } from '../../../../core/services/json-ld.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
+import type { Venue } from '../../../../core/interfaces/venue';
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
@@ -35,14 +37,28 @@ export class HomePage {
   private readonly playDaySection = viewChild.required<ElementRef<HTMLDivElement>>('playDaySection');
 
   constructor() {
-    inject(SeoService).setPage({
-      title: 'Fiestas Infantiles y Play Day en Torreón',
-      description:
-        'Hula Hoop es el playground infantil de Torreón, Coahuila. Celebra la fiesta privada de tus peques o vive un Play Day lleno de juegos y aventuras. ¡Reserva ya!',
-      url: SITE_URL,
-    });
+    const venue = inject(PublicVenueService).activeVenue();
+    const seo   = inject(SeoService);
+    const jsonLd = inject(JsonLdService);
 
-    inject(JsonLdService).set(HOME_JSON_LD);
+    if (venue) {
+      seo.setPage({
+        title: `Fiestas Infantiles y Play Day en Hula Hoop ${venue.nombre}`,
+        description:
+          `Hula Hoop ${venue.nombre} es el playground infantil más divertido. ` +
+          'Celebra la fiesta privada de tus peques o vive un Play Day lleno de juegos y aventuras. ¡Reserva ya!',
+        url: `${SITE_URL}/${venue.slug}`,
+      });
+      jsonLd.set(buildJsonLd(venue));
+    } else {
+      seo.setPage({
+        title: 'Fiestas Infantiles y Play Day en Torreón',
+        description:
+          'Hula Hoop es el playground infantil de Torreón, Coahuila. Celebra la fiesta privada de tus peques o vive un Play Day lleno de juegos y aventuras. ¡Reserva ya!',
+        url: SITE_URL,
+      });
+      jsonLd.set(FALLBACK_JSON_LD);
+    }
 
     afterNextRender(() => {
       this.animateFugaz();
@@ -56,7 +72,6 @@ export class HomePage {
 
     const isMobile = window.innerWidth < 768;
 
-    // On mobile: smaller scale, tighter path that stays within viewport
     const eventsH = eventsEl.offsetHeight;
     const playDayH = playDayEl.offsetHeight;
     const totalH = eventsH + playDayH;
@@ -103,7 +118,51 @@ export class HomePage {
   }
 }
 
-const HOME_JSON_LD = {
+function buildJsonLd(venue: Venue): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'AmusementPark',
+    name: `Hula Hoop ${venue.nombre}`,
+    alternateName: 'Hula Hoop',
+    description:
+      `El playground infantil más divertido en ${venue.nombre}. ` +
+      'Celebra fiestas privadas para niños o disfruta de un Play Day lleno de juegos y aventuras.',
+    url: `${SITE_URL}/${venue.slug}`,
+    ...(venue.telefono ? { telephone: venue.telefono } : {}),
+    ...(venue.email    ? { email: venue.email }         : {}),
+    ...(venue.direccion
+      ? {
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: venue.direccion,
+            addressCountry: 'MX',
+          },
+          hasMap: `https://maps.google.com/?q=${encodeURIComponent(venue.direccion)}`,
+        }
+      : {}),
+    image: venue.logo_url ??
+      'https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png',
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        opens: '16:00',
+        closes: '19:00',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Saturday', 'Sunday'],
+        opens: '09:30',
+        closes: '18:30',
+      },
+    ],
+    priceRange: '$$',
+    currenciesAccepted: 'MXN',
+    paymentAccepted: 'Cash, Credit Card',
+  };
+}
+
+const FALLBACK_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'AmusementPark',
   name: 'Hula Hoop Playground Infantil',
@@ -138,16 +197,7 @@ const HOME_JSON_LD = {
       closes: '18:30',
     },
   ],
-  sameAs: [
-    'https://www.facebook.com/hulahoop',
-    'https://www.instagram.com/hulahoop',
-    'https://www.tiktok.com/@hulahoop',
-  ],
   image: 'https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png',
-  logo: {
-    '@type': 'ImageObject',
-    url: 'https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/logo.png',
-  },
   hasMap: 'https://maps.google.com/?q=Edificio+Feliciano+Chabot+1645,Torreon,Coahuila',
   priceRange: '$$',
   currenciesAccepted: 'MXN',
