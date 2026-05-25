@@ -15,6 +15,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { RestaurantItemService } from '../../../../core/services/restaurant-item.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
 
 @Component({
@@ -41,6 +42,7 @@ import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item
 })
 export class AdminRestaurant {
   private readonly restaurantItemService = inject(RestaurantItemService);
+  private readonly venueService          = inject(VenueService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -110,7 +112,13 @@ export class AdminRestaurant {
         this.messageService.add({ severity: 'error', summary: 'Error al actualizar' });
       }
     } else {
-      const result = await this.restaurantItemService.createItem(values);
+      const venueId = this.venueService.currentVenueId();
+      if (!venueId) {
+        this.messageService.add({ severity: 'error', summary: 'Selecciona un salón primero' });
+        this.saving.set(false);
+        return;
+      }
+      const result = await this.restaurantItemService.createItem({ ...values, venue_id: venueId });
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Platillo creado' });
       } else {

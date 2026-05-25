@@ -16,6 +16,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PackageService } from '../../../../core/services/package.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import { PACKAGE_COLORS } from '../../../../core/interfaces/package';
 import type { PartyPackage, DepositType } from '../../../../core/interfaces/package';
 
@@ -44,6 +45,7 @@ import type { PartyPackage, DepositType } from '../../../../core/interfaces/pack
 })
 export class AdminPackages {
   private readonly packageService = inject(PackageService);
+  private readonly venueService   = inject(VenueService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -171,7 +173,13 @@ export class AdminPackages {
         this.messageService.add({ severity: 'error', summary: 'Error al actualizar paquete' });
       }
     } else {
-      const result = await this.packageService.createPackage(values);
+      const venueId = this.venueService.currentVenueId();
+      if (!venueId) {
+        this.messageService.add({ severity: 'error', summary: 'Selecciona un salón primero' });
+        this.saving.set(false);
+        return;
+      }
+      const result = await this.packageService.createPackage({ ...values, venue_id: venueId });
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Paquete creado' });
       } else {
