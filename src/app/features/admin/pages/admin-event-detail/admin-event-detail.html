@@ -65,6 +65,54 @@
     </div>
   </div>
 
+  <!-- ── PROGRESS BAR ─────────────────────────────────── -->
+  <div class="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-sm">
+    <div class="flex items-center justify-between relative">
+      <!-- Background track -->
+      <div class="absolute left-0 right-0 top-[18px] h-0.5 bg-slate-200 mx-5" aria-hidden="true"></div>
+      <!-- Filled track -->
+      <div class="absolute left-5 top-[18px] h-0.5 bg-emerald-400 transition-all duration-500"
+        [style.width]="stepProgressWidth()"
+        aria-hidden="true"></div>
+
+      @for (step of LIFECYCLE_STEPS; track step.step) {
+        <div class="flex flex-col items-center relative z-10">
+          <!-- Circle: completed = green check, active = red/brand, future = grey -->
+          @if (currentStep() > step.step) {
+            <div class="w-9 h-9 rounded-full bg-emerald-500 text-white ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300"
+              [attr.aria-label]="step.label + ' (completado)'">
+              <i class="pi pi-check text-xs"></i>
+            </div>
+          } @else if (currentStep() === step.step) {
+            <div class="w-9 h-9 rounded-full ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300 text-white"
+              [class]="isLocked() ? 'bg-slate-500' : 'bg-rojo-brillante'"
+              [attr.aria-label]="step.label + ' (actual)'">
+              {{ step.step }}
+            </div>
+          } @else {
+            <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-400 ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300"
+              [attr.aria-label]="step.label + ' (pendiente)'">
+              {{ step.step }}
+            </div>
+          }
+          <!-- Label: always visible on sm+, only active on mobile -->
+          <span class="mt-2 text-[11px] font-medium text-center leading-tight max-w-[60px]"
+            [class]="currentStep() === step.step ? 'text-slate-700 font-semibold' : (currentStep() > step.step ? 'text-emerald-600 hidden sm:block' : 'text-slate-400 hidden sm:block')">
+            {{ step.label }}
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── LOCK BANNER ──────────────────────────────────── -->
+  @if (isLocked()) {
+    <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-slate-600">
+      <i class="pi pi-lock text-slate-400 shrink-0"></i>
+      Este evento ha sido cancelado. Los registros financieros están bloqueados.
+    </div>
+  }
+
   <!-- ── TAB BAR ────────────────────────────────────────── -->
   <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
     @for (tab of [
@@ -235,6 +283,9 @@
         <h2 class="font-semibold text-slate-700">Resumen financiero</h2>
         @if (saldoPendiente() > 0) {
         <button (click)="openPayDialog()"
+          [disabled]="isLocked()"
+          [class.opacity-50]="isLocked()"
+          [class.cursor-not-allowed]="isLocked()"
           class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors">
           <i class="pi pi-plus text-xs"></i>
           Registrar pago
@@ -492,6 +543,9 @@
         <p class="text-xs text-slate-400 mt-0.5">{{ expenses().length }} gasto{{ expenses().length !== 1 ? 's' : '' }} registrado{{ expenses().length !== 1 ? 's' : '' }}</p>
       </div>
       <button (click)="openExpDialog()"
+        [disabled]="isLocked()"
+        [class.opacity-50]="isLocked()"
+        [class.cursor-not-allowed]="isLocked()"
         class="flex items-center gap-2 px-4 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
         <i class="pi pi-plus text-xs"></i>
         Agregar gasto

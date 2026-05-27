@@ -103,6 +103,31 @@ export class AdminEventDetail {
     return getStatusCfg(c.estado, 'contract');
   });
 
+  // ── Step progress bar ─────────────────────────────────
+  // Steps: 1=borrador, 2=firmado, 3=liquidado, 4=cancelado(terminal)
+  readonly currentStep = computed((): number => {
+    switch (this.contract()?.estado) {
+      case 'borrador':   return 1;
+      case 'firmado':    return 2;
+      case 'liquidado':  return 3;
+      case 'cancelado':  return 4;
+      default:           return 1;
+    }
+  });
+
+  // Steps definition exposed to template
+  readonly LIFECYCLE_STEPS: { label: string; step: number }[] = [
+    { label: 'Cotización',  step: 1 },
+    { label: 'Firmado',     step: 2 },
+    { label: 'Liquidado',   step: 3 },
+    { label: 'Cancelado',   step: 4 },
+  ];
+
+  // ── Lock: editing disabled when cancelled ─────────────
+  readonly isLocked = computed(() => {
+    return this.contract()?.estado === 'cancelado';
+  });
+
   constructor() {
     this.loadData();
   }
@@ -137,6 +162,28 @@ export class AdminEventDetail {
     this.payMonto.set(Math.max(0, contract.total_contrato - contract.deposito_pagado));
     if (quote) this.quote.set(quote);
     this.loading.set(false);
+  }
+
+  // ── Advance status ────────────────────────────────────────
+  async advanceStatus(newStatus: ContractStatus): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+
+    if (newStatus === 'liquidado' && this.saldoPendiente() > 0) {
+      const formatted = this.saldoPendiente().toLocaleString('es-MX', {
+        style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
+      });
+      this.showToast('error', `No se puede liquidar el evento: hay saldo pendiente de ${formatted}`);
+      return;
+    }
+
+    const updated = await this.contractService.update(c.id, { estado: newStatus });
+    if (updated) {
+      this.contract.set(updated);
+      this.showToast('success', 'Estado del contrato actualizado');
+    } else {
+      this.showToast('error', 'No se pudo actualizar el estado');
+    }
   }
 
   // ── Tabs ──────────────────────────────────────────────────
@@ -291,6 +338,11 @@ export class AdminEventDetail {
 
   goBack(): void {
     void this.router.navigate(['/admin/eventos']);
+  }
+
+  stepProgressWidth(): string {
+    const pct = (this.currentStep() - 1) / (this.LIFECYCLE_STEPS.length - 1) * 100;
+    return `calc(${pct}% - (${pct / 100} * 2.5rem))`;
   }
 
   private sortTasks(tasks: EventTask[]): EventTask[] {
