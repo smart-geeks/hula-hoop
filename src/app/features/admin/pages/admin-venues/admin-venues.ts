@@ -27,11 +27,14 @@ export class AdminVenues {
   readonly editingId = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
-    nombre:    ['', Validators.required],
-    slug:      ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
-    direccion: [''],
-    telefono:  [''],
-    email:     ['', Validators.email],
+    nombre:           ['', Validators.required],
+    slug:             ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
+    direccion:        [''],
+    telefono:         [''],
+    email:            ['', Validators.email],
+    whatsapp:         [''],
+    horarios:         [''],
+    google_maps_link: [''],
   });
 
   openCreate(): void {
@@ -43,11 +46,14 @@ export class AdminVenues {
 
   openEdit(v: Venue): void {
     this.form.reset({
-      nombre:    v.nombre,
-      slug:      v.slug,
-      direccion: v.direccion ?? '',
-      telefono:  v.telefono ?? '',
-      email:     v.email ?? '',
+      nombre:           v.nombre,
+      slug:             v.slug,
+      direccion:        v.direccion ?? '',
+      telefono:         v.telefono ?? '',
+      email:            v.email ?? '',
+      whatsapp:         v.whatsapp ?? '',
+      horarios:         v.horarios ?? '',
+      google_maps_link: v.google_maps_link ?? '',
     });
     this.editingId.set(v.id);
     this.modalMode.set('edit');
@@ -64,11 +70,14 @@ export class AdminVenues {
 
     const raw = this.form.getRawValue();
     const data: CreateVenueData = {
-      nombre:    raw.nombre,
-      slug:      raw.slug,
-      direccion: raw.direccion || undefined,
-      telefono:  raw.telefono  || undefined,
-      email:     raw.email     || undefined,
+      nombre:           raw.nombre,
+      slug:             raw.slug,
+      direccion:        raw.direccion || undefined,
+      telefono:         raw.telefono  || undefined,
+      email:            raw.email     || undefined,
+      whatsapp:         raw.whatsapp  || undefined,
+      horarios:         raw.horarios  || undefined,
+      google_maps_link: raw.google_maps_link || undefined,
     };
 
     const mode = this.modalMode();
@@ -83,12 +92,12 @@ export class AdminVenues {
         this.messageService.add({ severity: 'error', summary: 'Error al crear salón', detail: error ?? 'Error desconocido' });
       }
     } else if (id) {
-      const result = await this.venue.updateVenue(id, data);
+      const { data: result, error } = await this.venue.updateVenue(id, data);
       if (result) {
         this.messageService.add({ severity: 'success', summary: 'Salón actualizado', detail: result.nombre });
         this.showModal.set(false);
       } else {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el salón' });
+        this.messageService.add({ severity: 'error', summary: 'Error al actualizar', detail: error ?? 'No se pudo actualizar el salón' });
       }
     }
 
@@ -96,7 +105,7 @@ export class AdminVenues {
   }
 
   async toggleActivo(v: Venue): Promise<void> {
-    const result = await this.venue.updateVenue(v.id, { activo: !v.activo });
+    const { data: result } = await this.venue.updateVenue(v.id, { activo: !v.activo });
     if (result) {
       this.messageService.add({
         severity: 'success',

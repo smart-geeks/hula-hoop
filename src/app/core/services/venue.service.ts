@@ -76,9 +76,9 @@ export class VenueService {
     return { data: created as Venue, error: null };
   }
 
-  async updateVenue(id: string, data: UpdateVenueData): Promise<Venue | null> {
+  async updateVenue(id: string, data: UpdateVenueData): Promise<{ data: Venue | null; error: string | null }> {
     const client = this.supabase.client;
-    if (!client) return null;
+    if (!client) return { data: null, error: 'Cliente no disponible' };
 
     const { data: updated, error } = await client
       .from('venues')
@@ -89,10 +89,10 @@ export class VenueService {
 
     if (error) {
       console.error('Error updating venue:', error.message);
-      return null;
+      return { data: null, error: error.message };
     }
     this.venues.update(vs => vs.map(v => v.id === id ? (updated as Venue) : v));
-    return updated as Venue;
+    return { data: updated as Venue, error: null };
   }
 
   async getVenueById(id: string): Promise<{ id: string; slug: string; nombre: string } | null> {
