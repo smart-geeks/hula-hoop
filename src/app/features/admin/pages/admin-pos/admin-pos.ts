@@ -12,9 +12,16 @@ import { InventoryService } from '../../../../core/services/inventory.service';
 import { ContractService } from '../../../../core/services/contract.service';
 import { CashierService } from '../../../../core/services/cashier.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { RestaurantItemService } from '../../../../core/services/restaurant-item.service';
+import { ExtraService } from '../../../../core/services/extra.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
+import { VenueService } from '../../../../core/services/venue.service';
+import { ReservationService } from '../../../../core/services/reservation.service';
+import { SupabaseService } from '../../../../core/services/supabase.service';
 import type { PosSession, PosSale, CartItem, PaymentMethod, CashierProfile } from '../../../../core/interfaces/pos';
 import type { InventoryItem } from '../../../../core/interfaces/inventory';
+import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
+import type { Extra } from '../../../../core/interfaces/extra';
 import type { Contract } from '../../../../core/interfaces/contract';
 import type { Category } from '../../../../core/interfaces/category';
 
@@ -25,12 +32,17 @@ import type { Category } from '../../../../core/interfaces/category';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPos {
-  private readonly posService       = inject(PosService);
-  private readonly inventoryService = inject(InventoryService);
-  private readonly contractService  = inject(ContractService);
-  private readonly cashierService   = inject(CashierService);
-  private readonly categoryService  = inject(CategoryService);
-  private readonly ticketPrint      = inject(PosTicketPrintService);
+  private readonly posService            = inject(PosService);
+  private readonly inventoryService      = inject(InventoryService);
+  private readonly restaurantItemService  = inject(RestaurantItemService);
+  private readonly extraService           = inject(ExtraService);
+  private readonly contractService       = inject(ContractService);
+  private readonly cashierService        = inject(CashierService);
+  private readonly categoryService       = inject(CategoryService);
+  private readonly ticketPrint           = inject(PosTicketPrintService);
+  private readonly venueService          = inject(VenueService);
+  private readonly reservationService    = inject(ReservationService);
+  private readonly supabase              = inject(SupabaseService);
 
   // ── Core data ─────────────────────────────────────────────
   readonly loading        = signal(true);
@@ -38,6 +50,8 @@ export class AdminPos {
   readonly activeSession  = signal<PosSession | null>(null);
   readonly salesHistory   = signal<PosSale[]>([]);
   readonly inventory      = signal<InventoryItem[]>([]);
+  readonly restaurantItems = signal<RestaurantItem[]>([]);
+  readonly extras          = signal<Extra[]>([]);
   readonly contracts      = signal<Contract[]>([]);
   readonly cart           = signal<CartItem[]>([]);
   readonly searchQuery    = signal('');
@@ -56,15 +70,71 @@ export class AdminPos {
   readonly pinError        = signal(false);
   readonly pinValidating   = signal(false);
 
+  // ── Imputación (cost center) ───────────────────────────────
+  readonly scopeType          = signal<'libre' | 'contrato' | 'playdate'>('libre');
+  readonly scopeContractId    = signal<string | null>(null);
+  readonly activeTimeSlotId   = signal<string | null>(null);
+  readonly timeSlots          = signal<{ id: string; start_time: string; end_time: string }[]>([]);
+  readonly checkingCapacity   = signal(false);
+
+  get scopeContractIdBinding(): string { return this.scopeContractId() ?? ''; }
+  set scopeContractIdBinding(v: string) { this.scopeContractId.set(v || null); }
+
+  get activeTimeSlotIdBinding(): string { return this.activeTimeSlotId() ?? ''; }
+  set activeTimeSlotIdBinding(v: string) { this.activeTimeSlotId.set(v || null); }
+
   // ── Computed ───────────────────────────────────────────────
-  readonly filteredInventory = computed(() => {
+  readonly filteredProducts = computed(() => {
     const q   = this.searchQuery().toLowerCase().trim();
     const cat = this.categoryFilter();
-    let list  = this.inventory().filter((i) => i.precio_venta > 0 && i.stock_actual > 0);
-    if (cat !== 'all') list = list.filter((i) => i.categoria === cat);
-    if (q) list = list.filter(
-      (i) => i.nombre.toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q),
-    );
+    
+    // 1. Inventario
+    const invList = this.inventory()
+      .filter((i) => i.precio_venta > 0 && i.stock_actual > 0)
+      .map(i => ({
+        id: i.id,
+        tipo: 'inventario' as const,
+        nombre: i.nombre,
+        sku: i.sku || null,
+        precio: i.precio_venta,
+        categoria: i.categoria || 'Otro',
+        stock: i.stock_actual,
+        unidad: i.unidad || 'pza'
+      }));
+
+    // 2. Restaurante
+    const restList = this.restaurantItems()
+      .map(r => ({
+        id: r.id,
+        tipo: 'restaurante' as const,
+        nombre: r.name,
+        sku: null,
+        precio: r.price_cents / 100,
+        categoria: 'Restaurante - ' + r.category,
+        stock: 999,
+        unidad: 'serv'
+      }));
+
+    // 3. Extras
+    const extraList = this.extras()
+      .map(e => ({
+        id: e.id,
+        tipo: 'extra' as const,
+        nombre: e.name,
+        sku: null,
+        precio: e.price_cents / 100,
+        categoria: 'Extras',
+        stock: 999,
+        unidad: 'serv'
+      }));
+
+    let list = [...invList, ...restList, ...extraList];
+    if (cat !== 'all') list = list.filter((p) => p.categoria === cat);
+    if (q) {
+      list = list.filter(
+        (p) => p.nombre.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q),
+      );
+    }
     return list;
   });
 
@@ -83,8 +153,9 @@ export class AdminPos {
   readonly categories = computed(() => {
     const dbNames = new Set(this.productCategories().map((c) => c.nombre));
     const invCats = this.inventory().map((i) => i.categoria).filter(Boolean) as string[];
-    // DB categories first, then any inventory categories not in DB
-    const extra = invCats.filter((c) => !dbNames.has(c));
+    const restCats = this.restaurantItems().map((r) => 'Restaurante - ' + r.category);
+    const allCats = [...invCats, ...restCats, 'Extras'];
+    const extra = allCats.filter((c) => !dbNames.has(c));
     return [...Array.from(dbNames), ...Array.from(new Set(extra))];
   });
 
@@ -99,13 +170,29 @@ export class AdminPos {
   }
 
   private async loadAll(): Promise<void> {
-    const [sessions, inventory, contracts, cashiers, productCategories] = await Promise.all([
+    const venueId = this.venueService.currentVenueId() || '00000000-0000-0000-0000-000000000001';
+
+    const [sessions, inventory, restaurantItems, extras, contracts, cashiers, productCategories] = await Promise.all([
       this.posService.getActiveSessions(),
       this.inventoryService.getAll(),
+      this.restaurantItemService.getActiveItemsByVenue(venueId),
+      this.extraService.getActiveExtrasByVenue(venueId),
       this.contractService.getAll(),
       this.cashierService.getActive(),
       this.categoryService.getByTipo('producto'),
     ]);
+
+    // Cargar time_slots activos del venue para el selector de Play Day
+    const client = this.supabase.client;
+    if (client) {
+      const { data: slots } = await client
+        .from('time_slots')
+        .select('id, start_time, end_time')
+        .eq('venue_id', venueId)
+        .eq('is_active', true)
+        .order('start_time');
+      this.timeSlots.set(slots ?? []);
+    }
 
     let sales: PosSale[] = [];
     if (sessions.length > 0) {
@@ -117,6 +204,8 @@ export class AdminPos {
       this.salesHistory.set(sales);
     }
     this.inventory.set(inventory);
+    this.restaurantItems.set(restaurantItems);
+    this.extras.set(extras);
     this.contracts.set(contracts.filter((c) => c.estado !== 'cancelado'));
     this.cashiers.set(cashiers);
     this.productCategories.set(productCategories);
@@ -215,13 +304,37 @@ export class AdminPos {
 
   // ── Carrito ────────────────────────────────────────────────
 
-  addToCart(item: InventoryItem): void {
-    const existing = this.cart().find((c) => c.item_id === item.id);
+  async addToCart(prod: { id: string; tipo: 'inventario' | 'restaurante' | 'extra'; nombre: string; sku: string | null; precio: number; stock: number }): Promise<void> {
+    // Verificar capacidad si es un producto de acceso (boleto Play Day)
+    if (prod.tipo === 'restaurante') {
+      const item = this.restaurantItems().find((r) => r.id === prod.id);
+      if (item?.category === 'acceso') {
+        if (this.scopeType() !== 'playdate' || !this.activeTimeSlotId()) {
+          this.showToast('error', 'Selecciona el turno de Play Day activo en el selector de imputación');
+          return;
+        }
+        this.checkingCapacity.set(true);
+        const today = new Date().toISOString().split('T')[0];
+        const maxCap = 20; // fallback — idealmente de venueConfig
+        const available = await this.reservationService.getPlaydateAvailability(today, this.activeTimeSlotId()!, maxCap);
+        this.checkingCapacity.set(false);
+
+        const alreadyInCart = this.cart()
+          .filter((c) => c.id === prod.id && c.tipo === 'restaurante')
+          .reduce((sum, c) => sum + c.cantidad, 0);
+        if (available - alreadyInCart <= 0) {
+          this.showToast('error', '¡Cupo de Play Day completo para este turno!');
+          return;
+        }
+      }
+    }
+
+    const existing = this.cart().find((c) => c.id === prod.id && c.tipo === prod.tipo);
     if (existing) {
-      if (existing.cantidad >= item.stock_actual) return;
+      if (existing.cantidad >= prod.stock) return;
       this.cart.update((list) =>
         list.map((c) =>
-          c.item_id === item.id
+          c.id === prod.id && c.tipo === prod.tipo
             ? { ...c, cantidad: c.cantidad + 1, subtotal: (c.cantidad + 1) * c.precio_unitario }
             : c,
         ),
@@ -230,34 +343,45 @@ export class AdminPos {
       this.cart.update((list) => [
         ...list,
         {
-          item_id:         item.id,
-          nombre:          item.nombre,
-          sku:             item.sku,
+          id:              prod.id,
+          tipo:            prod.tipo,
+          nombre:          prod.nombre,
+          sku:             prod.sku,
           cantidad:        1,
-          precio_unitario: item.precio_venta,
-          subtotal:        item.precio_venta,
+          precio_unitario: prod.precio,
+          subtotal:        prod.precio,
         },
       ]);
     }
   }
 
-  updateQty(item_id: string, delta: number): void {
+  updateQty(id: string, tipo: 'inventario' | 'restaurante' | 'extra', delta: number): void {
     this.cart.update((list) => {
-      const inv = this.inventory().find((i) => i.id === item_id);
-      return list
-        .map((c) => {
-          if (c.item_id !== item_id) return c;
-          const newQty = c.cantidad + delta;
-          if (newQty <= 0) return null;
-          if (inv && newQty > inv.stock_actual) return c;
-          return { ...c, cantidad: newQty, subtotal: newQty * c.precio_unitario };
-        })
-        .filter(Boolean) as CartItem[];
+      const existing = list.find((c) => c.id === id && c.tipo === tipo);
+      if (!existing) return list;
+      
+      const newQty = existing.cantidad + delta;
+      if (newQty <= 0) {
+        return list.filter((c) => !(c.id === id && c.tipo === tipo));
+      }
+      
+      let stockLimit = 999;
+      if (tipo === 'inventario') {
+        const inv = this.inventory().find((i) => i.id === id);
+        if (inv) stockLimit = inv.stock_actual;
+      }
+      if (newQty > stockLimit) return list;
+      
+      return list.map((c) =>
+        c.id === id && c.tipo === tipo
+          ? { ...c, cantidad: newQty, subtotal: newQty * c.precio_unitario }
+          : c
+      );
     });
   }
 
-  removeFromCart(item_id: string): void {
-    this.cart.update((list) => list.filter((c) => c.item_id !== item_id));
+  removeFromCart(id: string, tipo: 'inventario' | 'restaurante' | 'extra'): void {
+    this.cart.update((list) => list.filter((c) => !(c.id === id && c.tipo === tipo)));
   }
 
   clearCart(): void { this.cart.set([]); }
@@ -271,26 +395,33 @@ export class AdminPos {
     const cashierId    = this.activeCashier()?.id ?? null;
 
     const sale = await this.posService.registerSale({
-      session_id: session.id,
-      cashier_id: cashierId,
-      total:      this.cartTotal(),
-      pagado_con: this.paymentMethod(),
-      items:      cartSnapshot.map((c) => ({
-        item_id:         c.item_id,
-        cantidad:        c.cantidad,
-        precio_unitario: c.precio_unitario,
+      session_id:            session.id,
+      cashier_id:            cashierId,
+      total:                 this.cartTotal(),
+      pagado_con:            this.paymentMethod(),
+      contract_id:           this.scopeType() === 'contrato' ? (this.scopeContractId() ?? null) : null,
+      playdate_date:         this.scopeType() === 'playdate' ? new Date().toISOString().split('T')[0] : null,
+      playdate_time_slot_id: this.scopeType() === 'playdate' ? (this.activeTimeSlotId() ?? null) : null,
+      items:                 cartSnapshot.map((c) => ({
+        item_id:            c.tipo === 'inventario' ? c.id : null,
+        restaurant_item_id: c.tipo === 'restaurante' ? c.id : null,
+        extra_id:           c.tipo === 'extra' ? c.id : null,
+        cantidad:           c.cantidad,
+        precio_unitario:    c.precio_unitario,
       })),
     });
 
     if (sale) {
       for (const cartItem of cartSnapshot) {
-        await this.inventoryService.registerMovement({
-          item_id:     cartItem.item_id,
-          tipo:        'salida',
-          cantidad:    cartItem.cantidad,
-          motivo:      `Venta POS ${sale.folio}`,
-          contract_id: session.contract_id ?? undefined,
-        });
+        if (cartItem.tipo === 'inventario') {
+          await this.inventoryService.registerMovement({
+            item_id:     cartItem.id,
+            tipo:        'salida',
+            cantidad:    cartItem.cantidad,
+            motivo:      `Venta POS ${sale.folio}`,
+            contract_id: session.contract_id ?? undefined,
+          });
+        }
       }
       const updatedInventory = await this.inventoryService.getAll();
       this.inventory.set(updatedInventory);
@@ -308,8 +439,8 @@ export class AdminPos {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
-  getCartQty(item_id: string): number {
-    return this.cart().find((c) => c.item_id === item_id)?.cantidad ?? 0;
+  getCartQty(id: string, tipo: 'inventario' | 'restaurante' | 'extra'): number {
+    return this.cart().find((c) => c.id === id && c.tipo === tipo)?.cantidad ?? 0;
   }
 
   private fmt(value: number): string {

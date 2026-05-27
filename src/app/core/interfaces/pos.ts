@@ -31,12 +31,16 @@ export interface PosSession {
 export interface PosSaleItem {
   id: string;
   sale_id: string;
-  item_id: string;
+  item_id?: string | null;
+  restaurant_item_id?: string | null;
+  extra_id?: string | null;
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
   // Relations
   item?: { nombre: string; sku: string | null };
+  restaurant_item?: { name: string };
+  extra?: { name: string };
 }
 
 // ── Venta ─────────────────────────────────────────────────────────────────────
@@ -54,7 +58,8 @@ export interface PosSale {
 
 // ── Carrito (estado local, no persiste en BD) ─────────────────────────────────
 export interface CartItem {
-  item_id: string;
+  id: string;
+  tipo: 'inventario' | 'restaurante' | 'extra';
   nombre: string;
   sku: string | null;
   cantidad: number;
@@ -69,4 +74,8 @@ export interface CreateSaleData {
   total: number;
   pagado_con: PaymentMethod;
   items: Omit<PosSaleItem, 'id' | 'sale_id' | 'subtotal'>[];
+  // Cost center fields (Fase 4 — transaction-level scoping)
+  contract_id?: string | null;
+  playdate_date?: string | null;
+  playdate_time_slot_id?: string | null;
 }
