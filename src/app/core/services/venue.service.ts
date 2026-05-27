@@ -45,12 +45,15 @@ export class VenueService {
     if (!client) return { data: null, error: 'Sin conexión a Supabase' };
 
     const { data: venueId, error } = await client.rpc('create_venue', {
-      p_nombre:    data.nombre,
-      p_slug:      data.slug,
-      p_direccion: data.direccion ?? null,
-      p_telefono:  data.telefono  ?? null,
-      p_email:     data.email     ?? null,
-      p_logo_url:  data.logo_url  ?? null,
+      p_nombre:           data.nombre,
+      p_slug:             data.slug,
+      p_direccion:        data.direccion ?? null,
+      p_telefono:         data.telefono  ?? null,
+      p_email:            data.email     ?? null,
+      p_logo_url:         data.logo_url  ?? null,
+      p_whatsapp:         data.whatsapp  ?? null,
+      p_horarios:         data.horarios  ?? null,
+      p_google_maps_link: data.google_maps_link ?? null,
     });
 
     if (error || !venueId) {
@@ -90,6 +93,17 @@ export class VenueService {
     }
     this.venues.update(vs => vs.map(v => v.id === id ? (updated as Venue) : v));
     return updated as Venue;
+  }
+
+  async getVenueById(id: string): Promise<{ id: string; slug: string; nombre: string } | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+    const { data } = await client
+      .from('venues')
+      .select('id, slug, nombre')
+      .eq('id', id)
+      .single();
+    return data ?? null;
   }
 
   async getVenueUsers(venueId: string): Promise<VenueUser[]> {

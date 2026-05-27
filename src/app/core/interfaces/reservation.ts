@@ -7,6 +7,7 @@ export type ReservationStatus =
 
 export interface PrivateReservation {
   id: string;
+  venue_id: string;
   profile_id: string | null;
   guest_name: string;
   guest_email: string;
@@ -41,6 +42,7 @@ export interface PrivateReservationExtra {
 
 export interface PlaydateReservation {
   id: string;
+  venue_id: string;
   profile_id: string | null;
   guest_name: string;
   guest_email: string;
@@ -62,6 +64,7 @@ export interface PlaydateReservation {
 
 /** Data needed to create a private reservation */
 export interface CreatePrivateReservationData {
+  venue_id: string;
   profile_id?: string | null;
   guest_name: string;
   guest_email: string;
@@ -75,11 +78,13 @@ export interface CreatePrivateReservationData {
   deposit_cents: number;
   notes?: string;
   snack_option_id?: string;
+  quote_id?: string | null;
   extras: { extra_id: string; quantity: number; unit_price_cents: number }[];
 }
 
 /** Data needed to create a playdate reservation */
 export interface CreatePlaydateReservationData {
+  venue_id: string;
   profile_id?: string | null;
   guest_name: string;
   guest_email: string;

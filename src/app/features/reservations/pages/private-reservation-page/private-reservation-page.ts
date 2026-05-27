@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { StepperModule } from 'primeng/stepper';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ButtonModule } from 'primeng/button';
@@ -21,6 +21,7 @@ import { VenueConfigService } from '../../../../core/services/venue-config.servi
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PaymentService } from '../../../../core/services/payment.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 import type { Extra } from '../../../../core/interfaces/extra';
@@ -62,12 +63,15 @@ export class PrivateReservationPage {
   private readonly reservationService = inject(ReservationService);
   private readonly authService = inject(AuthService);
   private readonly paymentService = inject(PaymentService);
+  private readonly publicVenue = inject(PublicVenueService);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly route  = inject(ActivatedRoute);
 
   // ── State ──
-  readonly activeStep = signal(1);
+  readonly activeStep     = signal(1);
+  readonly linkedQuoteId  = signal<string | null>(null);
   readonly loading = signal(true);
   readonly submitting = signal(false);
 
@@ -169,18 +173,46 @@ export class PrivateReservationPage {
   readonly isAdmin = computed(() => this.authService.isAdmin());
 
   constructor() {
+    const quoteId = this.route.snapshot.queryParamMap.get('quote_id');
+    this.linkedQuoteId.set(quoteId);
     this.loadData();
   }
 
   private async loadData(): Promise<void> {
     this.loading.set(true);
-    const [slots, pkgs, extras, snacks, config] = await Promise.all([
-      this.timeSlotService.getActiveSlots(),
-      this.packageService.getActivePackages(),
-      this.extraService.getActiveExtras(),
-      this.snackOptionService.getActiveSnackOptions(),
-      this.configService.getConfig(),
-    ]);
+    const venue = this.publicVenue.activeVenue();
+
+    let slots: TimeSlot[] = [];
+    let pkgs: PartyPackage[] = [];
+    let extras: Extra[] = [];
+    let config: VenueConfig | null = null;
+
+    if (venue) {
+      const [s, p, e, c] = await Promise.all([
+        this.timeSlotService.getActiveSlotsByVenue(venue.id),
+        this.packageService.getActivePackagesByVenue(venue.id),
+        this.extraService.getActiveExtrasByVenue(venue.id),
+        this.configService.getConfigByVenue(venue.id),
+      ]);
+      slots = s;
+      pkgs = p;
+      extras = e;
+      config = c;
+    } else {
+      const [s, p, e, c] = await Promise.all([
+        this.timeSlotService.getActiveSlots(),
+        this.packageService.getActivePackages(),
+        this.extraService.getActiveExtras(),
+        this.configService.getConfig(),
+      ]);
+      slots = s;
+      pkgs = p;
+      extras = e;
+      config = c;
+    }
+
+    const snacks = await this.snackOptionService.getActiveSnackOptions();
+
     this.timeSlots.set(slots);
     this.packages.set(pkgs);
     this.extras.set(extras);
@@ -321,33 +353,42 @@ export class PrivateReservationPage {
 
     const snack = this.selectedSnackOption();
 
-    const reservation = await this.reservationService.createPrivateReservation({
-      profile_id: user?.id ?? null,
-      guest_name: contact.guest_name,
-      guest_email: contact.guest_email,
-      guest_phone: contact.guest_phone,
-      reservation_date: this.formatDateISO(date),
-      time_slot_id: slot.id,
-      package_id: pkg.id,
-      guest_count: this.guestCount(),
-      subtotal_cents: this.subtotalCents(),
-      total_cents: this.totalCents(),
-      deposit_cents: this.depositCents(),
-      notes: contact.notes || undefined,
-      snack_option_id: snack?.id,
-      extras: this.selectedExtras().map((se) => ({
-        extra_id: se.extra.id,
-        quantity: se.quantity,
-        unit_price_cents: se.extra.price_cents,
-      })),
-    });
-
-    if (!reservation) {
+    const venue = this.publicVenue.activeVenue();
+    let reservation;
+    try {
+      reservation = await this.reservationService.createPrivateReservation({
+        venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+        profile_id: user?.id ?? null,
+        guest_name: contact.guest_name,
+        guest_email: contact.guest_email,
+        guest_phone: contact.guest_phone,
+        reservation_date: this.formatDateISO(date),
+        time_slot_id: slot.id,
+        package_id: pkg.id,
+        guest_count: this.guestCount(),
+        subtotal_cents: this.subtotalCents(),
+        total_cents: this.totalCents(),
+        deposit_cents: this.depositCents(),
+        notes: contact.notes || undefined,
+        snack_option_id: snack?.id,
+        quote_id: this.linkedQuoteId() ?? undefined,
+        extras: this.selectedExtras().map((se) => ({
+          extra_id: se.extra.id,
+          quantity: se.quantity,
+          unit_price_cents: se.extra.price_cents,
+        })),
+      });
+    } catch (err: any) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error al crear la reserva',
-        detail: 'Intenta de nuevo más tarde.',
+        detail: err.message || 'Intenta de nuevo más tarde.',
       });
+      this.submitting.set(false);
+      return;
+    }
+
+    if (!reservation) {
       this.submitting.set(false);
       return;
     }
@@ -387,33 +428,42 @@ export class PrivateReservationPage {
     const user = this.authService.currentUser();
     const snack = this.selectedSnackOption();
 
-    const reservation = await this.reservationService.createPrivateReservation({
-      profile_id: user?.id ?? null,
-      guest_name: contact.guest_name,
-      guest_email: contact.guest_email,
-      guest_phone: contact.guest_phone,
-      reservation_date: this.formatDateISO(date),
-      time_slot_id: slot.id,
-      package_id: pkg.id,
-      guest_count: this.guestCount(),
-      subtotal_cents: this.subtotalCents(),
-      total_cents: this.totalCents(),
-      deposit_cents: this.depositCents(),
-      notes: contact.notes || undefined,
-      snack_option_id: snack?.id,
-      extras: this.selectedExtras().map((se) => ({
-        extra_id: se.extra.id,
-        quantity: se.quantity,
-        unit_price_cents: se.extra.price_cents,
-      })),
-    });
-
-    if (!reservation) {
+    const venue = this.publicVenue.activeVenue();
+    let reservation;
+    try {
+      reservation = await this.reservationService.createPrivateReservation({
+        venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+        profile_id: user?.id ?? null,
+        guest_name: contact.guest_name,
+        guest_email: contact.guest_email,
+        guest_phone: contact.guest_phone,
+        reservation_date: this.formatDateISO(date),
+        time_slot_id: slot.id,
+        package_id: pkg.id,
+        guest_count: this.guestCount(),
+        subtotal_cents: this.subtotalCents(),
+        total_cents: this.totalCents(),
+        deposit_cents: this.depositCents(),
+        notes: contact.notes || undefined,
+        snack_option_id: snack?.id,
+        quote_id: this.linkedQuoteId() ?? undefined,
+        extras: this.selectedExtras().map((se) => ({
+          extra_id: se.extra.id,
+          quantity: se.quantity,
+          unit_price_cents: se.extra.price_cents,
+        })),
+      });
+    } catch (err: any) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error al crear la reserva',
-        detail: 'Intenta de nuevo más tarde.',
+        detail: err.message || 'Intenta de nuevo más tarde.',
       });
+      this.submitting.set(false);
+      return;
+    }
+
+    if (!reservation) {
       this.submitting.set(false);
       return;
     }
