@@ -174,6 +174,7 @@ export class AdminEventDetail {
       this.showToast('success', 'Pago registrado correctamente');
       this.payDialog.set(false);
       await this.loadData();
+      await this.printReceipt();
     } else {
       this.showToast('error', 'Error al registrar el pago');
     }
