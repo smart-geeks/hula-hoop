@@ -45,6 +45,12 @@ export class AdminConfig {
   readonly loading = signal(true);
   readonly saving  = signal(false);
 
+  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora'>('general');
+
+  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora'): void {
+    this.activeTab.set(tab);
+  }
+
   // ── Cajeros ────────────────────────────────────────────────
   readonly cashiers        = signal<CashierProfile[]>([]);
   readonly cashierLoading  = signal(false);
