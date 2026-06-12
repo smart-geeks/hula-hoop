@@ -44,6 +44,8 @@ export interface CreateContractData {
   total_contrato: number;
   deposito_pagado?: number;
   estado?: ContractStatus;
+  pdf_url?: string | null;
+  fecha_firma?: string | null;
   notas?: string;
 }
 

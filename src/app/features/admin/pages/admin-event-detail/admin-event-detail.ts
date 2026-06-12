@@ -14,13 +14,13 @@ import { ExpenseService } from '../../../../core/services/expense.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
-import type { Contract, ContractStatus } from '../../../../core/interfaces/contract';
+import type { Contract, ContractStatus, ContractPayment } from '../../../../core/interfaces/contract';
 import type { Quote } from '../../../../core/interfaces/quote';
 import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 import type { AdminExpense } from '../../../../core/interfaces/expense';
 import { EXPENSE_CATEGORIES } from '../../../../core/interfaces/expense';
 
-type DetailTab = 'resumen' | 'pagos' | 'cotizacion' | 'tareas' | 'gastos';
+type DetailTab = 'resumen' | 'contrato' | 'pagos' | 'cotizacion' | 'tareas' | 'gastos';
 type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 
 @Component({
@@ -111,6 +111,18 @@ export class AdminEventDetail {
     return getStatusCfg(status, 'contract');
   });
 
+  readonly statusIcon = computed(() => {
+    const status = this.contract()?.estado ?? 'borrador';
+    switch (status) {
+      case 'borrador': return 'pi-pencil';
+      case 'firmado': return 'pi-check';
+      case 'liquidado': return 'pi-wallet';
+      case 'concluido': return 'pi-flag';
+      case 'cancelado': return 'pi-times-circle';
+      default: return 'pi-pencil';
+    }
+  });
+
   constructor() {
     this.loadData();
   }
@@ -185,18 +197,36 @@ export class AdminEventDetail {
     const c = this.contract();
     if (!c) return;
     try {
-      const lastPayment = c.payments && c.payments.length > 0
-        ? c.payments[c.payments.length - 1]
-        : {
-            id: '',
-            contract_id: c.id,
-            monto: c.deposito_pagado,
-            fecha: c.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-            metodo: 'efectivo' as const,
-            notas: 'Pago inicial / abonos',
-            created_at: c.created_at || new Date().toISOString(),
-          };
+      let lastPayment: ContractPayment;
+      if (c.payments && c.payments.length > 0) {
+        const sorted = [...c.payments].sort((a, b) => 
+          new Date(a.created_at || a.fecha).getTime() - new Date(b.created_at || b.fecha).getTime()
+        );
+        lastPayment = sorted[sorted.length - 1];
+      } else {
+        lastPayment = {
+          id: '',
+          contract_id: c.id,
+          monto: Number(c.deposito_pagado),
+          fecha: c.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          metodo: 'efectivo' as const,
+          notas: 'Pago inicial / abonos',
+          created_at: c.created_at || new Date().toISOString(),
+        };
+      }
       this.ticketPrint.printPayment(c, lastPayment, this.quote());
+      this.showToast('success', 'Ticket enviado a la impresora');
+    } catch (err: any) {
+      console.error(err);
+      this.showToast('error', `Error al imprimir: ${err.message || err}`);
+    }
+  }
+
+  async printReceiptForPayment(payment: ContractPayment): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+    try {
+      this.ticketPrint.printPayment(c, payment, this.quote());
       this.showToast('success', 'Ticket enviado a la impresora');
     } catch (err: any) {
       console.error(err);
@@ -331,13 +361,15 @@ export class AdminEventDetail {
   }
 
   // ── Helpers ───────────────────────────────────────────────
-  formatDate(dateStr: string): string {
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-MX', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
   }
 
-  formatTime(time: string): string {
+  formatTime(time: string | null | undefined): string {
+    if (!time) return '—';
     const timePart = time.includes('T') ? time.split('T')[1] : time;
     const [h, m] = timePart.split(':');
     const hour = parseInt(h, 10);
@@ -384,4 +416,176 @@ export class AdminEventDetail {
     if (status === 'concluido') return 4;
     return 1;
   });
+
+  async updateContractStatus(estado: ContractStatus): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+
+    this.loading.set(true);
+    const updated = await this.contractService.update(c.id, { estado });
+    this.loading.set(false);
+
+    if (updated) {
+      this.contract.set(updated);
+      this.showToast('success', `Estado de contrato actualizado a ${estado}`);
+    } else {
+      this.showToast('error', 'No se pudo actualizar el estado del contrato');
+    }
+  }
+
+  async onContractFileUpload(event: Event): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+
+    const input = event.target as HTMLInputElement;
+    if (!input || !input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    this.loading.set(true);
+    const uploadedUrl = await this.contractService.uploadContractPdf(c.id, file);
+    this.loading.set(false);
+
+    if (uploadedUrl) {
+      const updated = await this.contractService.getById(c.id);
+      if (updated) {
+        this.contract.set(updated);
+      }
+      this.showToast('success', 'Contrato firmado subido con éxito');
+    } else {
+      this.showToast('error', 'Error al subir el archivo del contrato');
+    }
+  }
+
+  sendContractEmail(): void {
+    const c = this.contract();
+    if (!c) return;
+
+    const email = c.client?.email ?? '';
+    const subject = encodeURIComponent(`Contrato de Servicio Hula Hoop ${c.folio}`);
+    const body = encodeURIComponent(
+      `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
+      `Adjuntamos el enlace para revisar los detalles del contrato para tu evento el día ${this.formatDate(c.fecha_evento)}:\n` +
+      `Total del Contrato: $${c.total_contrato.toLocaleString('es-MX')} MXN\n` +
+      `Anticipo Pagado: $${c.deposito_pagado.toLocaleString('es-MX')} MXN\n` +
+      `Saldo Pendiente: $${c.saldo_pendiente.toLocaleString('es-MX')} MXN\n\n` +
+      `Por favor, firma de conformidad y devuélvenos el contrato firmado. Si tienes dudas, estamos a tu disposición.\n\n` +
+      `Atentamente,\nHula Hoop Eventos`
+    );
+
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+  }
+
+  downloadContract(): void {
+    const c = this.contract();
+    if (!c) return;
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    const fechaEvento = c.fecha_evento
+      ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : '—';
+    const fechaCelebracion = c.fecha_firma
+      ? new Date(c.fecha_firma + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : c.created_at
+        ? new Date(c.created_at).toLocaleDateString('es-MX', { dateStyle: 'long' })
+        : new Date().toLocaleDateString('es-MX', { dateStyle: 'long' });
+
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8">
+      <title>Contrato ${c.folio} — Hula Hoop</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#334155;line-height:1.6;padding:50px 60px;background:#fff;font-size:13px;text-align:justify}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:35px;padding-bottom:15px;border-bottom:2px solid #e2e8f0}
+        .logo{font-size:24px;font-weight:800;color:#E30D1C;letter-spacing:-0.5px}
+        .title{font-size:15px;font-weight:800;text-align:center;text-transform:uppercase;margin:30px 0 20px 0;color:#1e293b}
+        .section-title{font-weight:700;text-transform:uppercase;margin:20px 0 10px 0;font-size:12px;color:#0f172a}
+        p{margin-bottom:12px;text-indent:24px}
+        ol{margin:10px 0 15px 30px}
+        ol li{margin-bottom:8px}
+        .details-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12px}
+        .details-table td{padding:8px 12px;border:1px solid #cbd5e1}
+        .details-table td.label{font-weight:700;background:#f8fafc;width:25%}
+        .signatures{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:60px;page-break-inside:avoid}
+        .signature-block{text-align:center}
+        .signature-line{border-top:1px solid #475569;margin-top:50px;padding-top:8px;font-size:12px;font-weight:600}
+        .footer{margin-top:60px;border-top:1px solid #e2e8f0;padding-top:15px;font-size:10px;color:#94a3b8;text-align:center}
+        @media print{body{padding:20px 30px}}
+      </style>
+    </head><body>
+      <div class="header">
+        <div class="logo">HULA HOOP</div>
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:14px">CONTRATO DE ADHESIÓN</div>
+          <div style="color:#64748b;font-size:12px">FOLIO: ${c.folio}</div>
+        </div>
+      </div>
+
+      <div class="title">CONTRATO DE PRESTACIÓN DE SERVICIOS PARA EVENTO SOCIAL</div>
+
+      <p>CONTRATO DE PRESTACIÓN DE SERVICIOS QUE CELEBRAN, POR UNA PARTE, EL SALÓN DE EVENTOS HULA HOOP (EN LO SUCESIVO <strong>"EL PRESTADOR"</strong>), Y POR LA OTRA PARTE, LA PERSONA CUYOS DATOS APARECEN EN LA TABLA DE ESPECIFICACIONES DE ESTE DOCUMENTO (EN LO SUCESIVO <strong>"EL CLIENTE"</strong>), AL TENOR DE LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:</p>
+
+      <div class="section-title">DECLARACIONES</div>
+      <p>I. Declara <strong>"EL PRESTADOR"</strong> ser una empresa debidamente constituida conforme a las leyes mexicanas, con facultades suficientes para obligarse en los términos de este instrumento, y contar con la infraestructura y personal calificado para la prestación del servicio objeto del presente contrato.</p>
+      <p>II. Declara <strong>"EL CLIENTE"</strong>, por su propio derecho, contar con capacidad legal suficiente para contratar y obligarse en los términos del presente instrumento, reconociendo que los datos proporcionados son verídicos y vigentes.</p>
+
+      <div class="section-title">ESPECIFICACIONES DEL SERVICIO Y EVENTO</div>
+      <table class="details-table">
+        <tr>
+          <td class="label">Cliente</td>
+          <td>${c.client?.nombre ?? '—'}</td>
+          <td class="label">Fecha Evento</td>
+          <td>${fechaEvento}</td>
+        </tr>
+        <tr>
+          <td class="label">Teléfono</td>
+          <td>${c.client?.telefono ?? '—'}</td>
+          <td class="label">Horario</td>
+          <td>De ${c.hora_inicio ? this.formatTime(c.hora_inicio) : '—'} a ${c.hora_fin ? this.formatTime(c.hora_fin) : '—'}</td>
+        </tr>
+        <tr>
+          <td class="label">Email</td>
+          <td>${c.client?.email ?? '—'}</td>
+          <td class="label">Costo Renta</td>
+          <td>$${c.salon_renta.toLocaleString('es-MX')} MXN</td>
+        </tr>
+        <tr>
+          <td class="label">Total Contrato</td>
+          <td><strong>$${c.total_contrato.toLocaleString('es-MX')} MXN</strong></td>
+          <td class="label">Anticipo Pagado</td>
+          <td style="color:#16a34a;font-weight:600">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
+        </tr>
+        <tr>
+          <td class="label">Saldo Pendiente</td>
+          <td colspan="3" style="color:#dc2626;font-weight:700">$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</td>
+        </tr>
+      </table>
+
+      <div class="section-title">CLÁUSULAS</div>
+      <ol>
+        <li><strong>PRIMERA (OBJETO):</strong> "EL PRESTADOR" se obliga a prestar el servicio de renta del salón de eventos Hula Hoop para la realización del evento social de "EL CLIENTE", de conformidad con los términos descritos en el presente contrato.</li>
+        <li><strong>SEGUNDA (PRECIO Y CONDICIONES DE PAGO):</strong> "EL CLIENTE" se obliga a pagar a "EL PRESTADOR" la cantidad total señalada como "Total Contrato". Para reservar formalmente el espacio y la fecha, se requiere el anticipo detallado arriba. El saldo restante ("Saldo Pendiente") deberá ser liquidado por "EL CLIENTE" a más tardar el día de la celebración del evento, antes del inicio del mismo.</li>
+        <li><strong>TERCERA (POLÍTICA DE CANCELACIÓN Y MODIFICACIÓN):</strong> Cualquier cancelación por parte de "EL CLIENTE" implicará la pérdida total del anticipo pagado, por concepto de indemnización a "EL PRESTADOR" por reserva y bloqueo de la fecha. En caso de solicitar cambio de fecha, quedará sujeto a la disponibilidad del salón y se aplicará el cargo vigente por reprogramación de eventos.</li>
+        <li><strong>CUARTA (REGLAMENTO INTERNO):</strong> "EL CLIENTE" y sus invitados se obligan a observar en todo momento las normas de uso, seguridad e higiene de las instalaciones de Hula Hoop, respondiendo el cliente por cualquier daño material causado a los equipos, juguetes o infraestructura del inmueble por dolo, negligencia o mal uso.</li>
+        <li><strong>QUINTA (VIGENCIA Y JURISDICCIÓN):</strong> El presente contrato surte sus efectos a partir del momento de la firma electrónica o física por ambas partes. Para la interpretación y cumplimiento de este instrumento, las partes se someten a las leyes y tribunales competentes en la materia de la localidad del establecimiento, renunciando a cualquier otra jurisdicción.</li>
+      </ol>
+
+      <p style="margin-top:20px;text-indent:0">Leído por las partes y enterados de su alcance legal, se firma por duplicado el día ${fechaCelebracion}.</p>
+
+      <div class="signatures">
+        <div class="signature-block">
+          <div class="signature-line">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
+        </div>
+      </div>
+
+      <div class="footer">Este contrato fue generado por Hula Hoop · Calle Ejemplar · Tel: (55) 1234-5678 · info@hulahoop.mx</div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 400);
+  }
 }

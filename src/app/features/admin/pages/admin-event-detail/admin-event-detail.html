@@ -117,6 +117,7 @@
   <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
     @for (tab of [
       {id: 'resumen',    icon: 'pi-info-circle',    label: 'Resumen'},
+      {id: 'contrato',   icon: 'pi-file-pdf',       label: 'Contrato'},
       {id: 'pagos',      icon: 'pi-credit-card',    label: 'Pagos'},
       {id: 'cotizacion', icon: 'pi-file',            label: 'Cotización'},
       {id: 'tareas',     icon: 'pi-check-square',   label: 'Tareas'},
@@ -273,6 +274,236 @@
   </div>
   }
 
+  <!-- ── CONTRATO ─────────────────────────────────────────── -->
+  @if (activeTab() === 'contrato') {
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Document viewer (left, Span 2) -->
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+        <h2 class="font-semibold text-slate-700 flex items-center gap-2">
+          <i class="pi pi-file-pdf text-red-500"></i>
+          Vista Previa del Contrato Legal
+        </h2>
+        <div class="flex gap-2">
+          <button (click)="downloadContract()"
+            class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1">
+            <i class="pi pi-print"></i> Imprimir / PDF
+          </button>
+          <button (click)="sendContractEmail()"
+            class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1">
+            <i class="pi pi-envelope"></i> Enviar por Correo
+          </button>
+        </div>
+      </div>
+
+      <!-- Contract document sheet -->
+      <div class="p-8 max-h-[600px] overflow-y-auto bg-slate-50 text-slate-600 space-y-6 text-sm text-justify font-sans leading-relaxed">
+        <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 max-w-2xl mx-auto space-y-6">
+          <!-- Document Header -->
+          <div class="flex justify-between items-start border-b pb-4">
+            <div>
+              <span class="text-xl font-black text-rojo-brillante tracking-tight">HULA HOOP</span>
+              <p class="text-[10px] text-slate-400 font-medium">SALÓN DE EVENTOS</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">CONTRATO DE ADHESIÓN</span>
+              <p class="text-xs text-slate-400 font-semibold mt-1">Folio: {{ contract()?.folio }}</p>
+            </div>
+          </div>
+
+          <div class="text-center font-bold text-slate-800 uppercase tracking-wide my-4">
+            Contrato de Prestación de Servicios para Evento Social
+          </div>
+
+          <p class="indent-6">Contrato de prestación de servicios que celebran, por una parte, el salón de eventos <strong>HULA HOOP</strong> (en lo sucesivo <strong>"El Prestador"</strong>), y por la otra parte, la persona física cuyos datos aparecen registrados en la ficha técnica adjunta (en lo sucesivo <strong>"El Cliente"</strong>), de conformidad con las siguientes Declaraciones y Cláusulas:</p>
+
+          <!-- Specifications Table -->
+          <div>
+            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-2">Especificaciones y Datos Técnicos</span>
+            <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Nombre del Cliente</div>
+                <div class="p-3 text-slate-700 font-medium">{{ contract()?.client?.nombre ?? '—' }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Contacto</div>
+                <div class="p-3 text-slate-700 font-medium">{{ contract()?.client?.telefono ?? '—' }} / {{ contract()?.client?.email ?? '—' }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Fecha del Evento</div>
+                <div class="p-3 text-slate-700 font-medium">{{ formatDate(contract()?.fecha_evento) }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Horario del Evento</div>
+                <div class="p-3 text-slate-700 font-medium">De {{ formatTime(contract()?.hora_inicio) }} a {{ formatTime(contract()?.hora_fin) }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Costo Renta Salón</div>
+                <div class="p-3 text-slate-700 font-semibold">{{ contract()?.salon_renta | currency }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200 bg-red-50/10">
+                <div class="p-3 bg-red-50/20 font-bold text-red-700 border-r">Total Contrato</div>
+                <div class="p-3 text-slate-800 font-black">{{ contract()?.total_contrato | currency }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-emerald-50/10 font-semibold text-emerald-700 border-r">Anticipo Pagado</div>
+                <div class="p-3 text-emerald-700 font-bold">{{ contract()?.deposito_pagado | currency }}</div>
+              </div>
+              <div class="grid grid-cols-2 bg-slate-50/50">
+                <div class="p-3 bg-red-50/30 font-bold text-red-600 border-r">Saldo Pendiente</div>
+                <div class="p-3 text-red-600 font-bold">{{ contract()?.saldo_pendiente | currency }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Declaraciones -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider block">Declaraciones</span>
+            <p class="text-xs leading-relaxed">I. Declara <strong>"El Prestador"</strong> ser una entidad autorizada y contar con las licencias correspondientes, así como con el personal y equipamiento idóneo para brindar servicios de eventos infantiles y sociales en su domicilio comercial.</p>
+            <p class="text-xs leading-relaxed">II. Declara <strong>"El Cliente"</strong> contar con la capacidad legal suficiente y la solvencia económica requerida para obligarse bajo los términos y condiciones estipulados en el presente instrumento.</p>
+          </div>
+
+          <!-- Cláusulas -->
+          <div class="space-y-3">
+            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider block">Cláusulas del Contrato</span>
+            <div class="text-xs space-y-2.5">
+              <div><strong>PRIMERA (OBJETO):</strong> La renta temporal y exclusiva de las instalaciones de Hula Hoop para el evento detallado en la sección técnica, comprometiéndose a prestar los servicios contratados con altos estándares de calidad.</div>
+              <div><strong>SEGUNDA (VALOR Y FORMA DE PAGO):</strong> El precio de la prestación del servicio está estipulado como "Total Contrato". Para garantizar y reservar formalmente el salón se requiere el pago de un anticipo. El remanente deberá liquidarse íntegramente a más tardar el día del evento antes de que este inicie.</div>
+              <div><strong>TERCERA (POLÍTICA DE CANCELACIONES):</strong> Si "El Cliente" rescinde el contrato unilateralmente, perderá irrevocablemente el anticipo entregado como indemnización por daños comerciales. Modificaciones de fecha quedan sujetas a penalización y disponibilidad de Hula Hoop.</div>
+              <div><strong>CUARTA (RESPONSABILIDAD Y SEGURIDAD):</strong> "El Cliente" asume plena responsabilidad civil y legal por la integridad física y conductas de sus invitados dentro de las instalaciones, comprometiéndose a reparar o pagar el costo de cualquier desperfecto o siniestro causado intencionalmente o por descuido a los bienes de Hula Hoop.</div>
+              <div><strong>QUINTA (VIGENCIA Y JURISDICCIÓN):</strong> Ambas partes expresan su conformidad y firman el presente contrato, renunciando a cualquier fuero que pudiere corresponderles por razón de domicilio, sometiéndose a los tribunales del estado.</div>
+            </div>
+          </div>
+
+          <!-- Signatures line -->
+          <div class="grid grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+            <div class="text-center">
+              <div class="border-t border-slate-300 pt-2 text-[10px] font-semibold text-slate-500 uppercase">
+                Por HULA HOOP
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="border-t border-slate-300 pt-2 text-[10px] font-semibold text-slate-500 uppercase">
+                Por EL CLIENTE
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Management Sidebar (right, Span 1) -->
+    <div class="space-y-6">
+
+      <!-- Status control -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <i class="pi pi-cog text-slate-400"></i>
+          Estado del Contrato
+        </h3>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Estado Actual</label>
+            <span [class]="'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ' + statusConfig().classes">
+              <i [class]="'pi ' + statusIcon() + ' text-[10px]'"></i>
+              {{ statusConfig().label }}
+            </span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Cambiar Estado</label>
+            <div class="flex flex-col gap-2">
+              <button (click)="updateContractStatus('borrador')"
+                [disabled]="contract()?.estado === 'borrador'"
+                class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl text-left hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                <i class="pi pi-pencil text-slate-400"></i> Borrador / Cotizado
+              </button>
+              <button (click)="updateContractStatus('firmado')"
+                [disabled]="contract()?.estado === 'firmado'"
+                class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl text-left hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                <i class="pi pi-check text-blue-500"></i> Contratado / Firmado
+              </button>
+              <button (click)="updateContractStatus('liquidado')"
+                [disabled]="contract()?.estado === 'liquidado'"
+                class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl text-left hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                <i class="pi pi-wallet text-emerald-500"></i> Liquidado
+              </button>
+              <button (click)="updateContractStatus('concluido')"
+                [disabled]="contract()?.estado === 'concluido'"
+                class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl text-left hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                <i class="pi pi-flag text-indigo-500"></i> Concluido
+              </button>
+              <button (click)="updateContractStatus('cancelado')"
+                [disabled]="contract()?.estado === 'cancelado'"
+                class="px-4 py-2 border border-red-100 text-red-600 text-xs font-semibold rounded-xl text-left hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                <i class="pi pi-times-circle text-red-400"></i> Cancelado
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signed file upload -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <i class="pi pi-upload text-slate-400"></i>
+          Expediente Digital
+        </h3>
+
+        <div class="space-y-4">
+          @if (contract()?.pdf_url) {
+            <div class="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl text-xs space-y-2">
+              <div class="flex items-center gap-2 text-emerald-800 font-bold">
+                <i class="pi pi-verified text-sm"></i>
+                Contrato Firmado Cargado
+              </div>
+              <p class="text-slate-500 leading-normal">
+                Se ha adjuntado una copia del contrato firmado en el expediente digital de este evento.
+              </p>
+              <a [href]="contract()?.pdf_url" target="_blank"
+                class="inline-flex items-center gap-1 text-rojo-brillante font-semibold hover:underline">
+                <i class="pi pi-external-link"></i> Ver archivo cargado
+              </a>
+            </div>
+          } @else {
+            <div class="p-4 bg-amber-50/50 border border-amber-100 rounded-xl text-xs space-y-1">
+              <div class="flex items-center gap-2 text-amber-800 font-bold">
+                <i class="pi pi-exclamation-circle text-sm"></i>
+                Falta Contrato Firmado
+              </div>
+              <p class="text-slate-500 leading-normal">
+                No se ha subido una copia física/digital del contrato firmado por el cliente.
+              </p>
+            </div>
+          }
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">
+              Subir contrato firmado (PDF / Imagen)
+            </label>
+            <div class="relative border border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
+              <input type="file" (change)="onContractFileUpload($event)"
+                accept="application/pdf,image/*"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              <div class="flex flex-col items-center gap-2">
+                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:scale-105 transition-transform">
+                  <i class="pi pi-file-export"></i>
+                </div>
+                <span class="text-xs font-semibold text-slate-600">Seleccionar archivo</span>
+                <span class="text-[10px] text-slate-400">PDF, JPG, PNG hasta 10MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+  }
+
   <!-- ── PAGOS ────────────────────────────────────────────── -->
   @if (activeTab() === 'pagos') {
   <div class="space-y-5">
@@ -353,7 +584,13 @@
               @if (pay.notas) { <p class="text-xs text-slate-400 italic">{{ pay.notas }}</p> }
             </div>
           </div>
-          <p class="text-base font-bold text-emerald-700">+{{ pay.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+          <div class="flex items-center gap-3">
+            <p class="text-base font-bold text-emerald-700">+{{ pay.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+            <button (click)="printReceiptForPayment(pay)" title="Reimprimir Comprobante"
+              class="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors">
+              <i class="pi pi-print text-xs"></i>
+            </button>
+          </div>
         </div>
         }
       </div>
@@ -761,7 +998,7 @@
       <div class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Título de la actividad *</label>
-          <input #taskTitle type="text" placeholder="Ej. Comprar pastel, acomodar sillas..." 
+          <input #taskTitle type="text" placeholder="Ej. Comprar pastel, acomodar sillas..." (input)="0"
             class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rojo-brillante" />
         </div>
         <div>

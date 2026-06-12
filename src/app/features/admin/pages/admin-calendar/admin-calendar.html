@@ -49,7 +49,7 @@
   }
 
   <!-- Calendar grid + side panel -->
-  <div class="flex gap-5 items-start">
+  <div class="flex flex-col xl:flex-row gap-5 items-start">
 
     <!-- ── Calendar grid ── -->
     <div class="flex-1 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden min-w-0">
@@ -91,13 +91,14 @@
         <div class="grid grid-cols-7 divide-x divide-y divide-slate-100">
           @for (day of calendarDays(); track day.date.toISOString()) {
             <button (click)="selectDay(day)"
-              [class]="'relative min-h-[72px] p-2 text-left transition-colors '
-                + (!day.isCurrentMonth ? 'bg-slate-50/40 ' : '')
-                + (day.isToday ? 'bg-rojo-brillante/4 ' : 'hover:bg-slate-50 ')
+              [class]="'relative min-h-[58px] sm:min-h-[72px] p-1 sm:p-2 text-left transition-colors '
+                + (!day.isCurrentMonth ? 'bg-slate-50/40 '
+                  : day.isToday ? 'bg-rojo-brillante/4 '
+                  : 'hover:bg-slate-50 ')
                 + (selectedDay()?.date?.toISOString() === day.date.toISOString() ? 'ring-2 ring-inset ring-rojo-brillante/40 bg-rojo-brillante/3 ' : '')">
 
               <!-- Day number -->
-              <span [class]="'inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold leading-none mb-1 '
+              <span [class]="'inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-semibold leading-none mb-1 '
                 + (day.isToday
                   ? 'bg-rojo-brillante text-white'
                   : day.isCurrentMonth
@@ -106,9 +107,10 @@
                 {{ day.dayNum }}
               </span>
 
-              <!-- Event dots -->
+              <!-- Event indicators -->
               @if (day.events.length > 0) {
-                <div class="space-y-0.5">
+                <!-- Desktop view (full labels) -->
+                <div class="hidden sm:block space-y-0.5">
                   @for (ev of day.events; track ev.id; let i = $index) {
                     @if (i < 2) {
                       <div [class]="'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate '
@@ -124,6 +126,18 @@
                     <div class="text-[10px] text-slate-400 px-1 font-medium">
                       +{{ day.events.length - 2 }} más
                     </div>
+                  }
+                </div>
+
+                <!-- Mobile view (small visual dots to prevent layout compressing) -->
+                <div class="flex sm:hidden flex-wrap gap-0.5 mt-auto">
+                  @for (ev of day.events; track ev.id) {
+                    <span [class]="'w-1.5 h-1.5 rounded-full '
+                      + (ev.estado === 'liquidado' ? 'bg-emerald-500'
+                        : ev.estado === 'firmado' ? 'bg-blue-500'
+                        : ev.estado === 'cancelado' ? 'bg-red-500'
+                        : 'bg-slate-400')">
+                    </span>
                   }
                 </div>
               }
@@ -156,7 +170,7 @@
 
     <!-- ── Side panel: day detail ── -->
     @if (selectedDay()) {
-      <div class="w-72 bg-white border border-slate-200 rounded-2xl shadow-sm shrink-0 overflow-hidden">
+      <div class="w-full xl:w-80 bg-white border border-slate-200 rounded-2xl shadow-sm shrink-0 overflow-hidden">
 
         <!-- Panel header -->
         <div class="px-5 py-4 border-b border-slate-100">
@@ -259,7 +273,7 @@
       </div>
     } @else {
       <!-- Placeholder cuando no hay día seleccionado -->
-      <div class="w-72 bg-white border border-dashed border-slate-200 rounded-2xl shrink-0 flex flex-col items-center justify-center py-14 text-center px-6">
+      <div class="hidden xl:flex w-80 bg-white border border-dashed border-slate-200 rounded-2xl shrink-0 flex-col items-center justify-center py-14 text-center px-6">
         <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
           <i class="pi pi-hand-pointer text-slate-300 text-xl"></i>
         </div>

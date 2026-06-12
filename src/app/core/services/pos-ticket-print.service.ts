@@ -597,40 +597,68 @@ export class PosTicketPrintService {
 
   // ── Formatters ──────────────────────────────────────────────────────────────
 
-  private fmt(value: number): string {
+  private fmt(value: any): string {
+    const num = typeof value === 'number' ? value : parseFloat(value || '0');
     return new Intl.NumberFormat('es-MX', {
       style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).format(value);
+    }).format(isNaN(num) ? 0 : num);
   }
 
-  private fmtDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
+  private fmtDate(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      return d.toLocaleDateString('es-MX', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      });
+    } catch {
+      return String(iso);
+    }
   }
 
-  private fmtTime(iso: string): string {
-    return new Date(iso).toLocaleTimeString('es-MX', {
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    });
+  private fmtTime(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('es-MX', {
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+    } catch {
+      return '';
+    }
   }
 
-  private fmtEventDate(dateStr: string): string {
-    // fecha_evento viene como 'YYYY-MM-DD'; forzar UTC para evitar desfase por zona horaria
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString('es-MX', {
-      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-    });
+  private fmtEventDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return String(dateStr);
+      const [y, m, d] = parts.map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('es-MX', {
+        weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+      });
+    } catch {
+      return String(dateStr);
+    }
   }
 
-  private getPaymentDeadline(eventDateStr: string): string {
-    const [y, m, d] = eventDateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    date.setDate(date.getDate() - 15);
-    return date.toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    });
+  private getPaymentDeadline(eventDateStr: string | null | undefined): string {
+    if (!eventDateStr) return '—';
+    try {
+      const parts = eventDateStr.split('-');
+      if (parts.length < 3) return String(eventDateStr);
+      const [y, m, d] = parts.map(Number);
+      const date = new Date(y, m - 1, d);
+      date.setDate(date.getDate() - 15);
+      return date.toLocaleDateString('es-MX', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      });
+    } catch {
+      return String(eventDateStr);
+    }
   }
 
   private fmtHourSlot(timeStr: string | null): string {

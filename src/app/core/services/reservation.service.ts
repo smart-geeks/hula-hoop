@@ -20,6 +20,24 @@ export interface AvailablePlaydateSlot {
 export class ReservationService {
   private readonly supabase = inject(SupabaseService);
 
+  async getPrivateReservationByQuoteId(quoteId: string): Promise<PrivateReservation | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('private_reservations')
+      .select('*')
+      .eq('quote_id', quoteId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching private reservation by quote_id:', error.message);
+      return null;
+    }
+
+    return data as PrivateReservation;
+  }
+
   // ── Private Reservations ──────────────────────────────────
 
   async createPrivateReservation(data: CreatePrivateReservationData): Promise<PrivateReservation | null> {
