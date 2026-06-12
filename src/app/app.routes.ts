@@ -34,6 +34,12 @@ export const routes: Routes = [
         .then(m => m.QuotePublicPage),
   },
   {
+    path: 'contrato/:id',
+    loadComponent: () =>
+      import('./features/contracts/pages/contract-public-page/contract-public-page')
+        .then(m => m.ContractPublicPage),
+  },
+  {
     path: 'reserva/:accessToken',
     loadComponent: () =>
       import('./features/reservations/pages/reservation-detail-page/reservation-detail-page')

@@ -148,6 +148,41 @@ export class ContractService {
     return publicUrl;
   }
 
+  async uploadDocument(id: string, folder: 'ine' | 'comprobante' | 'firma', file: File): Promise<string | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const ext = file.name.split('.').pop() || 'pdf';
+    const fileName = `contracts/${folder}/${id}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from('gallery')
+      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) {
+      console.error(`Error uploading contract ${folder}:`, uploadError);
+      return null;
+    }
+
+    const { data: publicUrlData } = client.storage
+      .from('gallery')
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicUrlData?.publicUrl || null;
+    if (publicUrl) {
+      let updateData: UpdateContractData = {};
+      if (folder === 'ine') {
+        updateData = { ine_url: publicUrl };
+      } else if (folder === 'comprobante') {
+        updateData = { comprobante_url: publicUrl };
+      } else if (folder === 'firma') {
+        updateData = { firma_url: publicUrl };
+      }
+      await this.update(id, updateData);
+    }
+    return publicUrl;
+  }
+
   async addPayment(
     contractId: string,
     payment: Omit<ContractPayment, 'id' | 'contract_id' | 'created_at'>,

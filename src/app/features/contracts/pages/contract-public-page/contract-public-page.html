@@ -1,0 +1,471 @@
+<div class="max-w-4xl mx-auto px-4 py-8">
+
+  @if (loading()) {
+    <div class="flex justify-center py-16">
+      <div class="w-8 h-8 border-4 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
+  } @else if (notFound()) {
+    <div class="text-center py-16">
+      <div class="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto mb-5">
+        <i class="pi pi-file-excel text-4xl text-slate-300"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-700 mb-2">Contrato no encontrado</h1>
+      <p class="text-slate-400 text-sm mb-6">El enlace no es válido o el contrato no existe en nuestro sistema.</p>
+      <a routerLink="/"
+        class="inline-flex items-center gap-2 px-5 py-2.5 bg-rojo-brillante text-white rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 transition-colors">
+        <i class="pi pi-home text-sm"></i>
+        Ir al inicio
+      </a>
+    </div>
+
+  } @else if (contract(); as c) {
+    <!-- Brand Header -->
+    <div class="flex items-center justify-between mb-8 border-b border-slate-100 pb-6">
+      <div>
+        <div class="text-2xl font-extrabold text-rojo-brillante tracking-tight">Hula Hoop</div>
+        <p class="text-xs text-slate-400 mt-0.5">Firma de Contrato de Servicios</p>
+      </div>
+      <div class="text-right">
+        <p class="text-lg font-bold text-slate-700 font-mono">{{ c.folio }}</p>
+        <span [class]="'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + 
+          (c.estado === 'firmado' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')">
+          {{ c.estado | uppercase }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Column 1: Contract & Event Info (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Event Summary Box -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Resumen del Evento</h2>
+          
+          <div class="space-y-4">
+            <div>
+              <p class="text-xs text-slate-400 mb-0.5">Cliente</p>
+              <p class="font-semibold text-slate-800">{{ c.client?.nombre || 'No asignado' }}</p>
+              @if (c.client?.email) {
+                <p class="text-xs text-slate-500 font-mono">{{ c.client?.email }}</p>
+              }
+              @if (c.client?.telefono) {
+                <p class="text-xs text-slate-500">{{ c.client?.telefono }}</p>
+              }
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400 mb-0.5">Fecha y Hora</p>
+              <p class="font-semibold text-slate-800 capitalize">{{ formatDate(c.fecha_evento) }}</p>
+              @if (c.hora_inicio) {
+                <p class="text-xs text-slate-500 mt-0.5">{{ c.hora_inicio }}{{ c.hora_fin ? ' – ' + c.hora_fin : '' }}</p>
+              }
+            </div>
+
+            @if (c.pdf_url) {
+              <div class="pt-2">
+                <a [href]="c.pdf_url" target="_blank" 
+                  class="inline-flex items-center gap-2 text-xs font-semibold text-rojo-brillante hover:underline">
+                  <i class="pi pi-file-pdf"></i>
+                  Descargar contrato preliminar (PDF)
+                </a>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Financial Breakdown Box -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Detalle Financiero</h2>
+          
+          <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Renta del Salón</span>
+              <span class="font-medium text-slate-700">{{ c.salon_renta | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Total del Contrato</span>
+              <span class="font-medium text-slate-700">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500 text-emerald-600">Depósito Pagado</span>
+              <span class="font-medium text-emerald-600 font-semibold">{{ c.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            
+            <hr class="border-slate-100 my-2" />
+            
+            <div class="flex justify-between text-base font-bold text-slate-800">
+              <span>Saldo Pendiente</span>
+              <span class="text-rojo-brillante">{{ c.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if (c.notas) {
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Notas / Especificaciones</p>
+            <p class="text-xs text-slate-600 whitespace-pre-line">{{ c.notas }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Column 2: Wizard / Verification Steps (7 cols) -->
+      <div class="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-8">
+        
+        <!-- Step Indicators -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center" aria-hidden="true">
+            <div class="w-full border-t border-slate-200"></div>
+          </div>
+          <div class="relative flex justify-between">
+            <!-- Step 1 Indicator -->
+            <button (click)="goToStep(1)" [disabled]="currentStep() === 4"
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors font-semibold text-sm shadow-sm"
+              [ngClass]="{
+                'bg-rojo-brillante text-white': currentStep() === 1,
+                'bg-emerald-600 text-white': currentStep() > 1,
+                'bg-white border border-slate-300 text-slate-500 hover:border-slate-400': currentStep() < 1
+              }">
+              @if (currentStep() > 1) {
+                <i class="pi pi-check text-xs"></i>
+              } @else {
+                1
+              }
+            </button>
+
+            <!-- Step 2 Indicator -->
+            <button (click)="goToStep(2)" [disabled]="currentStep() === 4"
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors font-semibold text-sm shadow-sm"
+              [ngClass]="{
+                'bg-rojo-brillante text-white': currentStep() === 2,
+                'bg-emerald-600 text-white': currentStep() > 2,
+                'bg-white border border-slate-300 text-slate-500 hover:border-slate-400': currentStep() < 2
+              }">
+              @if (currentStep() > 2) {
+                <i class="pi pi-check text-xs"></i>
+              } @else {
+                2
+              }
+            </button>
+
+            <!-- Step 3 Indicator -->
+            <button (click)="goToStep(3)" [disabled]="currentStep() === 4"
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors font-semibold text-sm shadow-sm"
+              [ngClass]="{
+                'bg-rojo-brillante text-white': currentStep() === 3,
+                'bg-emerald-600 text-white': currentStep() > 3,
+                'bg-white border border-slate-300 text-slate-500 hover:border-slate-400': currentStep() < 3
+              }">
+              @if (currentStep() > 3) {
+                <i class="pi pi-check text-xs"></i>
+              } @else {
+                3
+              }
+            </button>
+
+            <!-- Step 4 Indicator -->
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors font-semibold text-sm shadow-sm"
+              [ngClass]="{
+                'bg-emerald-600 text-white': currentStep() === 4,
+                'bg-white border border-slate-300 text-slate-500': currentStep() < 4
+              }">
+              <i class="pi pi-verified text-sm"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 1: UPLOAD INE -->
+        @if (currentStep() === 1) {
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-xl font-bold text-slate-800">Paso 1: Identificación Oficial (INE)</h3>
+              <p class="text-slate-500 text-sm mt-1">Por favor sube una fotografía o documento PDF legible de tu identificación oficial (INE, Pasaporte o Cédula).</p>
+            </div>
+
+            <!-- Upload Area -->
+            <div class="border-2 border-dashed border-slate-300 hover:border-rojo-brillante/50 rounded-2xl p-8 text-center transition-colors bg-slate-50/50 relative">
+              <input type="file" accept="image/*,application/pdf" (change)="onFileSelected($event, 'ine')" 
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [disabled]="uploadingIne()" />
+              
+              @if (uploadingIne()) {
+                <div class="flex flex-col items-center justify-center space-y-3 py-4">
+                  <div class="w-8 h-8 border-4 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+                  <p class="text-sm text-slate-500 font-medium">Subiendo archivo...</p>
+                </div>
+              } @else if (ineUrl()) {
+                <div class="space-y-3 py-4">
+                  <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
+                    <i class="pi pi-check-circle text-2xl"></i>
+                  </div>
+                  <p class="text-sm font-semibold text-slate-800">¡Identificación subida correctamente!</p>
+                  <a [href]="ineUrl()" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-medium">
+                    <i class="pi pi-eye"></i> Ver archivo subido
+                  </a>
+                </div>
+              } @else {
+                <div class="space-y-3">
+                  <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                    <i class="pi pi-upload text-xl"></i>
+                  </div>
+                  <div>
+                    <span class="text-rojo-brillante font-semibold text-sm">Haz clic para subir</span>
+                    <span class="text-slate-500 text-sm"> o arrastra tu archivo aquí</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Formatos permitidos: JPG, PNG, PDF (Máx. 10MB)</p>
+                </div>
+              }
+            </div>
+
+            <div class="flex justify-end pt-4">
+              <button (click)="goToStep(2)" [disabled]="!ineUrl() || uploadingIne()"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-rojo-brillante text-white rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 disabled:opacity-50 transition-colors shadow-sm">
+                Siguiente paso
+                <i class="pi pi-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 2: UPLOAD PROOF OF ADDRESS -->
+        @if (currentStep() === 2) {
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-xl font-bold text-slate-800">Paso 2: Comprobante de Domicilio</h3>
+              <p class="text-slate-500 text-sm mt-1">Por favor sube un comprobante reciente (luz, agua, teléfono, etc., no mayor a 3 meses).</p>
+            </div>
+
+            <!-- Upload Area -->
+            <div class="border-2 border-dashed border-slate-300 hover:border-rojo-brillante/50 rounded-2xl p-8 text-center transition-colors bg-slate-50/50 relative">
+              <input type="file" accept="image/*,application/pdf" (change)="onFileSelected($event, 'comprobante')" 
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [disabled]="uploadingComp()" />
+              
+              @if (uploadingComp()) {
+                <div class="flex flex-col items-center justify-center space-y-3 py-4">
+                  <div class="w-8 h-8 border-4 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+                  <p class="text-sm text-slate-500 font-medium">Subiendo archivo...</p>
+                </div>
+              } @else if (compUrl()) {
+                <div class="space-y-3 py-4">
+                  <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
+                    <i class="pi pi-check-circle text-2xl"></i>
+                  </div>
+                  <p class="text-sm font-semibold text-slate-800">¡Comprobante subido correctamente!</p>
+                  <a [href]="compUrl()" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-medium">
+                    <i class="pi pi-eye"></i> Ver archivo subido
+                  </a>
+                </div>
+              } @else {
+                <div class="space-y-3">
+                  <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                    <i class="pi pi-upload text-xl"></i>
+                  </div>
+                  <div>
+                    <span class="text-rojo-brillante font-semibold text-sm">Haz clic para subir</span>
+                    <span class="text-slate-500 text-sm"> o arrastra tu archivo aquí</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Formatos permitidos: JPG, PNG, PDF (Máx. 10MB)</p>
+                </div>
+              }
+            </div>
+
+            <div class="flex justify-between pt-4">
+              <button (click)="goToStep(1)"
+                class="inline-flex items-center gap-2 px-5 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-semibold text-sm transition-colors">
+                <i class="pi pi-arrow-left text-xs"></i>
+                Atrás
+              </button>
+              <button (click)="goToStep(3)" [disabled]="!compUrl() || uploadingComp()"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-rojo-brillante text-white rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 disabled:opacity-50 transition-colors shadow-sm">
+                Siguiente paso
+                <i class="pi pi-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 3: DIGITAL SIGNATURE -->
+        @if (currentStep() === 3) {
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-xl font-bold text-slate-800">Paso 3: Firma de Aceptación</h3>
+              <p class="text-slate-500 text-sm mt-1">Por favor lee la declaración, escribe tu nombre completo y dibuja tu firma en el recuadro para validar el contrato.</p>
+            </div>
+
+            <!-- Interactive Contract Viewer -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Contrato Completo</span>
+                @if (c.pdf_url) {
+                  <a [href]="c.pdf_url" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-semibold">
+                    <i class="pi pi-file-pdf"></i> Descargar PDF del Contrato
+                  </a>
+                }
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-h-60 overflow-y-auto text-xs text-slate-600 space-y-4 font-normal leading-relaxed text-justify shadow-inner">
+                <div class="text-center font-bold text-slate-800 uppercase tracking-wide">
+                  CONTRATO DE PRESTACIÓN DE SERVICIOS PARA EVENTO SOCIAL (HULA HOOP)
+                </div>
+
+                <p>Contrato de prestación de servicios que celebran, por una parte, el salón de eventos <strong>HULA HOOP</strong> (en lo sucesivo <strong>"El Prestador"</strong>), y por la otra parte, la persona física cuyos datos aparecen registrados en la ficha técnica (en lo sucesivo <strong>"El Cliente"</strong>), de conformidad con las siguientes Declaraciones y Cláusulas:</p>
+
+                <div>
+                  <strong class="text-slate-800 uppercase block mb-1">Declaraciones</strong>
+                  <p class="mb-1">I. Declara <strong>"El Prestador"</strong> ser una entidad autorizada y contar con las licencias correspondientes, así como con el personal y equipamiento idóneo para brindar servicios de eventos infantiles y sociales en su domicilio comercial.</p>
+                  <p>II. Declara <strong>"El Cliente"</strong> contar con la capacidad legal suficiente y la solvencia económica requerida para obligarse bajo los términos y condiciones estipulados en el presente instrumento.</p>
+                </div>
+
+                <div>
+                  <strong class="text-slate-800 uppercase block mb-1">Cláusulas del Contrato</strong>
+                  <div class="space-y-2">
+                    <div><strong>PRIMERA (OBJETO):</strong> La renta temporal y exclusiva de las instalaciones de Hula Hoop para el evento detallado en la sección técnica, comprometiéndose a prestar los servicios contratados con altos estándares de calidad.</div>
+                    <div><strong>SEGUNDA (VALOR Y FORMA DE PAGO):</strong> El precio de la prestación del servicio está estipulado como "Total Contrato". Para garantizar y reservar formalmente el salón se requiere el pago de un anticipo. El remanente deberá liquidarse íntegramente a más tardar el día del evento antes de que este inicie.</div>
+                    <div><strong>TERCERA (POLÍTICA DE CANCELACIONES):</strong> Si "El Cliente" rescinde el contrato unilateralmente, perderá irrevocablemente el anticipo entregado como indemnización por daños comerciales. Modificaciones de fecha quedan sujetas a penalización y disponibilidad de Hula Hoop.</div>
+                    <div><strong>CUARTA (RESPONSABILIDAD Y SEGURIDAD):</strong> "El Cliente" asume plena responsabilidad civil y legal por la integridad física y conductas de sus invitados dentro de las instalaciones, comprometiéndose a reparar o pagar el costo de cualquier desperfecto o siniestro causado intencionalmente o por descuido a los bienes de Hula Hoop.</div>
+                    <div><strong>QUINTA (VIGENCIA Y JURISDICCIÓN):</strong> Ambas partes expresan su conformidad y firman el presente contrato, renunciando a cualquier fuero que pudiere corresponderles por razón de domicilio, sometiéndose a los tribunales del estado.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Name input -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Nombre completo (Firma digital)</label>
+                <input type="text" [ngModel]="signName()" (ngModelChange)="signName.set($event)"
+                  placeholder="Escribe tu nombre completo exactamente como en tu identificación"
+                  class="w-full px-4 py-3 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rojo-brillante/20 focus:border-rojo-brillante rounded-xl text-slate-800" />
+              </div>
+
+              <!-- Canvas board -->
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Trazo de Firma</label>
+                  <button type="button" (click)="clearCanvas()" class="text-xs text-slate-500 hover:text-rojo-brillante inline-flex items-center gap-1 font-semibold">
+                    <i class="pi pi-refresh"></i> Limpiar firma
+                  </button>
+                </div>
+                
+                <canvas #sigCanvas class="w-full h-44 bg-slate-50 border border-dashed border-slate-300 rounded-xl cursor-crosshair shadow-inner"
+                  (mousedown)="startDrawing($event)"
+                  (mousemove)="draw($event)"
+                  (mouseup)="stopDrawing()"
+                  (mouseleave)="stopDrawing()"
+                  (touchstart)="startDrawingTouch($event)"
+                  (touchmove)="drawTouch($event)"
+                  (touchend)="stopDrawing()"></canvas>
+              </div>
+
+              <!-- Checkbox -->
+              <label class="relative flex items-start cursor-pointer select-none">
+                <input type="checkbox" [checked]="acceptTerms()" (change)="acceptTerms.set(!acceptTerms())"
+                  class="sr-only peer" />
+                <div class="w-5 h-5 border border-slate-300 peer-checked:bg-emerald-600 peer-checked:border-emerald-600 rounded-md flex items-center justify-center transition-colors mr-3 mt-0.5 shadow-sm">
+                  <i class="pi pi-check text-[10px] text-white" *ngIf="acceptTerms()"></i>
+                </div>
+                <span class="text-xs text-slate-600 font-medium">He leído y acepto expresamente todos los términos, condiciones y especificaciones descritas en este contrato.</span>
+              </label>
+            </div>
+
+            <div class="flex justify-between pt-4">
+              <button (click)="goToStep(2)" [disabled]="submitting()"
+                class="inline-flex items-center gap-2 px-5 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-semibold text-sm transition-colors">
+                <i class="pi pi-arrow-left text-xs"></i>
+                Atrás
+              </button>
+              <button (click)="finishSigning()" 
+                [disabled]="submitting() || !acceptTerms() || !signName().trim() || !isCanvasSigned()"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-rojo-brillante text-white rounded-xl font-semibold text-sm hover:bg-rojo-brillante/90 disabled:opacity-50 transition-colors shadow-sm">
+                @if (submitting()) {
+                  <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Firmando...
+                } @else {
+                  <i class="pi pi-verified"></i>
+                  Firmar y Finalizar
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 4: SUCCESS STATE -->
+        @if (currentStep() === 4) {
+          <div class="text-center py-8 space-y-6">
+            <div class="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
+              <i class="pi pi-verified text-4xl"></i>
+            </div>
+            
+            <div class="space-y-2">
+              <h3 class="text-2xl font-bold text-slate-800">¡Contrato Firmado Exitosamente!</h3>
+              <p class="text-slate-500 text-sm max-w-md mx-auto">
+                Hemos registrado tu firma y los documentos. Tu evento ahora está oficialmente contratado. A continuación puedes ver y descargar los documentos.
+              </p>
+            </div>
+
+            <!-- Documents checklist download -->
+            <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200/60 max-w-md mx-auto text-left space-y-3">
+              <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tus Documentos Guardados</h4>
+              
+              <div class="flex items-center justify-between text-sm py-1">
+                <span class="flex items-center gap-2 text-slate-700 font-semibold">
+                  <i class="pi pi-check text-emerald-600"></i>
+                  Identificación (INE)
+                </span>
+                @if (ineUrl()) {
+                  <a [href]="ineUrl()" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-bold">
+                    <i class="pi pi-download"></i> Descargar
+                  </a>
+                }
+              </div>
+
+              <div class="flex items-center justify-between text-sm py-1">
+                <span class="flex items-center gap-2 text-slate-700 font-semibold">
+                  <i class="pi pi-check text-emerald-600"></i>
+                  Comprobante de Domicilio
+                </span>
+                @if (compUrl()) {
+                  <a [href]="compUrl()" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-bold">
+                    <i class="pi pi-download"></i> Descargar
+                  </a>
+                }
+              </div>
+
+              @if (c.firma_url) {
+                <div class="flex items-center justify-between text-sm py-1">
+                  <span class="flex items-center gap-2 text-slate-700 font-semibold">
+                    <i class="pi pi-check text-emerald-600"></i>
+                    Firma Registrada
+                  </span>
+                  <a [href]="c.firma_url" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-bold">
+                    <i class="pi pi-download"></i> Descargar
+                  </a>
+                </div>
+              }
+
+              @if (c.pdf_url) {
+                <hr class="border-slate-200 my-2" />
+                <div class="flex items-center justify-between text-sm py-1">
+                  <span class="flex items-center gap-2 text-slate-700 font-bold text-slate-800">
+                    <i class="pi pi-file-pdf text-rojo-brillante"></i>
+                    Contrato Oficial PDF
+                  </span>
+                  <a [href]="c.pdf_url" target="_blank" class="text-xs text-rojo-brillante hover:underline inline-flex items-center gap-1 font-bold">
+                    <i class="pi pi-eye"></i> Visualizar
+                  </a>
+                </div>
+              }
+            </div>
+
+            <div class="pt-4">
+              <p class="text-xs text-slate-400">Cualquier duda o aclaración sobre tu evento, por favor contáctanos.</p>
+            </div>
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+</div>

@@ -461,18 +461,48 @@ export class AdminEventDetail {
     if (!c) return;
 
     const email = c.client?.email ?? '';
+    const link = `${window.location.origin}/contrato/${c.id}`;
     const subject = encodeURIComponent(`Contrato de Servicio Hula Hoop ${c.folio}`);
     const body = encodeURIComponent(
       `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
-      `Adjuntamos el enlace para revisar los detalles del contrato para tu evento el día ${this.formatDate(c.fecha_evento)}:\n` +
-      `Total del Contrato: $${c.total_contrato.toLocaleString('es-MX')} MXN\n` +
-      `Anticipo Pagado: $${c.deposito_pagado.toLocaleString('es-MX')} MXN\n` +
-      `Saldo Pendiente: $${c.saldo_pendiente.toLocaleString('es-MX')} MXN\n\n` +
-      `Por favor, firma de conformidad y devuélvenos el contrato firmado. Si tienes dudas, estamos a tu disposición.\n\n` +
+      `Te enviamos el enlace para revisar, firmar digitalmente y subir tus documentos para el contrato de tu evento el día ${this.formatDate(c.fecha_evento)}:\n\n` +
+      `Enlace de Firma: ${link}\n\n` +
+      `Detalles del Contrato:\n` +
+      `- Total del Contrato: $${c.total_contrato.toLocaleString('es-MX')} MXN\n` +
+      `- Anticipo Pagado: $${c.deposito_pagado.toLocaleString('es-MX')} MXN\n` +
+      `- Saldo Pendiente: $${c.saldo_pendiente.toLocaleString('es-MX')} MXN\n\n` +
+      `Por favor ingresa al enlace para completar el proceso de firma de conformidad y subida de documentos.\n\n` +
       `Atentamente,\nHula Hoop Eventos`
     );
 
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+  }
+
+  sendContractWhatsapp(): void {
+    const c = this.contract();
+    if (!c) return;
+
+    const phone = c.client?.telefono ?? '';
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (formattedPhone.length === 10) {
+      formattedPhone = '52' + formattedPhone;
+    }
+
+    const link = `${window.location.origin}/contrato/${c.id}`;
+    const text = encodeURIComponent(
+      `*Hula Hoop - Firma de Contrato*\n\n` +
+      `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
+      `Te enviamos el enlace para revisar, firmar digitalmente y subir tu documentación para el contrato de tu evento el día *${this.formatDate(c.fecha_evento)}*:\n\n` +
+      `🔗 *Enlace de firma:* ${link}\n\n` +
+      `Detalles del Evento:\n` +
+      `• Total del Contrato: $${c.total_contrato.toLocaleString('es-MX')} MXN\n` +
+      `• Anticipo Pagado: $${c.deposito_pagado.toLocaleString('es-MX')} MXN\n` +
+      `• Saldo Pendiente: $${c.saldo_pendiente.toLocaleString('es-MX')} MXN\n\n` +
+      `Por favor ingresa al enlace para completar el proceso de firma y carga de documentos.\n\n` +
+      `¡Muchas gracias!`
+    );
+
+    window.open(`https://wa.me/${formattedPhone}?text=${text}`, '_blank');
   }
 
   downloadContract(): void {

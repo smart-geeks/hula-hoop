@@ -26,6 +26,9 @@ export interface Contract {
   saldo_pendiente: number;
   estado: ContractStatus;
   pdf_url: string | null;
+  ine_url?: string | null;
+  comprobante_url?: string | null;
+  firma_url?: string | null;
   notas: string | null;
   created_at: string;
   // Relations
@@ -45,6 +48,9 @@ export interface CreateContractData {
   deposito_pagado?: number;
   estado?: ContractStatus;
   pdf_url?: string | null;
+  ine_url?: string | null;
+  comprobante_url?: string | null;
+  firma_url?: string | null;
   fecha_firma?: string | null;
   notas?: string;
 }
