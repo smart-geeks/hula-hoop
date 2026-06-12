@@ -113,7 +113,7 @@ export class QuotePublicPage {
 
         reservation = await this.reservationService.createPrivateReservation({
           venue_id: q.venue_id,
-          profile_id: q.client_id || null,
+          profile_id: null,
           guest_name: q.client?.nombre || 'Invitado',
           guest_email: q.client?.email || '',
           guest_phone: q.client?.telefono || '',
