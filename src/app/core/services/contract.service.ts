@@ -63,21 +63,53 @@ export class ContractService {
     return data ?? [];
   }
 
-  async create(data: CreateContractData): Promise<Contract | null> {
+  async create(data: CreateContractData): Promise<{ data: Contract | null; error: any }> {
     const client  = this.supabase.client;
     const venueId = this.venue.currentVenueId();
-    if (!client || !venueId) return null;
+    if (!client) return { data: null, error: new Error('Sin conexión a Supabase') };
 
-    const folio = await this.generateFolio(venueId);
+    const targetVenueId = data.venue_id || venueId;
+    if (!targetVenueId) {
+      const err = new Error('Error: El venue_id es requerido');
+      console.error(err.message);
+      return { data: null, error: err };
+    }
+
+    let folio: string;
+    try {
+      folio = await this.generateFolio(targetVenueId);
+    } catch (err: any) {
+      console.error('Error generating folio:', err.message);
+      return { data: null, error: err };
+    }
 
     const { data: created, error } = await client
       .from('contracts')
-      .insert({ ...data, folio, venue_id: venueId })
+      .insert({ ...data, folio, venue_id: targetVenueId })
       .select()
       .single();
 
-    if (error) { console.error('Error creating contract:', error.message); return null; }
-    return created;
+    if (error) {
+      console.error('Error creating contract:', error.message);
+      return { data: null, error };
+    }
+
+    if (created && data.deposito_pagado && data.deposito_pagado > 0) {
+      const { error: payError } = await client
+        .from('contract_payments')
+        .insert({
+          contract_id: created.id,
+          monto:       data.deposito_pagado,
+          fecha:       created.created_at ? created.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          metodo:      'efectivo',
+          notas:       'Depósito inicial registrado en la creación del contrato',
+        });
+      if (payError) {
+        console.error('Error creating initial payment record:', payError.message);
+      }
+    }
+
+    return { data: created, error: null };
   }
 
   async update(id: string, data: UpdateContractData): Promise<Contract | null> {
@@ -125,7 +157,6 @@ export class ContractService {
     const { count } = await client
       .from('contracts')
       .select('*', { count: 'exact', head: true })
-      .eq('venue_id', venueId)
       .gte('created_at', `${year}-01-01`);
 
     return `CT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;

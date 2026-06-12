@@ -92,6 +92,12 @@
           [closable]="true" [draggable]="false">
   <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
     <p-floatlabel variant="on">
+      <p-select id="slot-venue" formControlName="venue_id" [options]="venues()"
+                optionLabel="nombre" optionValue="id" class="w-full" />
+      <label for="slot-venue">Sucursal *</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="on">
       <p-select id="slot-type" formControlName="day_type" [options]="dayTypeOptions"
                 optionLabel="label" optionValue="value" class="w-full" />
       <label for="slot-type">Tipo de día *</label>

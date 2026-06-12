@@ -190,7 +190,7 @@
         } @else {
           <div class="divide-y divide-slate-100 max-h-[440px] overflow-y-auto">
             @for (ev of selectedDay()!.events; track ev.id) {
-              <div [class]="'p-4 border-l-4 hover:bg-slate-50/60 transition-colors ' + getStatusBg(ev.estado)">
+              <a [routerLink]="['/admin/evento', ev.id]" [class]="'block p-4 border-l-4 hover:bg-slate-50/60 transition-colors no-underline cursor-pointer ' + getStatusBg(ev.estado)">
                 <!-- Client + folio -->
                 <div class="flex items-start justify-between gap-2 mb-2">
                   <div class="min-w-0">
@@ -243,7 +243,7 @@
                     {{ ev.client!.telefono }}
                   </div>
                 }
-              </div>
+              </a>
             }
           </div>
 
@@ -278,7 +278,7 @@
       </div>
       <div class="divide-y divide-slate-100">
         @for (ev of eventsThisMonth(); track ev.id) {
-          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+          <a [routerLink]="['/admin/evento', ev.id]" class="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors no-underline cursor-pointer">
             <!-- Date badge -->
             <div [class]="'w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 border-l-2 bg-slate-50 ' + getStatusBg(ev.estado)">
               <span class="text-[10px] font-bold text-slate-500 uppercase leading-none">
@@ -307,7 +307,7 @@
                 {{ ev.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}
               </p>
             </div>
-          </div>
+          </a>
         }
       </div>
     </div>

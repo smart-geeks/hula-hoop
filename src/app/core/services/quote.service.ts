@@ -158,7 +158,6 @@ export class QuoteService {
     const { count } = await client
       .from('quotes')
       .select('*', { count: 'exact', head: true })
-      .eq('venue_id', venueId)
       .gte('created_at', `${year}-01-01`);
 
     return `QT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;

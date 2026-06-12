@@ -20,7 +20,7 @@ export class PublicVenueService {
 
     const { data, error } = await client
       .from('venues')
-      .select('id, nombre, slug, direccion, telefono, email, logo_url, activo, created_at')
+      .select('id, nombre, slug, direccion, telefono, email, logo_url, whatsapp, horarios, google_maps_link, activo, created_at')
       .eq('activo', true)
       .order('nombre');
 
@@ -37,7 +37,7 @@ export class PublicVenueService {
 
     const { data, error } = await client
       .from('venues')
-      .select('id, nombre, slug, direccion, telefono, email, logo_url, activo, created_at')
+      .select('id, nombre, slug, direccion, telefono, email, logo_url, whatsapp, horarios, google_maps_link, activo, created_at')
       .eq('slug', slug)
       .eq('activo', true)
       .single();

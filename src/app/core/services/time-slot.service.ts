@@ -43,7 +43,7 @@ export class TimeSlotService {
     return data as TimeSlot[];
   }
 
-  async createSlot(slot: Pick<TimeSlot, 'day_type' | 'start_time' | 'end_time' | 'is_active'>): Promise<TimeSlot | null> {
+  async createSlot(slot: Pick<TimeSlot, 'day_type' | 'start_time' | 'end_time' | 'is_active' | 'venue_id'>): Promise<TimeSlot | null> {
     const client = this.supabase.client;
     if (!client) return null;
 
@@ -61,7 +61,7 @@ export class TimeSlotService {
     return data as TimeSlot;
   }
 
-  async updateSlot(id: string, changes: Partial<Pick<TimeSlot, 'day_type' | 'start_time' | 'end_time' | 'is_active'>>): Promise<TimeSlot | null> {
+  async updateSlot(id: string, changes: Partial<Pick<TimeSlot, 'day_type' | 'start_time' | 'end_time' | 'is_active' | 'venue_id'>>): Promise<TimeSlot | null> {
     const client = this.supabase.client;
     if (!client) return null;
 
@@ -95,5 +95,44 @@ export class TimeSlotService {
     }
 
     return true;
+  }
+
+  async getActiveSlotsByVenue(venueId: string): Promise<TimeSlot[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('time_slots')
+      .select('*')
+      .eq('venue_id', venueId)
+      .eq('is_active', true)
+      .order('day_type')
+      .order('start_time');
+
+    if (error) {
+      console.error('Error fetching time slots by venue:', error.message);
+      return [];
+    }
+
+    return data as TimeSlot[];
+  }
+
+  async getAllSlotsByVenue(venueId: string): Promise<TimeSlot[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('time_slots')
+      .select('*')
+      .eq('venue_id', venueId)
+      .order('day_type')
+      .order('start_time');
+
+    if (error) {
+      console.error('Error fetching all time slots by venue:', error.message);
+      return [];
+    }
+
+    return data as TimeSlot[];
   }
 }

@@ -17,12 +17,15 @@
         </h1>
       }
     </div>
-    <a
-      routerLink="../../contratos"
-      class="text-xs text-rojo-brillante font-semibold hover:underline shrink-0"
-    >
-      Ver contrato
-    </a>
+    @if (contract()) {
+      <button
+        (click)="openCreateDialog()"
+        class="flex items-center gap-1 bg-rojo-brillante text-white px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-rojo-brillante/90 transition-colors shadow-sm shrink-0"
+      >
+        <i class="pi pi-plus text-[10px]"></i>
+        Nueva actividad
+      </button>
+    }
   </div>
 
   <!-- Event info banner -->
@@ -98,14 +101,14 @@
           <i class="pi pi-check-square text-2xl text-slate-300"></i>
         </div>
         <h3 class="font-semibold text-slate-700 mb-1">Sin tareas asignadas</h3>
-        <p class="text-sm text-slate-400 mb-4">Este evento no tiene tareas registradas</p>
-        <a
-          routerLink="../../eventos"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rojo-brillante/5 text-rojo-brillante text-sm font-semibold hover:bg-rojo-brillante/10 transition-colors"
+        <p class="text-sm text-slate-400 mb-5">Este evento no tiene tareas registradas en este momento</p>
+        <button
+          (click)="openCreateDialog()"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rojo-brillante text-white text-sm font-bold hover:bg-rojo-brillante/90 transition-all shadow-sm"
         >
           <i class="pi pi-plus text-xs"></i>
-          Agregar tareas en Eventos
-        </a>
+          Crear mi primera actividad
+        </button>
       </div>
     } @else {
 
@@ -157,7 +160,6 @@
                     >
                       <i class="pi pi-clock text-xs"></i>
                       {{ formatTime(task.hora_inicio) }}
-                      @if (task.hora_fin) { — {{ formatTime(task.hora_fin) }} }
                     </span>
                   }
                   @if (task.assignee) {
@@ -188,6 +190,63 @@
       </div>
 
     }
+  }
+
+  <!-- Task Creation Dialog Modal -->
+  @if (showCreateDialog()) {
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl border border-slate-200 w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-lg">Nueva actividad</h3>
+          <button (click)="showCreateDialog.set(false)" class="text-slate-400 hover:text-slate-600 text-sm">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Título de la actividad *</label>
+            <input #taskTitle type="text" placeholder="Ej. Comprar pastel, acomodar sillas..." 
+              class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rojo-brillante" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Descripción / Notas</label>
+            <textarea #taskDesc rows="2" placeholder="Opcional. Detalles adicionales para el staff..." 
+              class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rojo-brillante"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Hora de inicio</label>
+              <input #taskTime type="time" 
+                class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rojo-brillante" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Asignar a</label>
+              <select #taskAssignee 
+                class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rojo-brillante bg-white">
+                <option value="">Cualquier staff</option>
+                @for (profile of profilesList(); track profile.id) {
+                  <option [value]="profile.id">{{ profile.full_name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          
+          <div class="flex gap-2 justify-end pt-2">
+            <button type="button" (click)="showCreateDialog.set(false)"
+              class="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+              Cancelar
+            </button>
+            <button type="button" 
+              (click)="createTask(taskTitle.value, taskDesc.value, taskTime.value, taskAssignee.value)"
+              [disabled]="!taskTitle.value.trim()"
+              class="px-4 py-2 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              Crear tarea
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   }
 
 </div>

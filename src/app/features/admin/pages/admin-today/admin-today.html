@@ -139,6 +139,46 @@
                   }
                 </div>
               </div>
+
+              <!-- Mini Checklist of Tasks -->
+              @if ((contractsTasks().get(contract.id) || []).length > 0) {
+                <div class="mt-4 pl-14 space-y-2 border-l-2 border-slate-100">
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <i class="pi pi-check-square text-[10px]"></i>Actividades operativas hoy
+                  </p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    @for (task of (contractsTasks().get(contract.id) || []); track task.id) {
+                      <button
+                        type="button"
+                        (click)="toggleTask(contract.id, task); $event.stopPropagation()"
+                        [disabled]="togglingTask() === task.id"
+                        class="flex items-center gap-2 text-left w-full group py-0.5 active:scale-[0.98] transition-transform"
+                        [attr.aria-label]="task.estado === 'completado' ? 'Marcar como pendiente: ' + task.titulo : 'Marcar como completado: ' + task.titulo"
+                      >
+                        <div
+                          class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all"
+                          [class]="task.estado === 'completado' ? 'bg-emerald-400 border-emerald-400' : 'border-slate-300 bg-white group-hover:border-slate-400'"
+                        >
+                          @if (togglingTask() === task.id) {
+                            <i class="pi pi-spin pi-spinner text-[8px] text-slate-400"></i>
+                          } @else if (task.estado === 'completado') {
+                            <i class="pi pi-check text-[8px] text-white font-bold"></i>
+                          }
+                        </div>
+                        <span
+                          class="text-xs font-semibold leading-tight truncate"
+                          [class]="task.estado === 'completado' ? 'text-slate-300 line-through' : 'text-slate-600 group-hover:text-slate-800'"
+                        >
+                          {{ task.titulo }}
+                          @if (task.hora_inicio) {
+                            <span class="text-[9px] text-slate-400 font-medium ml-1">({{ formatTime(task.hora_inicio) }})</span>
+                          }
+                        </span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           }
         </div>

@@ -46,4 +46,22 @@ export class VenueConfigService {
     if (error) { console.error('Error updating venue config:', error.message); return null; }
     return data as VenueConfig;
   }
+
+  async getConfigByVenue(venueId: string): Promise<VenueConfig | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('venue_config')
+      .select('*')
+      .eq('venue_id', venueId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching venue config by venue:', error.message);
+      return null;
+    }
+
+    return data as VenueConfig;
+  }
 }

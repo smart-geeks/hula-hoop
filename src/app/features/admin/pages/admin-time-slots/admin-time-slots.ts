@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
@@ -13,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
 @Component({
@@ -37,11 +38,13 @@ import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 })
 export class AdminTimeSlots {
   private readonly slotService = inject(TimeSlotService);
+  private readonly venueService = inject(VenueService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
   readonly slots = signal<TimeSlot[]>([]);
+  readonly venues = this.venueService.venues;
   readonly loading = signal(true);
   readonly dialogVisible = signal(false);
   readonly editingSlot = signal<TimeSlot | null>(null);
@@ -60,22 +63,39 @@ export class AdminTimeSlots {
     start_time: ['', Validators.required],
     end_time: ['', Validators.required],
     is_active: [true],
+    venue_id: ['', Validators.required],
   });
 
   constructor() {
-    this.loadSlots();
+    effect(() => {
+      // Reload slots when the current venue changes
+      const venueId = this.venueService.currentVenueId();
+      this.loadSlots();
+    });
   }
 
   async loadSlots(): Promise<void> {
     this.loading.set(true);
-    const data = await this.slotService.getAllSlots();
-    this.slots.set(data);
+    const venueId = this.venueService.currentVenueId();
+    if (venueId) {
+      const data = await this.slotService.getAllSlotsByVenue(venueId);
+      this.slots.set(data);
+    } else {
+      const data = await this.slotService.getAllSlots();
+      this.slots.set(data);
+    }
     this.loading.set(false);
   }
 
   openNew(): void {
     this.editingSlot.set(null);
-    this.form.reset({ day_type: 'weekday', start_time: '', end_time: '', is_active: true });
+    this.form.reset({
+      day_type: 'weekday',
+      start_time: '',
+      end_time: '',
+      is_active: true,
+      venue_id: this.venueService.currentVenueId() ?? '',
+    });
     this.dialogVisible.set(true);
   }
 
@@ -86,6 +106,7 @@ export class AdminTimeSlots {
       start_time: slot.start_time.substring(0, 5), // HH:MM
       end_time: slot.end_time.substring(0, 5),
       is_active: slot.is_active,
+      venue_id: slot.venue_id,
     });
     this.dialogVisible.set(true);
   }

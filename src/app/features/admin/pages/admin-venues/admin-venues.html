@@ -110,7 +110,7 @@
     [attr.aria-label]="modalMode() === 'create' ? 'Crear salón' : 'Editar salón'"
   >
     <div
-      class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5"
+      class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5 max-h-[90vh] overflow-y-auto"
       (click)="$event.stopPropagation()"
     >
       <div class="flex items-center justify-between">
@@ -171,7 +171,7 @@
 
         <!-- Teléfono -->
         <div class="space-y-1">
-          <label for="v-tel" class="text-sm font-medium text-slate-700">Teléfono</label>
+          <label for="v-tel" class="text-sm font-medium text-slate-700">Teléfono de llamadas</label>
           <input id="v-tel" pInputText formControlName="telefono" placeholder="+52 55 0000 0000" class="w-full" />
         </div>
 
@@ -190,6 +190,24 @@
           @if (form.controls.email.invalid && form.controls.email.touched) {
             <p class="text-xs text-red-500">Email inválido</p>
           }
+        </div>
+
+        <!-- WhatsApp -->
+        <div class="space-y-1">
+          <label for="v-whatsapp" class="text-sm font-medium text-slate-700">Número de WhatsApp (con lada, ej. 52871...)</label>
+          <input id="v-whatsapp" pInputText formControlName="whatsapp" placeholder="528711234567" class="w-full" />
+        </div>
+
+        <!-- Horarios -->
+        <div class="space-y-1">
+          <label for="v-horarios" class="text-sm font-medium text-slate-700">Horarios (Separa líneas con | o enter)</label>
+          <input id="v-horarios" pInputText formControlName="horarios" placeholder="Lun - Vie: 4:00 PM - 7:00 PM | Sáb - Dom: 9:30 AM - 6:30 PM" class="w-full" />
+        </div>
+
+        <!-- Link de Ubicación (Google Maps) -->
+        <div class="space-y-1">
+          <label for="v-google-maps" class="text-sm font-medium text-slate-700">Link de Google Maps (Ubicación)</label>
+          <input id="v-google-maps" pInputText formControlName="google_maps_link" placeholder="https://maps.google.com/..." class="w-full" />
         </div>
 
         <!-- Footer -->

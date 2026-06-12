@@ -37,7 +37,7 @@ export class ReservationService {
 
     if (error || !reservation) {
       console.error('Error creating private reservation:', error?.message);
-      return null;
+      throw new Error(error?.message || 'Error desconocido al insertar en la base de datos');
     }
 
     // Insert extras if any
@@ -160,9 +160,9 @@ export class ReservationService {
       .select()
       .single();
 
-    if (error) {
+    if (error || !reservation) {
       console.error('Error creating playdate reservation:', error?.message);
-      return null;
+      throw new Error(error?.message || 'Error desconocido al insertar en la base de datos');
     }
 
     return reservation as PlaydateReservation;

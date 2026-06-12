@@ -141,7 +141,7 @@
         </div>
 
         <!-- CTA (Button full width): borde inferior + laterales -->
-        <a routerLink="/reservar/play-day"
+        <a [routerLink]="['/', publicVenue.activeVenue()?.slug || '', 'reservar', 'play-day']"
           class="w-full text-center py-6 font-display text-base md:text-lg font-black uppercase tracking-widest text-gray-800 hover:bg-[#7ce2a2] transition-colors shadow-inner flex items-center justify-center gap-3 mt-auto border-b border-l border-r border-black"
           style="background-color: #8CE9AF;">
           <i class="pi pi-ticket text-xl" aria-hidden="true"></i> Obtén tu ticket

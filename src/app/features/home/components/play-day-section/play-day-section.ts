@@ -22,7 +22,7 @@ export class PlayDaySection {
   private readonly configService     = inject(VenueConfigService);
   private readonly reservationService = inject(ReservationService);
   private readonly restaurantService = inject(RestaurantItemService);
-  private readonly publicVenue       = inject(PublicVenueService);
+  readonly publicVenue       = inject(PublicVenueService);
 
   readonly slots          = signal<AvailablePlaydateSlot[]>([]);
   readonly loading        = signal(true);

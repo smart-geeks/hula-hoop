@@ -15,7 +15,9 @@ import { VenueConfigService } from '../../../../core/services/venue-config.servi
 import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PaymentService } from '../../../../core/services/payment.service';
+import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
+import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
 @Component({
   selector: 'app-playdate-reservation-page',
@@ -41,6 +43,7 @@ export class PlaydateReservationPage {
   private readonly reservationService = inject(ReservationService);
   private readonly authService = inject(AuthService);
   private readonly paymentService = inject(PaymentService);
+  private readonly publicVenue = inject(PublicVenueService);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -94,11 +97,26 @@ export class PlaydateReservationPage {
 
   private async loadData(): Promise<void> {
     this.loading.set(true);
+    const venue = this.publicVenue.activeVenue();
 
-    const [activeSlots, config] = await Promise.all([
-      this.timeSlotService.getActiveSlots(),
-      this.configService.getConfig(),
-    ]);
+    let activeSlots: TimeSlot[] = [];
+    let config: VenueConfig | null = null;
+
+    if (venue) {
+      const [slots, cfg] = await Promise.all([
+        this.timeSlotService.getActiveSlotsByVenue(venue.id),
+        this.configService.getConfigByVenue(venue.id),
+      ]);
+      activeSlots = slots;
+      config = cfg;
+    } else {
+      const [slots, cfg] = await Promise.all([
+        this.timeSlotService.getActiveSlots(),
+        this.configService.getConfig(),
+      ]);
+      activeSlots = slots;
+      config = cfg;
+    }
 
     this.venueConfig.set(config);
     const maxCapacity = config?.max_capacity_per_slot ?? 50;
@@ -168,26 +186,34 @@ export class PlaydateReservationPage {
 
     const contact = this.contactForm.getRawValue();
     const user = this.authService.currentUser();
+    const venue = this.publicVenue.activeVenue();
 
-    const reservation = await this.reservationService.createPlaydateReservation({
-      profile_id: user?.id ?? null,
-      guest_name: contact.guest_name,
-      guest_email: contact.guest_email,
-      guest_phone: contact.guest_phone,
-      reservation_date: slotData.date,
-      time_slot_id: slotData.slot.id,
-      kids_count: this.kidsCount(),
-      adults_count: this.adultsCount(),
-      extra_adults_count: this.extraAdultsCount(),
-      total_cents: this.totalCents(),
-    });
-
-    if (!reservation) {
+    let reservation;
+    try {
+      reservation = await this.reservationService.createPlaydateReservation({
+        venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+        profile_id: user?.id ?? null,
+        guest_name: contact.guest_name,
+        guest_email: contact.guest_email,
+        guest_phone: contact.guest_phone,
+        reservation_date: slotData.date,
+        time_slot_id: slotData.slot.id,
+        kids_count: this.kidsCount(),
+        adults_count: this.adultsCount(),
+        extra_adults_count: this.extraAdultsCount(),
+        total_cents: this.totalCents(),
+      });
+    } catch (err: any) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error al crear la reserva',
-        detail: 'Intenta de nuevo más tarde.',
+        detail: err.message || 'Intenta de nuevo más tarde.',
       });
+      this.submitting.set(false);
+      return;
+    }
+
+    if (!reservation) {
       this.submitting.set(false);
       return;
     }

@@ -48,7 +48,7 @@
         </p>
 
         <!-- Botón reservar -->
-        <a routerLink="/reservar/fiesta-privada" [queryParams]="{ package: pkg.id }"
+        <a [routerLink]="['/', publicVenue.activeVenue()?.slug || '', 'reservar', 'fiesta-privada']" [queryParams]="{ package: pkg.id }"
           class="mt-2 mb-3 px-6 py-1 text-sm font-bold uppercase tracking-widest text-gray-800 font-display"
           style="background-color: #8ce9b0;">
           Reservar

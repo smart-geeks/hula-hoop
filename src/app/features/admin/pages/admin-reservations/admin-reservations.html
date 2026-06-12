@@ -192,6 +192,13 @@
       <td>
         <p-tag [value]="row.type === 'private' ? 'Privada' : 'Play Day'"
                [severity]="row.type === 'private' ? 'contrast' : 'info'" />
+        @if (row.type === 'private' && row.contract_id) {
+          <a [routerLink]="['/admin/evento', row.contract_id]"
+             class="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+            <i class="pi pi-external-link text-[10px]"></i>
+            Gestionar Evento
+          </a>
+        }
       </td>
       <td>
         <p class="font-semibold">{{ row.guest_name }}</p>
@@ -387,7 +394,12 @@
     </div>
 
     <ng-template #footer>
-      <div class="flex gap-2 justify-end mt-2">
+      <div class="flex gap-2 justify-end mt-2 flex-wrap">
+        @if (row.type === 'private' && row.contract_id) {
+          <a [routerLink]="['/admin/evento', row.contract_id]" class="no-underline">
+            <p-button label="Gestionar Evento Hub" icon="pi pi-external-link" severity="primary" />
+          </a>
+        }
         <p-button label="Descargar PDF" icon="pi pi-file-pdf" [outlined]="true" severity="secondary"
                   (onClick)="printDetail()" />
         <p-button label="Enviar WhatsApp" icon="pi pi-whatsapp" severity="success"

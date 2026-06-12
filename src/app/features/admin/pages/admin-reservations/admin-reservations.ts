@@ -47,6 +47,8 @@ interface AdminReservationRow {
   paid_deposit_cents: number;
   liquidation_date: string | null;
   raw_liquidation_date: string | null;
+  contract_id?: string | null;
+  quote_id?: string | null;
 }
 
 @Component({
@@ -425,6 +427,8 @@ export class AdminReservations {
       paid_deposit_cents: r.paid_deposit_cents ?? 0,
       liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0) ? this.formatDate(this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0)!) : null,
       raw_liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0),
+      contract_id: r.contract_id,
+      quote_id: r.quote_id,
     };
   }
 

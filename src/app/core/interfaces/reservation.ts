@@ -27,6 +27,7 @@ export interface PrivateReservation {
   notes: string | null;
   snack_option_id: string | null;
   quote_id: string | null;
+  contract_id: string | null;
   packages?: { days_to_liquidate: number };
   created_at: string;
   updated_at: string;

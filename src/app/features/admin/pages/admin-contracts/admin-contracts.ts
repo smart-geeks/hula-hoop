@@ -22,6 +22,7 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; classes: string; do
   firmado:   { label: 'Contratado', classes: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500' },
   liquidado: { label: 'Liquidado',  classes: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
   cancelado: { label: 'Cancelado',  classes: 'bg-red-100 text-red-700',        dot: 'bg-red-400' },
+  concluido: { label: 'Concluido',  classes: 'bg-indigo-100 text-indigo-700',  dot: 'bg-indigo-500' },
 };
 
 @Component({
@@ -216,7 +217,10 @@ export class AdminContracts {
     this.saving.set(true);
 
     const raw = this.form.getRawValue();
+    const quote = raw.quote_id ? this.approvedQuotes().find(q => q.id === raw.quote_id) : null;
+
     const payload: CreateContractData = {
+      venue_id:        quote?.venue_id || undefined,
       client_id:       raw.client_id || undefined,
       quote_id:        raw.quote_id || undefined,
       fecha_evento:    raw.fecha_evento!,
@@ -232,7 +236,13 @@ export class AdminContracts {
     const isCreate = this.drawerMode() === 'create';
     let result: Contract | null = null;
     if (isCreate) {
-      result = await this.contractService.create(payload);
+      const res = await this.contractService.create(payload);
+      result = res.data;
+      if (res.error) {
+        this.showToast('error', `No se pudo crear el contrato: ${res.error.message || 'Error desconocido'}`);
+        this.saving.set(false);
+        return;
+      }
     } else {
       result = await this.contractService.update(this.selectedContract()!.id, payload);
     }
@@ -241,7 +251,7 @@ export class AdminContracts {
       await this.refreshContracts();
       this.closeDrawer();
       this.showToast('success', isCreate ? 'Contrato creado' : 'Contrato actualizado');
-    } else {
+    } else if (!isCreate) {
       this.showToast('error', 'Ocurrió un error. Intenta de nuevo.');
     }
     this.saving.set(false);

@@ -98,7 +98,7 @@ export class PosService {
 
     const { data, error } = await client
       .from('pos_sales')
-      .select('*, cashier:cashier_profiles(nombre), items:pos_sale_items(*, item:inventory_items(nombre, sku))')
+      .select('*, cashier:cashier_profiles(nombre), items:pos_sale_items(*, item:inventory_items(nombre, sku), restaurant_item:restaurant_items(name), extra:extras(name))')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false });
 

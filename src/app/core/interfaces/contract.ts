@@ -1,4 +1,4 @@
-export type ContractStatus = 'borrador' | 'firmado' | 'liquidado' | 'cancelado';
+export type ContractStatus = 'borrador' | 'firmado' | 'liquidado' | 'cancelado' | 'concluido';
 
 export interface ContractPayment {
   id: string;

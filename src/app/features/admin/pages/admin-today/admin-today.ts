@@ -11,8 +11,10 @@ import { ContractService } from '../../../../core/services/contract.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { ReportService } from '../../../../core/services/report.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
+import { EventTaskService } from '../../../../core/services/event-task.service';
 import type { Contract } from '../../../../core/interfaces/contract';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 
 interface TodayReservation {
   id: string;
@@ -43,11 +45,14 @@ export class AdminToday {
   private readonly reservationService = inject(ReservationService);
   private readonly reportService      = inject(ReportService);
   private readonly timeSlotService    = inject(TimeSlotService);
+  private readonly eventTaskService   = inject(EventTaskService);
   private slotsMap = new Map<string, TimeSlot>();
 
   readonly loading           = signal(true);
   readonly todayContracts    = signal<Contract[]>([]);
   readonly todayReservations = signal<TodayReservation[]>([]);
+  readonly contractsTasks    = signal<Map<string, EventTask[]>>(new Map());
+  readonly togglingTask      = signal<string | null>(null);
   readonly lowStockCount     = signal(0);
   readonly overdueCount      = signal(0);
 
@@ -108,7 +113,19 @@ export class AdminToday {
       (c) => c.saldo_pendiente > 0 && c.estado !== 'cancelado' && c.fecha_evento < this.todayStr,
     );
 
-    this.todayContracts.set(contracts.filter((c) => c.fecha_evento === this.todayStr));
+    const activeContracts = contracts.filter((c) => c.fecha_evento === this.todayStr);
+
+    // Fetch operational tasks for today's active contracts
+    const tasksResults = await Promise.all(
+      activeContracts.map((c) => this.eventTaskService.getByContract(c.id))
+    );
+    const tasksMap = new Map<string, EventTask[]>();
+    activeContracts.forEach((c, idx) => {
+      tasksMap.set(c.id, tasksResults[idx]);
+    });
+
+    this.todayContracts.set(activeContracts);
+    this.contractsTasks.set(tasksMap);
     this.todayReservations.set([...allPrivate, ...allPlaydate]);
     this.lowStockCount.set(dash?.low_stock_count ?? 0);
     this.overdueCount.set(overdue.length);
@@ -145,5 +162,38 @@ export class AdminToday {
       return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
     };
     return `${fmt(s.start_time)} – ${fmt(s.end_time)}`;
+  }
+
+  async toggleTask(contractId: string, task: EventTask): Promise<void> {
+    if (this.togglingTask() === task.id) return;
+    const newStatus: TaskStatus = task.estado === 'completado' ? 'pendiente' : 'completado';
+    this.togglingTask.set(task.id);
+    const ok = await this.eventTaskService.updateStatus(task.id, newStatus);
+    if (ok) {
+      this.contractsTasks.update((map) => {
+        const next = new Map(map);
+        const list = next.get(contractId) || [];
+        next.set(
+          contractId,
+          list.map((t) => (t.id === task.id ? { ...t, estado: newStatus } : t))
+        );
+        return next;
+      });
+    }
+    this.togglingTask.set(null);
+  }
+
+  formatTime(isoString: string): string {
+    if (!isoString) return '';
+    try {
+      const timePart = isoString.includes('T') ? isoString.split('T')[1] : isoString;
+      const [h, m] = timePart.split(':');
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${m} ${ampm}`;
+    } catch {
+      return '';
+    }
   }
 }

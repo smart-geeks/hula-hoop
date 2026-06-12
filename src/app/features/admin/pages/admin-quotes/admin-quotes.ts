@@ -540,7 +540,8 @@ export class AdminQuotes {
 
     this.anticoSaving.set(true);
 
-    const contract = await this.contractService.create({
+    const { data: contract, error } = await this.contractService.create({
+      venue_id:        quote.venue_id,
       quote_id:        quote.id,
       client_id:       quote.client_id ?? undefined,
       fecha_evento:    quote.fecha_evento ?? this.todayStr(),
@@ -548,13 +549,13 @@ export class AdminQuotes {
       hora_fin:        quote.hora_fin ?? undefined,
       salon_renta:     0,
       total_contrato:  quote.total,
-      deposito_pagado: monto,
+      deposito_pagado: 0,
       estado:          'firmado',
       notas:           quote.notas ?? undefined,
     });
 
-    if (!contract) {
-      this.showToast('error', 'No se pudo crear el contrato');
+    if (error || !contract) {
+      this.showToast('error', `No se pudo crear el contrato: ${error?.message || 'Error desconocido'}`);
       this.anticoSaving.set(false);
       return;
     }

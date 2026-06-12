@@ -421,6 +421,34 @@ export class AdminPos {
             motivo:      `Venta POS ${sale.folio}`,
             contract_id: session.contract_id ?? undefined,
           });
+        } else if (cartItem.tipo === 'restaurante') {
+          const item = this.restaurantItems().find((r) => r.id === cartItem.id);
+          if (item?.category === 'acceso') {
+            const today = new Date().toISOString().split('T')[0];
+            const slotId = this.activeTimeSlotId()!;
+            const venueId = this.venueService.currentVenueId() || '00000000-0000-0000-0000-000000000001';
+            
+            try {
+              await this.reservationService.createPlaydateReservation({
+                venue_id:           venueId,
+                guest_name:         'Cliente Taquilla',
+                guest_email:        'taquilla@hulahoop.com',
+                guest_phone:        '0000000000',
+                reservation_date:   today,
+                time_slot_id:       slotId,
+                kids_count:         cartItem.cantidad,
+                adults_count:       0,
+                extra_adults_count: 0,
+                total_cents:        Math.round(cartItem.precio_unitario * 100 * cartItem.cantidad),
+                ...({
+                  status: 'confirmed',
+                  paid_deposit_cents: Math.round(cartItem.precio_unitario * 100 * cartItem.cantidad)
+                } as any)
+              });
+            } catch (resErr) {
+              console.error('Error auto-creating playdate reservation in POS checkout:', resErr);
+            }
+          }
         }
       }
       const updatedInventory = await this.inventoryService.getAll();

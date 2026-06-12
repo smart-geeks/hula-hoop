@@ -14,7 +14,7 @@ import type { PartyPackage } from '../../../../core/interfaces/package';
 })
 export class PrivateEventsSection {
   private readonly packageService = inject(PackageService);
-  private readonly publicVenue   = inject(PublicVenueService);
+  readonly publicVenue            = inject(PublicVenueService);
 
   readonly packages = signal<PartyPackage[]>([]);
 

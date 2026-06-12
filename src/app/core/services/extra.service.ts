@@ -25,6 +25,26 @@ export class ExtraService {
     return data as Extra[];
   }
 
+  async getActiveExtrasByVenue(venueId: string): Promise<Extra[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('extras')
+      .select('*')
+      .eq('venue_id', venueId)
+      .eq('is_active', true)
+      .order('sort_order')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching extras by venue:', error.message);
+      return [];
+    }
+
+    return data as Extra[];
+  }
+
   async getAllExtras(): Promise<Extra[]> {
     const client = this.supabase.client;
     if (!client) return [];

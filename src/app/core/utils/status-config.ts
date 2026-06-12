@@ -9,6 +9,7 @@ export const CONTRACT_STATUS: Record<string, StatusConfig> = {
   firmado:   { label: 'Contratado', classes: 'bg-blue-100 text-blue-700',         borderL: 'border-l-blue-500' },
   liquidado: { label: 'Liquidado',  classes: 'bg-emerald-100 text-emerald-700',   borderL: 'border-l-emerald-500' },
   cancelado: { label: 'Cancelado',  classes: 'bg-red-100 text-red-700',           borderL: 'border-l-red-400' },
+  concluido: { label: 'Concluido',  classes: 'bg-indigo-100 text-indigo-700',     borderL: 'border-l-indigo-500' },
 };
 
 export const QUOTE_STATUS: Record<string, StatusConfig> = {

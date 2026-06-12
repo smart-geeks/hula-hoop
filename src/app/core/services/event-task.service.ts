@@ -25,7 +25,110 @@ export class EventTaskService {
       console.error('Error fetching event tasks:', error.message);
       return [];
     }
+
+    if (!data || data.length === 0) {
+      return this.generateDefaultTasks(contractId);
+    }
+
     return data ?? [];
+  }
+
+  private async generateDefaultTasks(contractId: string): Promise<EventTask[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    // Fetch the contract details to get its event times
+    const { data: contract } = await client
+      .from('contracts')
+      .select('fecha_evento, hora_inicio, hora_fin')
+      .eq('id', contractId)
+      .single();
+
+    if (!contract) return [];
+
+    const dateStr = contract.fecha_evento; // e.g. "2026-05-29"
+    const startStr = contract.hora_inicio || '16:00:00';
+    const endStr = contract.hora_fin || '19:00:00';
+
+    // Construct base date/time
+    const startEvent = new Date(`${dateStr}T${startStr}`);
+    const endEvent   = new Date(`${dateStr}T${endStr}`);
+
+    const helper = (baseDate: Date, hoursOffset: number): string => {
+      const d = new Date(baseDate.getTime() + hoursOffset * 60 * 60 * 1000);
+      return d.toISOString();
+    };
+
+    const defaultTasks = [
+      {
+        contract_id: contractId,
+        titulo:      'Comprar pastel',
+        descripcion: 'Retirar el pastel solicitado para el evento',
+        hora_inicio: helper(startEvent, -3),
+        hora_fin:    helper(startEvent, -2),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Pedir a proveedor (la merienda)',
+        descripcion: 'Confirmar recepción de merienda de los niños',
+        hora_inicio: helper(startEvent, -2.5),
+        hora_fin:    helper(startEvent, -1.5),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Pedir a proveedor (los extras)',
+        descripcion: 'Asegurar inflables, piñatas u otros servicios contratados',
+        hora_inicio: helper(startEvent, -2),
+        hora_fin:    helper(startEvent, -1),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Acomodar sillas y mesas',
+        descripcion: 'Distribución y montaje del mobiliario en el salón',
+        hora_inicio: helper(startEvent, -1),
+        hora_fin:    helper(startEvent, -0.5),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Limpiar baños',
+        descripcion: 'Verificar higiene, toallas, jabón y papel en tocadores',
+        hora_inicio: helper(startEvent, -1),
+        hora_fin:    helper(startEvent, -0.5),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Recepción y bienvenida',
+        descripcion: 'Recibir al festejado y sus invitados en la entrada',
+        hora_inicio: helper(startEvent, 0),
+        hora_fin:    helper(startEvent, 0.5),
+        estado:      'pendiente',
+      },
+      {
+        contract_id: contractId,
+        titulo:      'Limpieza final del salón',
+        descripcion: 'Retirar basura, acomodar mobiliario y entregar el salón limpio',
+        hora_inicio: helper(endEvent, 0),
+        hora_fin:    helper(endEvent, 1),
+        estado:      'pendiente',
+      },
+    ];
+
+    const { data: inserted, error } = await client
+      .from('event_tasks')
+      .insert(defaultTasks)
+      .select('*, assignee:profiles(full_name, email)');
+
+    if (error) {
+      console.error('Error inserting default tasks:', error.message);
+      return [];
+    }
+
+    return inserted ?? [];
   }
 
   async getMyTasks(userId: string): Promise<EventTask[]> {

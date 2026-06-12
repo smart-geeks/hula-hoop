@@ -6,6 +6,9 @@ export interface Venue {
   telefono?: string;
   email?: string;
   logo_url?: string;
+  whatsapp?: string;
+  horarios?: string;
+  google_maps_link?: string;
   activo: boolean;
   created_at: string;
 }
@@ -24,6 +27,10 @@ export interface CreateVenueData {
   telefono?: string;
   email?: string;
   logo_url?: string;
+  whatsapp?: string;
+  horarios?: string;
+  google_maps_link?: string;
 }
 
 export type UpdateVenueData = Partial<CreateVenueData> & { activo?: boolean };
+

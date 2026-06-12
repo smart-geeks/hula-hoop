@@ -45,17 +45,13 @@
     <!-- Horarios + Dirección -->
     <div class="mt-8 flex flex-col items-center justify-center gap-4 font-body font-bold text-gray-700 text-base md:text-lg">
 
-      <!-- Horario 1 -->
-      <div class="flex items-center gap-3">
-        <i class="pi pi-clock text-xl" style="color: #686ABB;" aria-hidden="true"></i>
-        <span>Lun &ndash; Vie: 4:00 PM &ndash; 7:00 PM</span>
-      </div>
-
-      <!-- Horario 2 -->
-      <div class="flex items-center gap-3">
-        <i class="pi pi-clock text-xl" style="color: #686ABB;" aria-hidden="true"></i>
-        <span>Sáb &ndash; Dom: 9:30 AM &ndash; 6:30 PM</span>
-      </div>
+      <!-- Horarios dinámicos -->
+      @for (sch of schedules(); track sch) {
+        <div class="flex items-center gap-3">
+          <i class="pi pi-clock text-xl" style="color: #686ABB;" aria-hidden="true"></i>
+          <span>{{ sch }}</span>
+        </div>
+      }
 
       <!-- Dirección dinámica -->
       <a
