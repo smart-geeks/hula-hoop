@@ -1,0 +1,2 @@
+ALTER TABLE contracts
+  ADD COLUMN IF NOT EXISTS doc_metadata JSONB DEFAULT '{}';
