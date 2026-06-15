@@ -32,15 +32,30 @@ export class AuthService {
     return role === 'owner' || role === 'admin';
   });
   readonly isPasswordRecovery = signal(false);
+  readonly isInitialized = signal(!isPlatformBrowser(this.platformId));
 
   /** Tracks the user ID for which we already have a profile loaded */
   private loadedProfileUserId: string | null = null;
   private profileFetchInProgress = false;
+  private readonly initResolvers: (() => void)[] = [];
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
       this.initAuthListener();
     }
+  }
+
+  async awaitReady(): Promise<void> {
+    if (this.isInitialized()) return;
+    return new Promise<void>((resolve) => {
+      this.initResolvers.push(resolve);
+    });
+  }
+
+  private resolveInit(): void {
+    this.isInitialized.set(true);
+    this.initResolvers.forEach((r) => r());
+    this.initResolvers.length = 0;
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
@@ -105,12 +120,26 @@ export class AuthService {
     return { error };
   }
 
-  private initAuthListener(): void {
+  private async initAuthListener(): Promise<void> {
     const client = this.supabase.client;
-    if (!client) return;
+    if (!client) {
+      this.resolveInit();
+      return;
+    }
 
-    // onAuthStateChange fires INITIAL_SESSION on setup — no need for a separate getSession() call.
-    // This avoids a duplicate token refresh that can trigger 429 rate-limits.
+    try {
+      const { data: { session } } = await client.auth.getSession();
+      const user = session?.user ?? null;
+      if (user) {
+        this.currentUser.set(user);
+        await this.fetchProfile(user.id);
+      }
+    } catch (err) {
+      console.error('Error during initial session retrieval:', err);
+    } finally {
+      this.resolveInit();
+    }
+
     client.auth.onAuthStateChange((event, session) => {
       this.ngZone.run(() => {
         const user = session?.user ?? null;
@@ -119,8 +148,11 @@ export class AuthService {
           this.isPasswordRecovery.set(true);
         }
 
+        if (event === 'INITIAL_SESSION') {
+          return;
+        }
+
         if (!user) {
-          // Signed out or session expired
           this.currentUser.set(null);
           this.userProfile.set(null);
           this.loadedProfileUserId = null;
@@ -129,11 +161,8 @@ export class AuthService {
 
         this.currentUser.set(user);
 
-        // Only fetch profile on events that establish or change the session.
-        // Skip TOKEN_REFRESHED if we already have the profile for this user.
         const needsProfileFetch =
           event === 'SIGNED_IN' ||
-          event === 'INITIAL_SESSION' ||
           (event === 'TOKEN_REFRESHED' && this.loadedProfileUserId !== user.id);
 
         if (needsProfileFetch) {
@@ -144,7 +173,6 @@ export class AuthService {
   }
 
   private async fetchProfile(userId: string): Promise<void> {
-    // Prevent concurrent fetches for the same user
     if (this.profileFetchInProgress) return;
 
     const client = this.supabase.client;

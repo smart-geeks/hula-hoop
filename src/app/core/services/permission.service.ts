@@ -15,6 +15,8 @@ export class PermissionService {
   readonly currentRoleName = signal<string | null>(null);
   readonly loading = signal(false);
 
+  private readonly permissionResolvers: (() => void)[] = [];
+
   constructor() {
     // Automatically load permissions whenever the current user, profile, or active venue changes
     effect(() => {
@@ -28,7 +30,24 @@ export class PermissionService {
         this.currentPermissions.set(null);
         this.currentRoleSlug.set(null);
         this.currentRoleName.set(null);
+        this.resolvePermissions();
       }
+    });
+  }
+
+  private resolvePermissions(): void {
+    this.permissionResolvers.forEach((r) => r());
+    this.permissionResolvers.length = 0;
+  }
+
+  async awaitReady(): Promise<void> {
+    await this.auth.awaitReady();
+    if (!this.auth.isLoggedIn()) return;
+
+    if (this.currentPermissions() !== null && !this.loading()) return;
+
+    return new Promise<void>((resolve) => {
+      this.permissionResolvers.push(resolve);
     });
   }
 
@@ -41,6 +60,7 @@ export class PermissionService {
     const client = this.supabase.client;
     if (!client) {
       this.setDefaultFallback();
+      this.resolvePermissions();
       return;
     }
 
@@ -95,6 +115,7 @@ export class PermissionService {
       this.setDefaultFallback();
     } finally {
       this.loading.set(false);
+      this.resolvePermissions();
     }
   }
 

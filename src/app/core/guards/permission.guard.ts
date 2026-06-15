@@ -2,9 +2,12 @@ import { inject } from '@angular/core';
 import { type CanActivateFn, Router } from '@angular/router';
 import { PermissionService } from '../services/permission.service';
 
-export const permissionGuard: CanActivateFn = (route, state) => {
+export const permissionGuard: CanActivateFn = async (route, state) => {
   const permissionService = inject(PermissionService);
   const router = inject(Router);
+
+  // Wait for permissions initialization
+  await permissionService.awaitReady();
 
   // Retrieve route metadata configuration
   // Route config should specify e.g.: data: { permission: 'gastos:r' } or data: { permission: 'configuracion' }
