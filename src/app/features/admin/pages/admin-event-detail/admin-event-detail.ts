@@ -13,6 +13,7 @@ import { EventTaskService } from '../../../../core/services/event-task.service';
 import { ExpenseService } from '../../../../core/services/expense.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
 import type { Contract, ContractStatus, ContractPayment } from '../../../../core/interfaces/contract';
 import type { Quote } from '../../../../core/interfaces/quote';
@@ -36,6 +37,7 @@ export class AdminEventDetail {
   private readonly expenseService   = inject(ExpenseService);
   private readonly ticketPrint      = inject(PosTicketPrintService);
   private readonly supabase           = inject(SupabaseService);
+  private readonly authService       = inject(AuthService);
   private readonly route            = inject(ActivatedRoute);
   private readonly router           = inject(Router);
 
@@ -142,6 +144,17 @@ export class AdminEventDetail {
     if (s === 'pendiente') return 'border-amber-200';
     return 'border-slate-200';
   });
+
+  // ── Expediente Digital ────────────────────────────────
+  readonly uploadingDoc    = signal<'ine' | 'comprobante' | 'firma' | 'pdf' | null>(null);
+  readonly expandedReplace = signal<string | null>(null);
+
+  readonly docMeta = computed(() =>
+    (this.contract()?.doc_metadata ?? {}) as Record<
+      string,
+      { replaced_by: string; replaced_at: string } | null
+    >,
+  );
 
   constructor() {
     this.loadData();
@@ -480,6 +493,45 @@ export class AdminEventDetail {
     } else {
       this.showToast('error', 'Error al subir el archivo del contrato');
     }
+  }
+
+  toggleReplace(field: string): void {
+    this.expandedReplace.update((cur) => (cur === field ? null : field));
+  }
+
+  async onDocUpload(
+    field: 'ine' | 'comprobante' | 'firma' | 'pdf',
+    event: Event,
+  ): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+
+    const input = event.target as HTMLInputElement;
+    if (!input?.files?.length) return;
+    const file = input.files[0];
+
+    const adminName = this.authService.userProfile()?.full_name ?? 'Admin';
+    this.uploadingDoc.set(field);
+
+    const updated = await this.contractService.uploadDocumentAdmin(
+      c.id,
+      field,
+      file,
+      adminName,
+      this.docMeta(),
+    );
+
+    this.uploadingDoc.set(null);
+    this.expandedReplace.set(null);
+
+    if (updated) {
+      this.contract.set(updated);
+      this.showToast('success', 'Documento subido correctamente');
+    } else {
+      this.showToast('error', 'Error al subir el documento');
+    }
+
+    input.value = '';
   }
 
   sendContractEmail(): void {
