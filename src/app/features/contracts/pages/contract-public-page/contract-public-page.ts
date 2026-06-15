@@ -12,7 +12,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ContractService } from '../../../../core/services/contract.service';
 import { VenueService } from '../../../../core/services/venue.service';
+import { QuoteService } from '../../../../core/services/quote.service';
 import type { Contract } from '../../../../core/interfaces/contract';
+import type { Quote } from '../../../../core/interfaces/quote';
 
 @Component({
   selector: 'app-contract-public-page',
@@ -23,12 +25,14 @@ import type { Contract } from '../../../../core/interfaces/contract';
 export class ContractPublicPage implements AfterViewInit {
   private readonly contractService = inject(ContractService);
   private readonly venueService    = inject(VenueService);
+  private readonly quoteService    = inject(QuoteService);
   private readonly route           = inject(ActivatedRoute);
   private readonly router          = inject(Router);
 
   readonly loading         = signal(true);
   readonly notFound        = signal(false);
   readonly contract        = signal<Contract | null>(null);
+  readonly quote           = signal<Quote | null>(null);
   readonly venueSlug       = signal<string | null>(null);
   readonly submitting      = signal(false);
 
@@ -76,6 +80,11 @@ export class ContractPublicPage implements AfterViewInit {
       this.contract.set(c);
       this.ineUrl.set(c.ine_url || null);
       this.compUrl.set(c.comprobante_url || null);
+
+      if (c.quote_id) {
+        const q = await this.quoteService.getById(c.quote_id);
+        this.quote.set(q);
+      }
       
       // Determine starting step based on already uploaded documents
       if (!c.ine_url) {
@@ -306,8 +315,33 @@ export class ContractPublicPage implements AfterViewInit {
     }
   }
 
-  formatTime(time?: string): string {
+  formatTime(time: string | null | undefined): string {
     if (!time) return '—';
-    return time.substring(0, 5);
+    const timePart = time.includes('T') ? time.split('T')[1] : time;
+    const [h, m] = timePart.split(':');
+    const hour = parseInt(h, 10);
+    return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  getContractPackage(quote: any): string {
+    if (!quote || !quote.items || quote.items.length === 0) return '—';
+    return quote.items[0]?.descripcion || '—';
+  }
+
+  getContractSnack(quote: any): string {
+    if (!quote || !quote.items) return '—';
+    const snackItem = quote.items.find((it: any) => it.descripcion.startsWith('Merienda:'));
+    if (!snackItem) return '—';
+    return snackItem.descripcion.replace(/^Merienda:\s*/, '');
+  }
+
+  getContractExtras(quote: any): string {
+    if (!quote || !quote.items) return '—';
+    const packageDesc = this.getContractPackage(quote);
+    const extras = quote.items.filter((it: any) => 
+      it.descripcion !== packageDesc && !it.descripcion.startsWith('Merienda:')
+    );
+    if (extras.length === 0) return '—';
+    return extras.map((it: any) => `${it.descripcion} (x${it.cantidad})`).join(', ');
   }
 }
