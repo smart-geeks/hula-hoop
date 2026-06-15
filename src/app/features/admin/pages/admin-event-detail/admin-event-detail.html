@@ -65,44 +65,164 @@
     </div>
   </div>
 
-  <!-- ── PROGRESS BAR ─────────────────────────────────── -->
-  <div class="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-sm">
-    <div class="flex items-center justify-between relative">
-      <!-- Background track -->
-      <div class="absolute left-0 right-0 top-[18px] h-0.5 bg-slate-200 mx-5" aria-hidden="true"></div>
-      <!-- Filled track -->
-      <div class="absolute left-5 top-[18px] h-0.5 bg-emerald-400 transition-all duration-500"
-        [style.width]="stepProgressWidth()"
-        aria-hidden="true"></div>
+  <!-- ── MILESTONE CARDS ────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
-      @for (step of LIFECYCLE_STEPS; track step.step) {
-        <div class="flex flex-col items-center relative z-10">
-          <!-- Circle: completed = green check, active = red/brand, future = grey -->
-          @if (currentStep() > step.step) {
-            <div class="w-9 h-9 rounded-full bg-emerald-500 text-white ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300"
-              [attr.aria-label]="step.label + ' (completado)'">
-              <i class="pi pi-check text-xs"></i>
-            </div>
-          } @else if (currentStep() === step.step) {
-            <div class="w-9 h-9 rounded-full ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300 text-white"
-              [class]="isLocked() ? 'bg-slate-500' : 'bg-rojo-brillante'"
-              [attr.aria-label]="step.label + ' (actual)'">
-              {{ step.step }}
-            </div>
+    <!-- CONTRATO -->
+    <button (click)="scrollToTab('contrato')"
+      [class]="'text-left bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all '
+        + (documentosCompletos() ? 'border-emerald-200' : 'border-amber-200')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <i class="pi pi-file-edit text-blue-500 text-sm"></i>
+          </div>
+          <span class="font-semibold text-slate-700 text-sm">Contrato</span>
+        </div>
+        @if (documentosCompletos()) {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">✓ Completo</span>
+        } @else {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">⚠ Pendiente</span>
+        }
+      </div>
+      <div class="space-y-1.5 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">INE</span>
+          @if (contract()?.ine_url) {
+            <span class="text-emerald-600 font-medium">✓ subido</span>
           } @else {
-            <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-400 ring-2 ring-white flex items-center justify-center text-sm font-bold transition-all duration-300"
-              [attr.aria-label]="step.label + ' (pendiente)'">
-              {{ step.step }}
-            </div>
+            <span class="text-slate-300">✗ falta</span>
           }
-          <!-- Label: always visible on sm+, only active on mobile -->
-          <span class="mt-2 text-[11px] font-medium text-center leading-tight max-w-[60px]"
-            [class]="currentStep() === step.step ? 'text-slate-700 font-semibold' : (currentStep() > step.step ? 'text-emerald-600 hidden sm:block' : 'text-slate-400 hidden sm:block')">
-            {{ step.label }}
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Comprobante</span>
+          @if (contract()?.comprobante_url) {
+            <span class="text-emerald-600 font-medium">✓ subido</span>
+          } @else {
+            <span class="text-slate-300">✗ falta</span>
+          }
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Firma</span>
+          @if (contract()?.firma_url || contract()?.pdf_url) {
+            <span class="text-emerald-600 font-medium">✓ firmado</span>
+          } @else {
+            <span class="text-slate-300">✗ pendiente</span>
+          }
+        </div>
+      </div>
+    </button>
+
+    <!-- PAGOS -->
+    <button (click)="scrollToTab('pagos')"
+      [class]="'text-left bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all '
+        + (saldoPendiente() === 0 ? 'border-emerald-200' : 'border-amber-200')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+            <i class="pi pi-credit-card text-emerald-500 text-sm"></i>
+          </div>
+          <span class="font-semibold text-slate-700 text-sm">Pagos</span>
+        </div>
+        @if (saldoPendiente() === 0) {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">✓ Liquidado</span>
+        } @else {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">{{ pagoProgress() }}% pagado</span>
+        }
+      </div>
+      <div class="space-y-1.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Total</span>
+          <span class="font-semibold text-slate-700">{{ contract()?.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Pagado</span>
+          <span class="font-semibold text-emerald-600">{{ contract()?.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Saldo</span>
+          <span [class]="saldoPendiente() > 0 ? 'font-bold text-amber-600' : 'font-semibold text-emerald-600'">
+            {{ saldoPendiente() > 0 ? (saldoPendiente() | currency:'MXN':'symbol-narrow':'1.0-0') : '—' }}
           </span>
         </div>
-      }
-    </div>
+        <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+          <div class="h-1.5 rounded-full transition-all duration-500"
+            [class]="pagoProgress() >= 100 ? 'bg-emerald-400' : 'bg-amber-400'"
+            [style.width.%]="pagoProgress()"></div>
+        </div>
+      </div>
+    </button>
+
+    <!-- TAREAS -->
+    <button (click)="scrollToTab('tareas')"
+      [class]="'text-left bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all '
+        + (tareasStatus() === 'completo' ? 'border-emerald-200' : tareasStatus() === 'pendiente' ? 'border-amber-200' : 'border-slate-200')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+            <i class="pi pi-check-square text-violet-500 text-sm"></i>
+          </div>
+          <span class="font-semibold text-slate-700 text-sm">Tareas</span>
+        </div>
+        @if (tareasStatus() === 'sin-tareas') {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 shrink-0">Sin tareas</span>
+        } @else if (tareasStatus() === 'completo') {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">✓ Completas</span>
+        } @else {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">{{ tasks().length - completedTaskCount() }} pendientes</span>
+        }
+      </div>
+      <div class="space-y-1.5 text-xs">
+        @if (tasks().length === 0) {
+          <p class="text-slate-400 leading-relaxed">Sin actividades configuradas aún</p>
+        } @else {
+          <div class="flex justify-between">
+            <span class="text-slate-400">Completadas</span>
+            <span class="font-semibold text-slate-700">{{ completedTaskCount() }} / {{ tasks().length }}</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+            <div class="h-1.5 rounded-full transition-all duration-500"
+              [class]="taskProgress() >= 100 ? 'bg-emerald-400' : 'bg-violet-400'"
+              [style.width.%]="taskProgress()"></div>
+          </div>
+          <p class="text-slate-400">{{ taskProgress() }}% completado</p>
+        }
+      </div>
+    </button>
+
+    <!-- GASTOS -->
+    <button (click)="scrollToTab('gastos')"
+      [class]="'text-left bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all '
+        + (totalExpenses() > 0 ? 'border-slate-200' : 'border-amber-200')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+            <i class="pi pi-wallet text-orange-500 text-sm"></i>
+          </div>
+          <span class="font-semibold text-slate-700 text-sm">Gastos</span>
+        </div>
+        @if (totalExpenses() > 0) {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">{{ expenses().length }} registros</span>
+        } @else {
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">⚠ Recordar</span>
+        }
+      </div>
+      <div class="space-y-1.5 text-xs">
+        @if (totalExpenses() > 0) {
+          <div class="flex justify-between">
+            <span class="text-slate-400">Total acumulado</span>
+            <span class="font-bold text-slate-800">{{ totalExpenses() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Registros</span>
+            <span class="font-semibold text-slate-600">{{ expenses().length }}</span>
+          </div>
+        } @else {
+          <p class="text-amber-700 leading-relaxed">¿Recuerdas registrar los gastos del evento?</p>
+        }
+      </div>
+    </button>
+
   </div>
 
   <!-- ── LOCK BANNER ──────────────────────────────────── -->
@@ -114,7 +234,7 @@
   }
 
   <!-- ── TAB BAR ────────────────────────────────────────── -->
-  <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
+  <div id="tabs-section" class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
     @for (tab of [
       {id: 'resumen',    icon: 'pi-info-circle',    label: 'Resumen'},
       {id: 'contrato',   icon: 'pi-file-pdf',       label: 'Contrato'},
@@ -343,20 +463,32 @@
                 <div class="p-3 text-slate-700 font-medium">De {{ formatTime(contract()?.hora_inicio) }} a {{ formatTime(contract()?.hora_fin) }}</div>
               </div>
               <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Paquete Contratado</div>
+                <div class="p-3 text-slate-700 font-medium">{{ getContractPackage(quote()) }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Merienda</div>
+                <div class="p-3 text-slate-700 font-medium">{{ getContractSnack(quote()) }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Extras</div>
+                <div class="p-3 text-slate-700 font-medium">{{ getContractExtras(quote()) }}</div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Costo Renta Salón</div>
-                <div class="p-3 text-slate-700 font-semibold">{{ contract()?.salon_renta | currency }}</div>
+                <div class="p-3 text-slate-700 font-semibold">{{ contract()?.salon_renta | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
               <div class="grid grid-cols-2 border-b border-slate-200 bg-red-50/10">
                 <div class="p-3 bg-red-50/20 font-bold text-red-700 border-r">Total Contrato</div>
-                <div class="p-3 text-slate-800 font-black">{{ contract()?.total_contrato | currency }}</div>
+                <div class="p-3 text-slate-800 font-black">{{ contract()?.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
               <div class="grid grid-cols-2 border-b border-slate-200">
                 <div class="p-3 bg-emerald-50/10 font-semibold text-emerald-700 border-r">Anticipo Pagado</div>
-                <div class="p-3 text-emerald-700 font-bold">{{ contract()?.deposito_pagado | currency }}</div>
+                <div class="p-3 text-emerald-700 font-bold">{{ contract()?.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
               <div class="grid grid-cols-2 bg-slate-50/50">
                 <div class="p-3 bg-red-50/30 font-bold text-red-600 border-r">Saldo Pendiente</div>
-                <div class="p-3 text-red-600 font-bold">{{ contract()?.saldo_pendiente | currency }}</div>
+                <div class="p-3 text-red-600 font-bold">{{ contract()?.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
             </div>
           </div>
@@ -369,9 +501,9 @@
           </div>
 
           <!-- Cláusulas -->
-          <div class="space-y-3">
+          <div class="space-y-2">
             <span class="text-xs font-bold text-slate-800 uppercase tracking-wider block">Cláusulas del Contrato</span>
-            <div class="text-xs space-y-2.5">
+            <div class="space-y-2 text-xs leading-relaxed">
               <div><strong>PRIMERA (OBJETO):</strong> La renta temporal y exclusiva de las instalaciones de Hula Hoop para el evento detallado en la sección técnica, comprometiéndose a prestar los servicios contratados con altos estándares de calidad.</div>
               <div><strong>SEGUNDA (VALOR Y FORMA DE PAGO):</strong> El precio de la prestación del servicio está estipulado como "Total Contrato". Para garantizar y reservar formalmente el salón se requiere el pago de un anticipo. El remanente deberá liquidarse íntegramente a más tardar el día del evento antes de que este inicie.</div>
               <div><strong>TERCERA (POLÍTICA DE CANCELACIONES):</strong> Si "El Cliente" rescinde el contrato unilateralmente, perderá irrevocablemente el anticipo entregado como indemnización por daños comerciales. Modificaciones de fecha quedan sujetas a penalización y disponibilidad de Hula Hoop.</div>
@@ -383,11 +515,19 @@
           <!-- Signatures line -->
           <div class="grid grid-cols-2 gap-8 pt-8 border-t border-slate-100">
             <div class="text-center">
+              <div class="h-16 flex items-end justify-center pb-2">
+                <span class="text-slate-400 text-xs italic font-serif">Hula Hoop Eventos</span>
+              </div>
               <div class="border-t border-slate-300 pt-2 text-[10px] font-semibold text-slate-500 uppercase">
                 Por HULA HOOP
               </div>
             </div>
             <div class="text-center">
+              <div class="h-16 flex flex-col justify-end items-center pb-1">
+                @if (contract()?.firma_url) {
+                  <img [src]="contract()?.firma_url" alt="Firma Cliente" class="max-h-12 object-contain" />
+                }
+              </div>
               <div class="border-t border-slate-300 pt-2 text-[10px] font-semibold text-slate-500 uppercase">
                 Por EL CLIENTE
               </div>
