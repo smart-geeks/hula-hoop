@@ -725,62 +725,7 @@
             }
           </div>
 
-          <!-- Slot 3: Firma digital -->
-          <div class="rounded-xl border p-4 text-xs transition-colors"
-               [class]="contract()?.firma_url ? 'border-emerald-200 bg-emerald-50/40' : 'border-dashed border-slate-200 bg-white'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="font-semibold text-slate-700 flex items-center gap-1.5">
-                <i class="pi pi-pen-to-square text-slate-400"></i> Firma digital
-              </span>
-              @if (contract()?.firma_url) {
-                <span class="text-[10px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">&#x2713; Firmado</span>
-              } @else {
-                <span class="text-[10px] font-bold uppercase tracking-wide text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">&#x2717; Pendiente</span>
-              }
-            </div>
-
-            @if (contract()?.firma_url) {
-              <div class="flex flex-wrap gap-2 mb-2">
-                <a [href]="contract()?.firma_url" target="_blank"
-                   class="inline-flex items-center gap-1 text-rojo-brillante font-semibold hover:underline">
-                  <i class="pi pi-external-link text-[10px]"></i> Ver
-                </a>
-                <button type="button" (click)="toggleReplace('firma')"
-                        class="inline-flex items-center gap-1 text-slate-500 font-semibold hover:text-slate-700">
-                  <i class="pi pi-refresh text-[10px]"></i>
-                  Reemplazar
-                  <i class="pi text-[10px]" [class]="expandedReplace() === 'firma' ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-                </button>
-              </div>
-              @if (docMeta()['firma']) {
-                <p class="text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1 mb-2">
-                  <i class="pi pi-info-circle"></i>
-                  Reemplazado por <strong>{{ docMeta()['firma']!.replaced_by }}</strong>
-                  &middot; {{ docMeta()['firma']!.replaced_at | date:'d MMM yyyy, h:mm a':'':'es-MX' }}
-                </p>
-              }
-            }
-
-            @if (!contract()?.firma_url || expandedReplace() === 'firma') {
-              <div class="flex flex-wrap gap-2 mt-1">
-                <label class="cursor-pointer relative">
-                  <input type="file" accept="image/*,application/pdf"
-                         class="sr-only"
-                         [disabled]="uploadingDoc() === 'firma'"
-                         (change)="onDocUpload('firma', $event)" />
-                  <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors">
-                    @if (uploadingDoc() === 'firma') {
-                      <i class="pi pi-spin pi-spinner text-xs"></i> Subiendo&hellip;
-                    } @else {
-                      <i class="pi pi-upload text-xs"></i> Subir archivo
-                    }
-                  </span>
-                </label>
-              </div>
-            }
-          </div>
-
-          <!-- Slot 4: Contrato firmado (PDF) -->
+          <!-- Slot 3: Contrato firmado (PDF) -->
           <div class="rounded-xl border p-4 text-xs transition-colors"
                [class]="contract()?.pdf_url ? 'border-emerald-200 bg-emerald-50/40' : 'border-dashed border-slate-200 bg-white'">
             <div class="flex items-center justify-between mb-2">
