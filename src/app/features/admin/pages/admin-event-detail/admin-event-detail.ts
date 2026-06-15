@@ -123,6 +123,19 @@ export class AdminEventDetail {
     }
   });
 
+  readonly documentosCompletos = computed(() => {
+    const c = this.contract();
+    if (!c) return false;
+    const tieneFirma = !!(c.firma_url || c.pdf_url);
+    return !!(c.ine_url && c.comprobante_url && tieneFirma);
+  });
+
+  readonly tareasStatus = computed((): 'completo' | 'pendiente' | 'sin-tareas' => {
+    const total = this.tasks().length;
+    if (total === 0) return 'sin-tareas';
+    return this.completedTaskCount() === total ? 'completo' : 'pendiente';
+  });
+
   constructor() {
     this.loadData();
   }
@@ -376,13 +389,37 @@ export class AdminEventDetail {
     return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
 
+  getContractPackage(quote: any): string {
+    if (!quote || !quote.items || quote.items.length === 0) return '—';
+    return quote.items[0]?.descripcion || '—';
+  }
+
+  getContractSnack(quote: any): string {
+    if (!quote || !quote.items) return '—';
+    const snackItem = quote.items.find((it: any) => it.descripcion.startsWith('Merienda:'));
+    if (!snackItem) return '—';
+    return snackItem.descripcion.replace(/^Merienda:\s*/, '');
+  }
+
+  getContractExtras(quote: any): string {
+    if (!quote || !quote.items) return '—';
+    const packageDesc = this.getContractPackage(quote);
+    const extras = quote.items.filter((it: any) => 
+      it.descripcion !== packageDesc && !it.descripcion.startsWith('Merienda:')
+    );
+    if (extras.length === 0) return '—';
+    return extras.map((it: any) => `${it.descripcion} (x${it.cantidad})`).join(', ');
+  }
+
   goBack(): void {
     void this.router.navigate(['/admin/eventos']);
   }
 
-  stepProgressWidth(): string {
-    const pct = (this.currentStep() - 1) / (this.LIFECYCLE_STEPS.length - 1) * 100;
-    return `calc(${pct}% - (${pct / 100} * 2.5rem))`;
+  scrollToTab(tab: DetailTab): void {
+    this.setTab(tab);
+    setTimeout(() => {
+      document.getElementById('tabs-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   }
 
   private sortTasks(tasks: EventTask[]): EventTask[] {
@@ -398,24 +435,6 @@ export class AdminEventDetail {
     this.toast.set({ type, message });
     setTimeout(() => this.toast.set(null), 3000);
   }
-
-  // Lifecycle configuration
-  readonly LIFECYCLE_STEPS = [
-    { step: 1, label: 'Cotizado',   status: 'cotizado' },
-    { step: 2, label: 'Contratado', status: 'firmado' },
-    { step: 3, label: 'Liquidado',  status: 'liquidado' },
-    { step: 4, label: 'Concluido',  status: 'concluido' },
-  ];
-
-  readonly currentStep = computed(() => {
-    const status = this.contract()?.estado ?? 'borrador';
-    if (status === 'cancelado') return 0;
-    if (status === 'borrador') return 1;
-    if (status === 'firmado') return 2;
-    if (status === 'liquidado') return 3;
-    if (status === 'concluido') return 4;
-    return 1;
-  });
 
   async updateContractStatus(estado: ContractStatus): Promise<void> {
     const c = this.contract();
@@ -512,6 +531,11 @@ export class AdminEventDetail {
     const win = window.open('', '_blank');
     if (!win) return;
 
+    const quoteData = this.quote();
+    const pkg = this.getContractPackage(quoteData);
+    const snack = this.getContractSnack(quoteData);
+    const extras = this.getContractExtras(quoteData);
+
     const fechaEvento = c.fecha_evento
       ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
       : '—';
@@ -539,7 +563,7 @@ export class AdminEventDetail {
         .details-table td.label{font-weight:700;background:#f8fafc;width:25%}
         .signatures{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:60px;page-break-inside:avoid}
         .signature-block{text-align:center}
-        .signature-line{border-top:1px solid #475569;margin-top:50px;padding-top:8px;font-size:12px;font-weight:600}
+        .signature-line{border-top:1px solid #475569;margin-top:10px;padding-top:8px;font-size:12px;font-weight:600}
         .footer{margin-top:60px;border-top:1px solid #e2e8f0;padding-top:15px;font-size:10px;color:#94a3b8;text-align:center}
         @media print{body{padding:20px 30px}}
       </style>
@@ -555,10 +579,6 @@ export class AdminEventDetail {
       <div class="title">CONTRATO DE PRESTACIÓN DE SERVICIOS PARA EVENTO SOCIAL</div>
 
       <p>CONTRATO DE PRESTACIÓN DE SERVICIOS QUE CELEBRAN, POR UNA PARTE, EL SALÓN DE EVENTOS HULA HOOP (EN LO SUCESIVO <strong>"EL PRESTADOR"</strong>), Y POR LA OTRA PARTE, LA PERSONA CUYOS DATOS APARECEN EN LA TABLA DE ESPECIFICACIONES DE ESTE DOCUMENTO (EN LO SUCESIVO <strong>"EL CLIENTE"</strong>), AL TENOR DE LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:</p>
-
-      <div class="section-title">DECLARACIONES</div>
-      <p>I. Declara <strong>"EL PRESTADOR"</strong> ser una empresa debidamente constituida conforme a las leyes mexicanas, con facultades suficientes para obligarse en los términos de este instrumento, y contar con la infraestructura y personal calificado para la prestación del servicio objeto del presente contrato.</p>
-      <p>II. Declara <strong>"EL CLIENTE"</strong>, por su propio derecho, contar con capacidad legal suficiente para contratar y obligarse en los términos del presente instrumento, reconociendo que los datos proporcionados son verídicos y vigentes.</p>
 
       <div class="section-title">ESPECIFICACIONES DEL SERVICIO Y EVENTO</div>
       <table class="details-table">
@@ -577,20 +597,32 @@ export class AdminEventDetail {
         <tr>
           <td class="label">Email</td>
           <td>${c.client?.email ?? '—'}</td>
-          <td class="label">Costo Renta</td>
-          <td>$${c.salon_renta.toLocaleString('es-MX')} MXN</td>
+          <td class="label">Paquete Contratado</td>
+          <td>${pkg}</td>
         </tr>
         <tr>
+          <td class="label">Merienda</td>
+          <td>${snack}</td>
+          <td class="label">Extras</td>
+          <td>${extras}</td>
+        </tr>
+        <tr>
+          <td class="label">Costo Renta Salón</td>
+          <td>$${c.salon_renta.toLocaleString('es-MX')} MXN</td>
           <td class="label">Total Contrato</td>
           <td><strong>$${c.total_contrato.toLocaleString('es-MX')} MXN</strong></td>
-          <td class="label">Anticipo Pagado</td>
-          <td style="color:#16a34a;font-weight:600">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
         </tr>
         <tr>
+          <td class="label">Anticipo Pagado</td>
+          <td style="color:#16a34a;font-weight:600">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
           <td class="label">Saldo Pendiente</td>
-          <td colspan="3" style="color:#dc2626;font-weight:700">$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</td>
+          <td style="color:#dc2626;font-weight:700"><strong>$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</strong></td>
         </tr>
       </table>
+
+      <div class="section-title">DECLARACIONES</div>
+      <p>I. Declara <strong>"EL PRESTADOR"</strong> ser una empresa debidamente constituida conforme a las leyes mexicanas, con facultades suficientes para obligarse en los términos de este instrumento, y contar con la infraestructura y personal calificado para la prestación del servicio objeto del presente contrato.</p>
+      <p>II. Declara <strong>"EL CLIENTE"</strong>, por su propio derecho, contar con capacidad legal suficiente para contratar y obligarse en los términos del presente instrumento, reconociendo que los datos proporcionados son verídicos y vigentes.</p>
 
       <div class="section-title">CLÁUSULAS</div>
       <ol>
@@ -605,10 +637,17 @@ export class AdminEventDetail {
 
       <div class="signatures">
         <div class="signature-block">
+          <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; font-style: italic; color: #94a3b8; font-size: 14px;">
+            Hula Hoop Eventos
+          </div>
           <div class="signature-line">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
         </div>
         <div class="signature-block">
+          <div style="height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pb-1">
+            ${c.firma_url ? `<img src="${c.firma_url}" style="max-height: 55px;" />` : ''}
+          </div>
           <div class="signature-line">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
+          ${c.fecha_firma ? `<div style="font-size: 9px; color: #64748b; margin-top: 4px;">Firmado digitalmente el ${fechaCelebracion}</div>` : ''}
         </div>
       </div>
 
