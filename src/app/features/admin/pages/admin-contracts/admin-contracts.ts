@@ -163,6 +163,7 @@ export class AdminContracts {
       quote_id:       quote.id,
       fecha_evento:   quote.fecha_evento ?? '',
       total_contrato: quote.total,
+      salon_renta:    quote.items?.[0]?.precio_unitario ?? 0,
     });
 
     if (quote.client_id) {

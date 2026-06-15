@@ -547,7 +547,7 @@ export class AdminQuotes {
       fecha_evento:    quote.fecha_evento ?? this.todayStr(),
       hora_inicio:     quote.hora_inicio ?? undefined,
       hora_fin:        quote.hora_fin ?? undefined,
-      salon_renta:     0,
+      salon_renta:     quote.items?.[0]?.precio_unitario ?? 0,
       total_contrato:  quote.total,
       deposito_pagado: 0,
       estado:          'firmado',
