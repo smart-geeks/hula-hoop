@@ -136,6 +136,13 @@ export class AdminEventDetail {
     return this.completedTaskCount() === total ? 'completo' : 'pendiente';
   });
 
+  readonly tareasBorderClass = computed(() => {
+    const s = this.tareasStatus();
+    if (s === 'completo') return 'border-emerald-200';
+    if (s === 'pendiente') return 'border-amber-200';
+    return 'border-slate-200';
+  });
+
   constructor() {
     this.loadData();
   }
