@@ -183,6 +183,54 @@ export class ContractService {
     return publicUrl;
   }
 
+  async uploadDocumentAdmin(
+    contractId: string,
+    field: 'ine' | 'comprobante' | 'firma' | 'pdf',
+    file: File,
+    replacedByName: string,
+    currentMeta: Record<string, { replaced_by: string; replaced_at: string } | null>,
+  ): Promise<Contract | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const ext = file.name.split('.').pop() || 'jpg';
+    const fileName = `contracts/${field}/${contractId}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from('gallery')
+      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) {
+      console.error(`Error uploading ${field}:`, uploadError);
+      return null;
+    }
+
+    const { data: publicUrlData } = client.storage
+      .from('gallery')
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicUrlData?.publicUrl;
+    if (!publicUrl) return null;
+
+    const urlField = field === 'pdf' ? 'pdf_url' : `${field}_url`;
+    const newMeta = {
+      ...currentMeta,
+      [field]: { replaced_by: replacedByName, replaced_at: new Date().toISOString() },
+    };
+
+    const { error } = await client
+      .from('contracts')
+      .update({ [urlField]: publicUrl, doc_metadata: newMeta })
+      .eq('id', contractId);
+
+    if (error) {
+      console.error(`Error updating contract ${field}:`, error);
+      return null;
+    }
+
+    return this.getById(contractId);
+  }
+
   async addPayment(
     contractId: string,
     payment: Omit<ContractPayment, 'id' | 'contract_id' | 'created_at'>,

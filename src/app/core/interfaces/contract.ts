@@ -29,6 +29,7 @@ export interface Contract {
   ine_url?: string | null;
   comprobante_url?: string | null;
   firma_url?: string | null;
+  doc_metadata?: Record<string, { replaced_by: string; replaced_at: string } | null> | null;
   notas: string | null;
   created_at: string;
   // Relations
