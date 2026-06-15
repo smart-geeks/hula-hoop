@@ -20,12 +20,22 @@ import { SeoService, SITE_URL } from '../../../../core/services/seo.service';
 import { JsonLdService } from '../../../../core/services/json-ld.service';
 import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { Venue } from '../../../../core/interfaces/venue';
+import { WhatsAppFloatingWidget } from '../../../../shared/components/whatsapp-floating-widget/whatsapp-floating-widget';
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
 @Component({
   selector: 'app-home-page',
-  imports: [HeroSection, PolaroidSection, PrivateEventsSection, PlayDaySection, GallerySection, ContactSection, HomeFooter],
+  imports: [
+    HeroSection,
+    PolaroidSection,
+    PrivateEventsSection,
+    PlayDaySection,
+    GallerySection,
+    ContactSection,
+    HomeFooter,
+    WhatsAppFloatingWidget
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-screen flex-col grid-bg overflow-x-clip' },
   templateUrl: './home-page.html',

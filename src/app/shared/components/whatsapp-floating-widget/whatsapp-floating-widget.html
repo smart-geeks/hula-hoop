@@ -1,0 +1,79 @@
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans">
+  <!-- Chat Window -->
+  @if (isOpen()) {
+    <div class="mb-4 w-80 md:w-96 max-w-[calc(100vw-3rem)] bg-white rounded-3xl shadow-2xl border-2 border-neutral-100 overflow-hidden flex flex-col transition-all duration-300 transform origin-bottom-right scale-100 opacity-100">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-morado to-[#5759a3] p-4 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <!-- Team avatar -->
+            <div class="w-10 h-10 rounded-full bg-lima flex items-center justify-center overflow-hidden border-2 border-white/40">
+              <img src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/general/logo.png" 
+                   alt="Hula Hoop" class="w-full h-full object-cover" />
+            </div>
+            <!-- Online indicator dot -->
+            <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></span>
+          </div>
+          <div>
+            <h4 class="font-bold text-sm tracking-wide">Soporte Hula Hoop</h4>
+            <p class="text-[11px] text-lima font-semibold flex items-center gap-1">
+              En línea • Responde al instante
+            </p>
+          </div>
+        </div>
+        <button (click)="toggleOpen()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/10" aria-label="Cerrar chat">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 bg-neutral-50 max-h-60 overflow-y-auto flex flex-col gap-3">
+        <!-- Message -->
+        <div class="bg-white rounded-2xl rounded-tl-none p-3 shadow-sm border border-neutral-100 text-sm text-neutral-800 max-w-[85%] self-start relative">
+          <p class="mb-1 font-body">¡Hola! 👋 Bienvenido a Hula Hoop.</p>
+          <p class="mb-1 font-body">¿Tienes dudas sobre nuestros paquetes de fiestas o Play Day?</p>
+          <p class="font-body text-xs text-neutral-500">Escribe tu mensaje aquí abajo para chatear por WhatsApp.</p>
+          <span class="text-[9px] text-neutral-400 block mt-1 text-right">Hace un momento</span>
+        </div>
+      </div>
+
+      <!-- Footer Input -->
+      <div class="p-3 bg-white border-t border-neutral-100 flex items-center gap-2">
+        <input 
+          type="text" 
+          [(ngModel)]="messageText"
+          (keydown.enter)="sendWhatsApp()"
+          placeholder="Escribe tu mensaje..." 
+          class="flex-1 bg-neutral-100 hover:bg-neutral-50 focus:bg-white text-sm px-3 py-2.5 rounded-xl border-0 focus:ring-2 focus:ring-morado outline-none text-neutral-800 transition-all font-body"
+        />
+        <button 
+          (click)="sendWhatsApp()" 
+          [disabled]="!messageText().trim()"
+          class="bg-[#25D366] text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-[#20ba59] active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all shadow-md hover:shadow-lg shadow-emerald-200"
+        >
+          <i class="pi pi-send text-sm"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Floating Green Button -->
+  <button 
+    (click)="toggleOpen()"
+    class="pixel-bounce group relative bg-gradient-to-tr from-[#25d366] to-[#7be3a2] text-white w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 border-white shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/35 transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none"
+    aria-label="Contactar por WhatsApp"
+  >
+    <!-- Pulse ring -->
+    <span class="absolute inset-0 rounded-full bg-[#25D366]/40 animate-ping opacity-75 group-hover:opacity-0 transition-opacity"></span>
+    
+    <!-- WhatsApp Icon -->
+    <i class="pi pi-whatsapp text-2xl md:text-3xl z-10 transition-transform duration-300" [class.rotate-90]="isOpen()"></i>
+
+    <!-- Tooltip (only when closed) -->
+    @if (!isOpen()) {
+      <span class="absolute right-16 bg-neutral-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-md">
+        ¿Dudas? Escríbenos
+      </span>
+    }
+  </button>
+</div>
