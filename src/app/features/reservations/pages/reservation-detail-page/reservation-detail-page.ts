@@ -159,7 +159,7 @@ export class ReservationDetailPage {
     const res = this.reservation();
     const type = this.reservationType();
     if (!res || !type) return;
-    window.open(this.printService.getWhatsAppUrl(this.buildPrintData(res, type)), '_blank');
+    window.open(this.printService.getWhatsAppUrl(this.buildPrintData(res, type), false), '_blank');
   }
 
   private buildPrintData(

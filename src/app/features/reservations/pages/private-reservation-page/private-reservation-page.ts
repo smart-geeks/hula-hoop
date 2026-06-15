@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, effect } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ReservationPrintService, ReservationPrintData } from '../../../../core/services/reservation-print.service';
 import { StepperModule } from 'primeng/stepper';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ButtonModule } from 'primeng/button';
@@ -68,12 +69,16 @@ export class PrivateReservationPage {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly route  = inject(ActivatedRoute);
+  private readonly printService = inject(ReservationPrintService);
 
   // ── State ──
   readonly activeStep     = signal(1);
   readonly linkedQuoteId  = signal<string | null>(null);
   readonly loading = signal(true);
   readonly submitting = signal(false);
+  readonly lastGeneratedReservation = signal<any | null>(null);
+  readonly generatedQuoteToken = signal<string | null>(null);
+  readonly generatingQuote = signal(false);
 
   // ── Data ──
   readonly timeSlots = signal<TimeSlot[]>([]);
@@ -176,6 +181,22 @@ export class PrivateReservationPage {
     const quoteId = this.route.snapshot.queryParamMap.get('quote_id');
     this.linkedQuoteId.set(quoteId);
     this.loadData();
+
+    this.contactForm.valueChanges.subscribe(() => {
+      this.generatedQuoteToken.set(null);
+      this.lastGeneratedReservation.set(null);
+    });
+
+    effect(() => {
+      this.selectedDate();
+      this.selectedSlot();
+      this.selectedPackage();
+      this.guestCount();
+      this.selectedExtras();
+      this.selectedSnackOption();
+      this.lastGeneratedReservation.set(null);
+      this.generatedQuoteToken.set(null);
+    }, { allowSignalWrites: true });
   }
 
   private async loadData(): Promise<void> {
@@ -322,6 +343,7 @@ export class PrivateReservationPage {
   }
 
   // ── Step navigation ──
+  // ── Step navigation ──
   canGoToStep2(): boolean {
     return this.selectedDate() !== null && this.selectedSlot() !== null;
   }
@@ -334,10 +356,186 @@ export class PrivateReservationPage {
     return true; // extras are optional
   }
 
+  onStepChange(step: number | undefined): void {
+    if (step === undefined) return;
+    const current = this.activeStep();
+    if (step > current) {
+      if (step >= 2 && !this.canGoToStep2()) {
+        this.navigateToStepWithWarning(
+          1,
+          'Debes seleccionar una fecha y un horario disponible primero. Estos campos son necesarios para generar tu cotización.',
+          '#date-selection-header'
+        );
+        return;
+      }
+      if (step >= 3 && !this.canGoToStep3()) {
+        if (!this.canGoToStep2()) {
+          this.navigateToStepWithWarning(
+            1,
+            'Debes seleccionar una fecha y un horario disponible primero. Estos campos son necesarios para generar tu cotización.',
+            '#date-selection-header'
+          );
+          return;
+        }
+        this.navigateToStepWithWarning(
+          2,
+          'Debes seleccionar un paquete y su merienda primero. Estos campos son necesarios para generar tu cotización.',
+          '#package-selection-header'
+        );
+        return;
+      }
+      if (step >= 4) {
+        if (!this.canGoToStep2()) {
+          this.navigateToStepWithWarning(
+            1,
+            'Debes seleccionar una fecha y un horario disponible primero. Estos campos son necesarios para generar tu cotización.',
+            '#date-selection-header'
+          );
+          return;
+        }
+        if (!this.canGoToStep3()) {
+          this.navigateToStepWithWarning(
+            2,
+            'Debes seleccionar un paquete y su merienda primero. Estos campos son necesarios para generar tu cotización.',
+            '#package-selection-header'
+          );
+          return;
+        }
+      }
+    }
+    
+    this.activeStep.set(step);
+  }
+
+  navigateToStepWithWarning(targetStep: number, warningDetail: string, focusSelector?: string): void {
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Campos necesarios para generar tu cotización',
+      detail: warningDetail,
+      life: 5000
+    });
+
+    this.activeStep.set(targetStep);
+
+    if (focusSelector) {
+      setTimeout(() => {
+        const el = document.querySelector(focusSelector);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (el instanceof HTMLInputElement || el instanceof HTMLButtonElement) {
+            el.focus();
+          }
+        }
+      }, 300);
+    }
+  }
+
+  handleSummaryClick(field: 'fecha' | 'paquete' | 'extras' | 'total'): void {
+    if (field === 'fecha') {
+      this.activeStep.set(1);
+      setTimeout(() => {
+        const el = document.querySelector('#date-selection-header');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    } else if (field === 'paquete') {
+      if (!this.canGoToStep2()) {
+        this.navigateToStepWithWarning(
+          1,
+          'Primero debes elegir una fecha y horario para ver los paquetes disponibles. Estos campos son necesarios para generar tu cotización.',
+          '#date-selection-header'
+        );
+      } else {
+        this.activeStep.set(2);
+        setTimeout(() => {
+          const el = document.querySelector('#package-selection-header');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    } else if (field === 'extras') {
+      if (!this.canGoToStep2()) {
+        this.navigateToStepWithWarning(
+          1,
+          'Primero debes elegir una fecha y horario. Estos campos son necesarios para generar tu cotización.',
+          '#date-selection-header'
+        );
+      } else if (!this.canGoToStep3()) {
+        this.navigateToStepWithWarning(
+          2,
+          'Primero debes seleccionar un paquete. Estos campos son necesarios para generar tu cotización.',
+          '#package-selection-header'
+        );
+      } else {
+        this.activeStep.set(3);
+        setTimeout(() => {
+          const el = document.querySelector('#extras-selection-header');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    } else if (field === 'total') {
+      if (!this.canGoToStep2()) {
+        this.navigateToStepWithWarning(
+          1,
+          'Primero debes elegir una fecha y horario. Estos campos son necesarios para generar tu cotización.',
+          '#date-selection-header'
+        );
+      } else if (!this.canGoToStep3()) {
+        this.navigateToStepWithWarning(
+          2,
+          'Primero debes seleccionar un paquete. Estos campos son necesarios para generar tu cotización.',
+          '#package-selection-header'
+        );
+      } else {
+        this.activeStep.set(4);
+        setTimeout(() => {
+          const el = document.querySelector('#contact-form-header');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          setTimeout(() => {
+            const input = document.getElementById('res-name');
+            if (input) input.focus();
+          }, 300);
+        }, 300);
+      }
+    }
+  }
+
+  showRequiredFieldsMessage(): void {
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Campos necesarios para generar tu cotización',
+      detail: 'Por favor, llena los datos de contacto obligatorios indicados con asterisco (*).',
+      life: 5000
+    });
+
+    const contactHeader = document.getElementById('contact-form-header');
+    if (contactHeader) {
+      contactHeader.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    setTimeout(() => {
+      const controls = [
+        { id: 'res-name', name: 'guest_name' },
+        { id: 'res-email', name: 'guest_email' },
+        { id: 'res-phone', name: 'guest_phone' }
+      ];
+      for (const item of controls) {
+        const ctrl = this.contactForm.get(item.name);
+        if (ctrl && ctrl.invalid) {
+          const input = document.getElementById(item.id);
+          if (input) {
+            input.focus();
+            break;
+          }
+        }
+      }
+    }, 500);
+  }
+
   // ── Step 5: Submit ──
   async submitReservation(): Promise<void> {
     if (this.contactForm.invalid) {
       this.contactForm.markAllAsTouched();
+      this.showRequiredFieldsMessage();
       return;
     }
 
@@ -348,44 +546,50 @@ export class PrivateReservationPage {
 
     this.submitting.set(true);
 
-    const contact = this.contactForm.getRawValue();
-    const user = this.authService.currentUser();
+    let reservation = this.lastGeneratedReservation();
 
-    const snack = this.selectedSnackOption();
+    if (!reservation) {
+      const contact = this.contactForm.getRawValue();
+      const user = this.authService.currentUser();
+      const snack = this.selectedSnackOption();
+      const venue = this.publicVenue.activeVenue();
 
-    const venue = this.publicVenue.activeVenue();
-    let reservation;
-    try {
-      reservation = await this.reservationService.createPrivateReservation({
-        venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
-        profile_id: user?.id ?? null,
-        guest_name: contact.guest_name,
-        guest_email: contact.guest_email,
-        guest_phone: contact.guest_phone,
-        reservation_date: this.formatDateISO(date),
-        time_slot_id: slot.id,
-        package_id: pkg.id,
-        guest_count: this.guestCount(),
-        subtotal_cents: this.subtotalCents(),
-        total_cents: this.totalCents(),
-        deposit_cents: this.depositCents(),
-        notes: contact.notes || undefined,
-        snack_option_id: snack?.id,
-        quote_id: this.linkedQuoteId() ?? undefined,
-        extras: this.selectedExtras().map((se) => ({
-          extra_id: se.extra.id,
-          quantity: se.quantity,
-          unit_price_cents: se.extra.price_cents,
-        })),
-      });
-    } catch (err: any) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error al crear la reserva',
-        detail: err.message || 'Intenta de nuevo más tarde.',
-      });
-      this.submitting.set(false);
-      return;
+      try {
+        reservation = await this.reservationService.createPrivateReservation({
+          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+          profile_id: user?.id ?? null,
+          guest_name: contact.guest_name,
+          guest_email: contact.guest_email,
+          guest_phone: contact.guest_phone,
+          reservation_date: this.formatDateISO(date),
+          time_slot_id: slot.id,
+          package_id: pkg.id,
+          guest_count: this.guestCount(),
+          subtotal_cents: this.subtotalCents(),
+          total_cents: this.totalCents(),
+          deposit_cents: this.depositCents(),
+          notes: contact.notes || undefined,
+          snack_option_id: snack?.id,
+          quote_id: this.linkedQuoteId() ?? undefined,
+          extras: this.selectedExtras().map((se) => ({
+            extra_id: se.extra.id,
+            quantity: se.quantity,
+            unit_price_cents: se.extra.price_cents,
+          })),
+        });
+
+        if (reservation) {
+          this.lastGeneratedReservation.set(reservation);
+        }
+      } catch (err: any) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al crear la reserva',
+          detail: err.message || 'Intenta de nuevo más tarde.',
+        });
+        this.submitting.set(false);
+        return;
+      }
     }
 
     if (!reservation) {
@@ -414,6 +618,7 @@ export class PrivateReservationPage {
   async submitAdminLocalReservation(): Promise<void> {
     if (this.contactForm.invalid) {
       this.contactForm.markAllAsTouched();
+      this.showRequiredFieldsMessage();
       return;
     }
 
@@ -424,43 +629,50 @@ export class PrivateReservationPage {
 
     this.submitting.set(true);
 
-    const contact = this.contactForm.getRawValue();
-    const user = this.authService.currentUser();
-    const snack = this.selectedSnackOption();
+    let reservation = this.lastGeneratedReservation();
 
-    const venue = this.publicVenue.activeVenue();
-    let reservation;
-    try {
-      reservation = await this.reservationService.createPrivateReservation({
-        venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
-        profile_id: user?.id ?? null,
-        guest_name: contact.guest_name,
-        guest_email: contact.guest_email,
-        guest_phone: contact.guest_phone,
-        reservation_date: this.formatDateISO(date),
-        time_slot_id: slot.id,
-        package_id: pkg.id,
-        guest_count: this.guestCount(),
-        subtotal_cents: this.subtotalCents(),
-        total_cents: this.totalCents(),
-        deposit_cents: this.depositCents(),
-        notes: contact.notes || undefined,
-        snack_option_id: snack?.id,
-        quote_id: this.linkedQuoteId() ?? undefined,
-        extras: this.selectedExtras().map((se) => ({
-          extra_id: se.extra.id,
-          quantity: se.quantity,
-          unit_price_cents: se.extra.price_cents,
-        })),
-      });
-    } catch (err: any) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error al crear la reserva',
-        detail: err.message || 'Intenta de nuevo más tarde.',
-      });
-      this.submitting.set(false);
-      return;
+    if (!reservation) {
+      const contact = this.contactForm.getRawValue();
+      const user = this.authService.currentUser();
+      const snack = this.selectedSnackOption();
+      const venue = this.publicVenue.activeVenue();
+
+      try {
+        reservation = await this.reservationService.createPrivateReservation({
+          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+          profile_id: user?.id ?? null,
+          guest_name: contact.guest_name,
+          guest_email: contact.guest_email,
+          guest_phone: contact.guest_phone,
+          reservation_date: this.formatDateISO(date),
+          time_slot_id: slot.id,
+          package_id: pkg.id,
+          guest_count: this.guestCount(),
+          subtotal_cents: this.subtotalCents(),
+          total_cents: this.totalCents(),
+          deposit_cents: this.depositCents(),
+          notes: contact.notes || undefined,
+          snack_option_id: snack?.id,
+          quote_id: this.linkedQuoteId() ?? undefined,
+          extras: this.selectedExtras().map((se) => ({
+            extra_id: se.extra.id,
+            quantity: se.quantity,
+            unit_price_cents: se.extra.price_cents,
+          })),
+        });
+
+        if (reservation) {
+          this.lastGeneratedReservation.set(reservation);
+        }
+      } catch (err: any) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al crear la reserva',
+          detail: err.message || 'Intenta de nuevo más tarde.',
+        });
+        this.submitting.set(false);
+        return;
+      }
     }
 
     if (!reservation) {
@@ -476,6 +688,153 @@ export class PrivateReservationPage {
     await this.router.navigate(['/admin/reservas'], {
       state: { openPaymentFor: reservation.id }
     });
+
+    this.submitting.set(false);
+  }
+
+  async generateQuoteOnly(method: 'download' | 'whatsapp' | 'email'): Promise<void> {
+    if (this.contactForm.invalid) {
+      this.contactForm.markAllAsTouched();
+      this.showRequiredFieldsMessage();
+      return;
+    }
+
+    const date = this.selectedDate();
+    const slot = this.selectedSlot();
+    const pkg = this.selectedPackage();
+    if (!date || !slot || !pkg) return;
+
+    this.generatingQuote.set(true);
+
+    try {
+      const contact = this.contactForm.getRawValue();
+      const snack = this.selectedSnackOption();
+      
+      let reservation = this.lastGeneratedReservation();
+
+      if (!reservation) {
+        const user = this.authService.currentUser();
+        const venue = this.publicVenue.activeVenue();
+
+        reservation = await this.reservationService.createPrivateReservation({
+          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
+          profile_id: user?.id ?? null,
+          guest_name: contact.guest_name,
+          guest_email: contact.guest_email,
+          guest_phone: contact.guest_phone,
+          reservation_date: this.formatDateISO(date),
+          time_slot_id: slot.id,
+          package_id: pkg.id,
+          guest_count: this.guestCount(),
+          subtotal_cents: this.subtotalCents(),
+          total_cents: this.totalCents(),
+          deposit_cents: this.depositCents(),
+          notes: contact.notes || undefined,
+          snack_option_id: snack?.id,
+          quote_id: this.linkedQuoteId() ?? undefined,
+          extras: this.selectedExtras().map((se) => ({
+            extra_id: se.extra.id,
+            quantity: se.quantity,
+            unit_price_cents: se.extra.price_cents,
+          })),
+        });
+
+        if (!reservation) {
+          throw new Error('No se pudo generar la reserva/cotización.');
+        }
+
+        this.lastGeneratedReservation.set(reservation);
+      }
+
+      const snackName = snack?.name ?? null;
+      const printData = this.buildPrintData(
+        reservation,
+        date,
+        slot,
+        pkg,
+        snackName,
+        this.selectedExtras()
+      );
+
+      if (method === 'download') {
+        this.printService.print(printData);
+      } else if (method === 'whatsapp') {
+        const whatsappUrl = this.printService.getWhatsAppUrl(printData, false);
+        window.open(whatsappUrl, '_blank');
+      } else if (method === 'email') {
+        const link = `${window.location.origin}/reserva/${reservation.access_token}`;
+        const subject = `Cotización Fiesta Privada - Hula Hoop`;
+        const body = `Hola ${contact.guest_name},\n\nAquí tienes el enlace a tu cotización para la fiesta privada en Hula Hoop:\n\n${link}\n\n¡Gracias!`;
+        window.location.href = `mailto:${contact.guest_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      }
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Acción completada',
+        detail: 'Cotización procesada con éxito.',
+      });
+
+    } catch (err: any) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al procesar cotización',
+        detail: err.message || 'Intenta de nuevo más tarde.',
+      });
+    } finally {
+      this.generatingQuote.set(false);
+    }
+  }
+
+  getLiquidationDateString(date: Date, days: number | undefined): string | null {
+    if (!days) return null;
+    const d = new Date(date.getTime());
+    d.setDate(d.getDate() - days);
+    return d.toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  private buildPrintData(
+    res: any,
+    date: Date,
+    slot: TimeSlot,
+    pkg: PartyPackage,
+    snackName: string | null,
+    extras: SelectedExtra[]
+  ): ReservationPrintData {
+    const guest_count_label = `${this.guestCount()} invitados`;
+    const liquidation_date = this.getLiquidationDateString(date, pkg.days_to_liquidate);
+
+    return {
+      type: 'private',
+      statusLabel: 'Pendiente de pago',
+      guest_name: res.guest_name,
+      guest_email: res.guest_email,
+      guest_phone: res.guest_phone,
+      reservation_date: this.formatDateDisplay(date),
+      time_slot_label: `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`,
+      guest_count_label,
+      snack_name: snackName,
+      notes: res.notes,
+      extras: extras.map(se => ({
+        name: se.extra.name,
+        quantity: se.quantity,
+        unit_price_cents: se.extra.price_cents,
+        pay_at_venue: se.extra.pay_at_venue
+      })),
+      subtotal_cents: this.subtotalCents(),
+      total_cents: this.totalCents(),
+      paid_deposit_cents: 0,
+      liquidation_date,
+      access_token: res.access_token,
+    };
+  }
+
+  private clearCachedQuoteToken(): void {
+    this.generatedQuoteToken.set(null);
+    this.lastGeneratedReservation.set(null);
   }
 
   // ── Helpers ──

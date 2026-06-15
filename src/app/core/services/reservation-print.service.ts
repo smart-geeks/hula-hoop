@@ -39,7 +39,7 @@ export class ReservationPrintService {
     setTimeout(() => win.print(), 600);
   }
 
-  getWhatsAppUrl(data: ReservationPrintData): string {
+  getWhatsAppUrl(data: ReservationPrintData, includePhone = true): string {
     const link = `${window.location.origin}/reserva/${data.access_token}`;
     const firstName = data.guest_name.split(' ')[0];
     const remaining = Math.max(0, data.total_cents - data.paid_deposit_cents);
@@ -61,11 +61,14 @@ export class ReservationPrintService {
       `¡Nos vemos pronto, será una fiesta increíble! 🎊`,
     ].filter((l): l is string => l !== null).join('\n');
 
-    // Format Mexican phone number to international (52 + 10 digits)
-    const digits = data.guest_phone.replace(/\D/g, '');
-    const intlPhone = digits.length === 10 ? `52${digits}` : digits;
+    if (includePhone && data.guest_phone) {
+      // Format Mexican phone number to international (52 + 10 digits)
+      const digits = data.guest_phone.replace(/\D/g, '');
+      const intlPhone = digits.length === 10 ? `52${digits}` : digits;
+      return `https://wa.me/${intlPhone}?text=${encodeURIComponent(lines)}`;
+    }
 
-    return `https://wa.me/${intlPhone}?text=${encodeURIComponent(lines)}`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(lines)}`;
   }
 
   private buildHtml(data: ReservationPrintData): string {
