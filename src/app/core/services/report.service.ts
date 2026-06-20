@@ -11,6 +11,16 @@ export interface EventoRow {
   saldo_pendiente: number;
 }
 
+export interface PLEventRow {
+  contract_id: string;
+  folio: string;
+  cliente: string;
+  fecha_evento: string;
+  ingresos: number;
+  gastos: number;
+  utilidad_neta: number;
+}
+
 export interface PLGlobalRow {
   ingresos_contratos: number;
   ventas_pos: number;
@@ -220,6 +230,54 @@ export class ReportService {
     const utilidad_neta = total_ingresos - total_egresos;
 
     return { ingresos_contratos, ventas_pos, total_ingresos, compras, gastos, total_egresos, utilidad_neta };
+  }
+
+  async getPLByEvent(from: string, to: string): Promise<PLEventRow[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data: contracts } = await client
+      .from('contracts')
+      .select('id, folio, fecha_evento, client:clients(nombre)')
+      .gte('fecha_evento', from)
+      .lte('fecha_evento', to)
+      .neq('estado', 'cancelado')
+      .order('fecha_evento', { ascending: true });
+
+    if (!contracts?.length) return [];
+
+    const ids = contracts.map((c: any) => c.id);
+
+    const [paymentsRes, expensesRes] = await Promise.all([
+      client.from('contract_payments').select('contract_id, monto').in('contract_id', ids),
+      client.from('admin_expenses').select('contract_id, monto').in('contract_id', ids),
+    ]);
+
+    const payMap = new Map<string, number>();
+    for (const p of paymentsRes.data ?? []) {
+      payMap.set(p.contract_id, (payMap.get(p.contract_id) ?? 0) + (p.monto ?? 0));
+    }
+
+    const expMap = new Map<string, number>();
+    for (const e of expensesRes.data ?? []) {
+      if (e.contract_id) {
+        expMap.set(e.contract_id, (expMap.get(e.contract_id) ?? 0) + (e.monto ?? 0));
+      }
+    }
+
+    return contracts.map((c: any) => {
+      const ingresos = payMap.get(c.id) ?? 0;
+      const gastos   = expMap.get(c.id) ?? 0;
+      return {
+        contract_id:  c.id,
+        folio:        c.folio,
+        cliente:      c.client?.nombre ?? '—',
+        fecha_evento: c.fecha_evento,
+        ingresos,
+        gastos,
+        utilidad_neta: ingresos - gastos,
+      };
+    });
   }
 
   async getPipeline(from: string, to: string): Promise<PipelineRow[]> {

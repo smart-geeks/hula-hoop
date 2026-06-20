@@ -13,6 +13,7 @@ import { INVENTORY_CATEGORIES } from '../../../../core/interfaces/inventory';
 import type {
   EventoRow,
   PLGlobalRow,
+  PLEventRow,
   PipelineRow,
   ClienteRow,
   ProveedorRow,
@@ -70,6 +71,15 @@ export class AdminReports {
 
   readonly eventosData     = signal<EventoRow[]>([]);
   readonly plData          = signal<PLGlobalRow | null>(null);
+  readonly plEventRows     = signal<PLEventRow[]>([]);
+  readonly plEventTotals   = computed(() => {
+    const rows = this.plEventRows();
+    return {
+      ingresos:      rows.reduce((s, r) => s + r.ingresos, 0),
+      gastos:        rows.reduce((s, r) => s + r.gastos, 0),
+      utilidad_neta: rows.reduce((s, r) => s + r.utilidad_neta, 0),
+    };
+  });
   readonly pipelineData    = signal<PipelineRow[]>([]);
   readonly clientesData    = signal<ClienteRow[]>([]);
   readonly proveedoresData = signal<ProveedorRow[]>([]);
@@ -127,8 +137,12 @@ export class AdminReports {
         const data = await this.reportService.getEventos(f, t, estado || undefined);
         this.eventosData.set(data);
       } else if (tab === 'pl_global') {
-        const data = await this.reportService.getPLGlobal(f, t);
+        const [data, eventRows] = await Promise.all([
+          this.reportService.getPLGlobal(f, t),
+          this.reportService.getPLByEvent(f, t),
+        ]);
         this.plData.set(data);
+        this.plEventRows.set(eventRows);
       } else if (tab === 'pipeline') {
         const data = await this.reportService.getPipeline(f, t);
         this.pipelineData.set(data);

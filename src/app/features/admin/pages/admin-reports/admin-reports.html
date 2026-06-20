@@ -277,6 +277,83 @@
               </div>
             </div>
           </div>
+
+          <!-- ── P&L por evento ── -->
+          @if (plEventRows().length > 0) {
+            <div class="mt-6">
+              <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <i class="pi pi-calendar text-slate-400"></i>
+                Estado de Resultados por Evento
+              </h3>
+              <div class="rounded-2xl border border-slate-200 overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wide">
+                      <th class="px-4 py-3 text-left font-semibold">Folio</th>
+                      <th class="px-4 py-3 text-left font-semibold">Cliente</th>
+                      <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+                      <th class="px-4 py-3 text-right font-semibold">Ingresos</th>
+                      <th class="px-4 py-3 text-right font-semibold">Gastos</th>
+                      <th class="px-4 py-3 text-right font-semibold">Utilidad</th>
+                      <th class="px-4 py-3 text-right font-semibold">Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of plEventRows(); track row.contract_id) {
+                      <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3">
+                          <a [href]="'/admin/evento/' + row.contract_id"
+                            class="font-mono text-xs font-semibold text-rojo-brillante hover:underline">
+                            {{ row.folio }}
+                          </a>
+                        </td>
+                        <td class="px-4 py-3 text-slate-700">{{ row.cliente }}</td>
+                        <td class="px-4 py-3 text-slate-500 text-xs">
+                          {{ row.fecha_evento | date:'dd/MM/yyyy' }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold text-emerald-700">
+                          {{ row.ingresos | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold text-red-600">
+                          {{ row.gastos | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-bold"
+                          [class]="row.utilidad_neta >= 0 ? 'text-blue-700' : 'text-red-700'">
+                          {{ row.utilidad_neta | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                        </td>
+                        <td class="px-4 py-3 text-right text-xs"
+                          [class]="row.utilidad_neta >= 0 ? 'text-blue-600' : 'text-red-600'">
+                          @if (row.ingresos > 0) {
+                            {{ row.utilidad_neta / row.ingresos | percent:'1.0-1' }}
+                          } @else {
+                            —
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="bg-slate-100 font-bold text-sm border-t-2 border-slate-300">
+                      <td colspan="3" class="px-4 py-3 text-slate-600 text-xs uppercase tracking-wide">
+                        Totales del período
+                      </td>
+                      <td class="px-4 py-3 text-right text-emerald-700">
+                        {{ plEventTotals().ingresos | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                      </td>
+                      <td class="px-4 py-3 text-right text-red-600">
+                        {{ plEventTotals().gastos | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                      </td>
+                      <td class="px-4 py-3 text-right"
+                        [class]="plEventTotals().utilidad_neta >= 0 ? 'text-blue-700' : 'text-red-700'">
+                        {{ plEventTotals().utilidad_neta | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                      </td>
+                      <td class="px-4 py-3"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          }
         }
 
       <!-- ════════ PIPELINE ════════ -->
