@@ -511,7 +511,9 @@
               }
 
               <a
-                routerLink="/admin/reservas"
+                [routerLink]="asReservation(selectedEvent()!.raw).contract_id
+                  ? ['/admin/evento', asReservation(selectedEvent()!.raw).contract_id]
+                  : '/admin/reservas'"
                 class="flex items-center justify-center gap-2 w-full py-2 border border-violet-200 text-violet-700 rounded-xl text-xs font-semibold hover:bg-violet-50 transition-colors">
                 <i class="pi pi-money-bill text-xs"></i>
                 Registrar pago
@@ -604,13 +606,13 @@
           @if (selectedEvent()!.type === 'contract') {
             @let contract = asContract(selectedEvent()!.raw);
             @if (contract.estado === 'borrador') {
-              <a routerLink="/admin/contratos"
+              <a [routerLink]="['/admin/evento', selectedEvent()!.id]"
                  class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">
                 <i class="pi pi-pencil text-xs"></i>
                 Registrar firma del contrato
               </a>
             } @else if (contract.estado === 'firmado' && contract.saldo_pendiente > 0) {
-              <a routerLink="/admin/contratos"
+              <a [routerLink]="['/admin/evento', selectedEvent()!.id]"
                  class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors">
                 <i class="pi pi-money-bill text-xs"></i>
                 Registrar pago pendiente
@@ -622,29 +624,30 @@
                 Abrir checklist del evento
               </a>
             }
-            <a routerLink="/admin/contratos"
+            <a [routerLink]="['/admin/evento', selectedEvent()!.id]"
                class="flex items-center justify-center gap-1.5 w-full py-2 text-slate-500 text-xs font-medium hover:text-slate-700 transition-colors">
-              Ver en módulo de contratos →
+              Ver detalle del evento →
             </a>
           } @else {
             @let resv = asReservation(selectedEvent()!.raw);
             @if (resv.status === 'pending_payment') {
-              <a routerLink="/admin/reservas"
+              <button type="button"
+                 (click)="setDetailTab('pagos')"
                  class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-amber-500 text-white rounded-xl text-xs font-semibold hover:bg-amber-600 transition-colors">
                 <i class="pi pi-money-bill text-xs"></i>
-                Registrar anticipo
-              </a>
+                Registrar pago
+              </button>
             } @else if (resv.status === 'confirmed') {
-              <a routerLink="/admin/reservas"
+              <a [routerLink]="resv.contract_id ? ['/admin/evento', resv.contract_id] : '/admin/reservas'"
                  class="flex items-center justify-center gap-1.5 w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors">
-                <i class="pi pi-check text-xs"></i>
-                Reserva confirmada — ver detalle
+                <i class="pi pi-external-link text-xs"></i>
+                Ver detalle del evento
               </a>
             } @else {
-              <a routerLink="/admin/reservas"
+              <a [routerLink]="resv.contract_id ? ['/admin/evento', resv.contract_id] : '/admin/reservas'"
                  class="flex items-center justify-center gap-2 w-full py-2.5 bg-violet-600 text-white rounded-xl text-xs font-semibold hover:bg-violet-700 transition-colors">
                 <i class="pi pi-external-link text-xs"></i>
-                Ver en módulo de reservas
+                Ver detalle del evento
               </a>
             }
           }
