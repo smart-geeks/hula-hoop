@@ -20,6 +20,94 @@
     </div>
 
   } @else if (contract(); as c) {
+    <!-- Amendment section — shown when there's a pending amendment -->
+    @if (amendment() && amendment()!.status === 'pending_approval') {
+      <section class="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm">
+        <div class="border-b border-amber-200 bg-amber-100 px-5 py-4">
+          <h2 class="text-base font-bold text-amber-900">📋 Modificación pendiente de autorización</h2>
+          <p class="mt-1 text-sm text-amber-700">Tu evento tiene cambios que requieren tu aprobación.</p>
+        </div>
+
+        <div class="px-5 py-4">
+          <!-- Items table -->
+          <table class="mb-4 w-full text-sm">
+            <thead>
+              <tr class="border-b border-amber-200 text-left text-xs text-amber-700">
+                <th class="pb-2 pr-4">Descripción</th>
+                <th class="pb-2 pr-4 text-center">Cant.</th>
+                <th class="pb-2 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of amendment()!.proposed_items; track $index) {
+                <tr class="border-b border-amber-100">
+                  <td class="py-2 pr-4 text-slate-700">{{ item.descripcion }}</td>
+                  <td class="py-2 pr-4 text-center text-slate-600">{{ item.cantidad }}</td>
+                  <td class="py-2 text-right font-medium text-slate-700">
+                    {{ item.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <!-- Totals summary -->
+          <div class="mb-4 rounded-lg border border-amber-200 bg-white px-4 py-3 text-sm">
+            <div class="flex justify-between text-slate-500">
+              <span>Total anterior:</span>
+              <span>{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="flex justify-between font-semibold text-slate-800">
+              <span>Nuevo total:</span>
+              <span>{{ amendment()!.proposed_total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mt-1 flex justify-between border-t border-amber-100 pt-1"
+                 [class]="amendment()!.delta_monto >= 0 ? 'text-orange-600 font-semibold' : 'text-emerald-600 font-semibold'">
+              <span>Diferencia:</span>
+              <span>{{ amendment()!.delta_monto >= 0 ? '+' : '' }}{{ amendment()!.delta_monto | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            @if (amendment()!.notas) {
+              <p class="mt-2 text-xs text-slate-500">Motivo: {{ amendment()!.notas }}</p>
+            }
+          </div>
+
+          <!-- Action area -->
+          @if (amendmentDone() === 'approved') {
+            <div class="rounded-lg bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
+              ✅ Has autorizado los cambios. ¡Gracias!
+            </div>
+          } @else if (amendmentDone() === 'rejected') {
+            <div class="rounded-lg bg-slate-50 px-4 py-3 text-center text-sm text-slate-500">
+              Los cambios han sido rechazados. Nos pondremos en contacto contigo.
+            </div>
+          } @else {
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                (click)="rejectAmendment()"
+                [disabled]="amendmentRejecting() || amendmentApproving()"
+                class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                @if (amendmentRejecting()) {
+                  <i class="pi pi-spin pi-spinner mr-1"></i>
+                }
+                Rechazar cambios
+              </button>
+              <button
+                type="button"
+                (click)="approveAmendment()"
+                [disabled]="amendmentApproving() || amendmentRejecting()"
+                class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+                @if (amendmentApproving()) {
+                  <i class="pi pi-spin pi-spinner mr-1"></i>
+                }
+                ✓ Autorizo los cambios
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
     <!-- Brand Header -->
     <div class="flex items-center justify-between mb-8 border-b border-slate-100 pb-6">
       <div>

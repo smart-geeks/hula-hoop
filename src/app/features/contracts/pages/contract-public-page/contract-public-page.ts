@@ -13,8 +13,10 @@ import { FormsModule } from '@angular/forms';
 import { ContractService } from '../../../../core/services/contract.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { QuoteService } from '../../../../core/services/quote.service';
+import { QuoteAmendmentService } from '../../../../core/services/quote-amendment.service';
 import type { Contract } from '../../../../core/interfaces/contract';
 import type { Quote } from '../../../../core/interfaces/quote';
+import type { QuoteAmendment } from '../../../../core/interfaces/quote-amendment';
 
 @Component({
   selector: 'app-contract-public-page',
@@ -23,18 +25,24 @@ import type { Quote } from '../../../../core/interfaces/quote';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContractPublicPage implements AfterViewInit {
-  private readonly contractService = inject(ContractService);
-  private readonly venueService    = inject(VenueService);
-  private readonly quoteService    = inject(QuoteService);
-  private readonly route           = inject(ActivatedRoute);
-  private readonly router          = inject(Router);
+  private readonly contractService  = inject(ContractService);
+  private readonly venueService     = inject(VenueService);
+  private readonly quoteService     = inject(QuoteService);
+  private readonly amendmentService = inject(QuoteAmendmentService);
+  private readonly route            = inject(ActivatedRoute);
+  private readonly router           = inject(Router);
 
-  readonly loading         = signal(true);
-  readonly notFound        = signal(false);
-  readonly contract        = signal<Contract | null>(null);
-  readonly quote           = signal<Quote | null>(null);
-  readonly venueSlug       = signal<string | null>(null);
-  readonly submitting      = signal(false);
+  readonly loading            = signal(true);
+  readonly notFound           = signal(false);
+  readonly contract           = signal<Contract | null>(null);
+  readonly quote              = signal<Quote | null>(null);
+  readonly venueSlug          = signal<string | null>(null);
+  readonly submitting         = signal(false);
+
+  readonly amendment          = signal<QuoteAmendment | null>(null);
+  readonly amendmentApproving = signal(false);
+  readonly amendmentRejecting = signal(false);
+  readonly amendmentDone      = signal<'approved' | 'rejected' | null>(null);
 
   // Wizard state: 1 = INE, 2 = Comprobante, 3 = Firma, 4 = Success
   readonly currentStep     = signal(1);
@@ -85,7 +93,10 @@ export class ContractPublicPage implements AfterViewInit {
         const q = await this.quoteService.getById(c.quote_id);
         this.quote.set(q);
       }
-      
+
+      const activeAmendment = await this.amendmentService.getActiveByContract(id);
+      this.amendment.set(activeAmendment);
+
       // Determine starting step based on already uploaded documents
       if (!c.ine_url) {
         this.currentStep.set(1);
@@ -285,6 +296,32 @@ export class ContractPublicPage implements AfterViewInit {
       alert('Ocurrió un error inesperado al firmar el contrato.');
     } finally {
       this.submitting.set(false);
+    }
+  }
+
+  async approveAmendment(): Promise<void> {
+    const a = this.amendment();
+    if (!a || this.amendmentApproving()) return;
+    this.amendmentApproving.set(true);
+    const ok = await this.amendmentService.approve(a.id);
+    this.amendmentApproving.set(false);
+    if (ok) {
+      this.amendmentDone.set('approved');
+      // Reload contract to reflect new totals
+      const c = this.contract();
+      if (c) await this.loadContract(c.id);
+    }
+  }
+
+  async rejectAmendment(): Promise<void> {
+    const a = this.amendment();
+    if (!a || this.amendmentRejecting()) return;
+    this.amendmentRejecting.set(true);
+    const ok = await this.amendmentService.reject(a.id);
+    this.amendmentRejecting.set(false);
+    if (ok) {
+      this.amendmentDone.set('rejected');
+      this.amendment.set(null);
     }
   }
 
