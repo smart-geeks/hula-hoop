@@ -401,7 +401,7 @@ export class ReportService {
 
     const [paymentsRes, expensesRes, purchasesRes] = await Promise.all([
       client.from('contract_payments')
-        .select('fecha, monto, contract:contracts(folio)')
+        .select('fecha, monto, tipo, contract:contracts(folio)')
         .gte('fecha', from).lte('fecha', to),
       client.from('admin_expenses')
         .select('fecha, monto, descripcion')
@@ -415,9 +415,16 @@ export class ReportService {
     const rows: FlujoCajaRow[] = [];
 
     for (const r of paymentsRes.data ?? []) {
+      const tipo = (r as any).tipo ?? 'abono';
+      const tipoLabel: Record<string, string> = {
+        anticipo: 'Anticipo',
+        abono: 'Abono',
+        liquidacion: 'Liquidación',
+        extra: 'Extra',
+      };
       rows.push({
         fecha: (r as any).fecha,
-        concepto: `Pago contrato ${(r as any).contract?.folio ?? ''}`,
+        concepto: `${tipoLabel[tipo] ?? tipo} — Contrato ${(r as any).contract?.folio ?? ''}`,
         tipo: 'entrada',
         monto: (r as any).monto,
       });

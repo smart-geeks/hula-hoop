@@ -472,6 +472,35 @@
             </div>
           </div>
         }
+
+        <!-- Cobros de contratos del día -->
+        @if (todayContractPayments().length > 0) {
+          <div class="border-t border-slate-100">
+            <div class="px-5 py-3 flex items-center justify-between">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Cobros de contratos hoy</p>
+              <p class="text-xs font-bold text-blue-600">
+                {{ todayContractPayments().length }} cobro{{ todayContractPayments().length !== 1 ? 's' : '' }}
+              </p>
+            </div>
+            <div class="divide-y divide-slate-50 max-h-32 overflow-y-auto">
+              @for (payment of todayContractPayments(); track payment.id) {
+                <div class="flex items-center justify-between px-5 py-2 text-xs">
+                  <span class="capitalize text-slate-400">{{ payment.tipo }}</span>
+                  <span class="capitalize text-slate-500">{{ payment.metodo }}</span>
+                  <span class="font-bold text-slate-700">
+                    {{ payment.monto | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </span>
+                </div>
+              }
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex justify-between text-sm">
+              <span class="text-slate-500 font-medium">Total contratos</span>
+              <span class="font-bold text-blue-700">
+                {{ contractPaymentsTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
+              </span>
+            </div>
+          </div>
+        }
       </div>
 
     </div>

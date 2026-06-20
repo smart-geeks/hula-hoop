@@ -22,7 +22,7 @@ import type { PosSession, PosSale, CartItem, PaymentMethod, CashierProfile } fro
 import type { InventoryItem } from '../../../../core/interfaces/inventory';
 import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
 import type { Extra } from '../../../../core/interfaces/extra';
-import type { Contract } from '../../../../core/interfaces/contract';
+import type { Contract, ContractPayment } from '../../../../core/interfaces/contract';
 import type { Category } from '../../../../core/interfaces/category';
 
 @Component({
@@ -150,6 +150,11 @@ export class AdminPos {
     this.salesHistory().reduce((s, sale) => s + sale.total, 0),
   );
 
+  readonly todayContractPayments = signal<ContractPayment[]>([]);
+  readonly contractPaymentsTotal = computed(() =>
+    this.todayContractPayments().reduce((s, p) => s + p.monto, 0)
+  );
+
   readonly categories = computed(() => {
     const dbNames = new Set(this.productCategories().map((c) => c.nombre));
     const invCats = this.inventory().map((i) => i.categoria).filter(Boolean) as string[];
@@ -167,6 +172,7 @@ export class AdminPos {
 
   constructor() {
     this.loadAll();
+    this.loadTodayContractPayments();
   }
 
   private async loadAll(): Promise<void> {
@@ -210,6 +216,25 @@ export class AdminPos {
     this.cashiers.set(cashiers);
     this.productCategories.set(productCategories);
     this.loading.set(false);
+  }
+
+  private async loadTodayContractPayments(): Promise<void> {
+    const client = this.supabase.client;
+    if (!client) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await client
+      .from('contract_payments')
+      .select('*')
+      .gte('fecha', today)
+      .lte('fecha', today)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading contract payments:', error.message);
+      return;
+    }
+    this.todayContractPayments.set((data ?? []) as ContractPayment[]);
   }
 
   // ── Cajero PIN flow ────────────────────────────────────────
