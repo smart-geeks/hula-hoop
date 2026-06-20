@@ -883,7 +883,7 @@ export class PosTicketPrintService {
   ${this.buildHeader(venue)}
 
   <hr class="sep-solid" />
-  <div class="section-title">— COMPROBANTE DE PAGO —</div>
+  <div class="section-title">${payment.tipo === 'modificacion' ? '— PAGO POR MODIFICACIÓN —' : '— COMPROBANTE DE PAGO —'}</div>
   <hr class="sep-solid" />
 
   <table style="width:100%">
@@ -952,9 +952,20 @@ export class PosTicketPrintService {
 
   <hr class="sep-solid" />
 
+  ${payment.tipo === 'modificacion' ? `
+  <div style="border:1px solid #d32f2f;border-radius:3px;padding:2mm 3mm;margin-bottom:2mm;background:#fff5f5">
+    <div class="bold xs" style="color:#d32f2f;text-align:center;margin-bottom:1mm">⚠ CARGO ADICIONAL AL CONTRATO</div>
+    <div class="xs" style="text-align:center;color:#555;line-height:1.4">
+      Este pago corresponde a una modificación de cotización autorizada<br>
+      con posterioridad al contrato original.<br>
+      <span class="bold">No reemplaza el anticipo inicial.</span>
+    </div>
+  </div>
+  ` : ''}
+
   <table style="width:100%">
     <tr class="total-row">
-      <td class="bold" style="text-align:left">ESTE PAGO</td>
+      <td class="bold" style="text-align:left">${payment.tipo === 'modificacion' ? 'CARGO MODIFICACIÓN' : 'ESTE PAGO'}</td>
       <td class="r bold" style="text-align:right">${this.fmt(payment.monto)}</td>
     </tr>
   </table>
