@@ -303,13 +303,17 @@ export class ContractPublicPage implements AfterViewInit {
     const a = this.amendment();
     if (!a || this.amendmentApproving()) return;
     this.amendmentApproving.set(true);
-    const ok = await this.amendmentService.approveViaToken(a.id, a.approval_token);
-    this.amendmentApproving.set(false);
-    if (ok) {
-      this.amendmentDone.set('approved');
-      // Reload contract to reflect new totals
-      const c = this.contract();
-      if (c) await this.loadContract(c.id);
+    try {
+      const ok = await this.amendmentService.approveViaToken(a.id, a.approval_token);
+      if (ok) {
+        this.amendmentDone.set('approved');
+        const c = this.contract();
+        if (c) await this.loadContract(c.id);
+      } else {
+        alert('No se pudo autorizar la modificación. Es posible que ya haya sido procesada. Por favor recarga la página.');
+      }
+    } finally {
+      this.amendmentApproving.set(false);
     }
   }
 

@@ -42,16 +42,14 @@ BEGIN
 
   -- Update quote totals
   UPDATE quotes SET
-    subtotal = v_amendment.proposed_subtotal,
+    subtotal  = v_amendment.proposed_subtotal,
     descuento = v_amendment.proposed_descuento,
-    total = v_amendment.proposed_total,
-    updated_at = now()
+    total     = v_amendment.proposed_total
   WHERE id = v_amendment.quote_id;
 
   -- Update contract total (saldo_pendiente is GENERATED ALWAYS, do NOT write it)
   UPDATE contracts SET
-    total_contrato = v_amendment.proposed_total,
-    updated_at = now()
+    total_contrato = v_amendment.proposed_total
   WHERE id = v_amendment.contract_id;
 
   -- Mark amendment approved
