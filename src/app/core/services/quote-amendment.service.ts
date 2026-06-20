@@ -23,21 +23,6 @@ export class QuoteAmendmentService {
     return data;
   }
 
-  async getByToken(token: string): Promise<QuoteAmendment | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
-
-    const { data, error } = await client
-      .from('quote_amendments')
-      .select('*')
-      .eq('approval_token', token)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) { console.error('Error fetching amendment by token:', error.message); return null; }
-    return data;
-  }
-
   async createDraft(data: {
     quote_id: string;
     contract_id: string;
@@ -158,23 +143,10 @@ export class QuoteAmendmentService {
       return false;
     }
 
-    const { data: currentContract, error: contractFetchError } = await client
-      .from('contracts')
-      .select('saldo_pendiente')
-      .eq('id', amendment.contract_id)
-      .single();
-
-    if (contractFetchError || !currentContract) {
-      console.error('Error fetching current contract:', contractFetchError?.message);
-      return false;
-    }
-
+    // Only update total_contrato — saldo_pendiente is GENERATED ALWAYS and recalculates automatically
     const { error: updateContractError } = await client
       .from('contracts')
-      .update({
-        total_contrato:   amendment.proposed_total,
-        saldo_pendiente:  currentContract.saldo_pendiente + amendment.delta_monto,
-      })
+      .update({ total_contrato: amendment.proposed_total })
       .eq('id', amendment.contract_id);
 
     if (updateContractError) {
@@ -202,5 +174,33 @@ export class QuoteAmendmentService {
 
     if (error) { console.error('Error rejecting amendment:', error.message); return false; }
     return true;
+  }
+
+  /** Called by the public portal (anon). Token is validated server-side by the RPC. */
+  async approveViaToken(amendmentId: string, token: string): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { data, error } = await client.rpc('approve_amendment', {
+      p_amendment_id: amendmentId,
+      p_token: token,
+    });
+
+    if (error) { console.error('Error approving amendment via token:', error.message); return false; }
+    return data === true;
+  }
+
+  /** Called by the public portal (anon). Token is validated server-side by the RPC. */
+  async rejectViaToken(amendmentId: string, token: string): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { data, error } = await client.rpc('reject_amendment', {
+      p_amendment_id: amendmentId,
+      p_token: token,
+    });
+
+    if (error) { console.error('Error rejecting amendment via token:', error.message); return false; }
+    return data === true;
   }
 }

@@ -414,19 +414,21 @@ export class ReportService {
 
     const rows: FlujoCajaRow[] = [];
 
+    const tipoLabel: Record<string, string> = {
+      anticipo: 'Anticipo',
+      abono: 'Abono',
+      liquidacion: 'Liquidación',
+      extra: 'Extra',
+    };
+
     for (const r of paymentsRes.data ?? []) {
-      const tipo = (r as any).tipo ?? 'abono';
-      const tipoLabel: Record<string, string> = {
-        anticipo: 'Anticipo',
-        abono: 'Abono',
-        liquidacion: 'Liquidación',
-        extra: 'Extra',
-      };
+      const pago = r as { fecha: string; monto: number; tipo: string; contract?: { folio?: string } };
+      const tipo = pago.tipo ?? 'abono';
       rows.push({
-        fecha: (r as any).fecha,
-        concepto: `${tipoLabel[tipo] ?? tipo} — Contrato ${(r as any).contract?.folio ?? ''}`,
+        fecha: pago.fecha,
+        concepto: `${tipoLabel[tipo] ?? tipo} — Contrato ${pago.contract?.folio ?? ''}`,
         tipo: 'entrada',
-        monto: (r as any).monto,
+        monto: pago.monto,
       });
     }
 

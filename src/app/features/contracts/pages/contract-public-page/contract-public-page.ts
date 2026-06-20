@@ -303,7 +303,7 @@ export class ContractPublicPage implements AfterViewInit {
     const a = this.amendment();
     if (!a || this.amendmentApproving()) return;
     this.amendmentApproving.set(true);
-    const ok = await this.amendmentService.approve(a.id);
+    const ok = await this.amendmentService.approveViaToken(a.id, a.approval_token);
     this.amendmentApproving.set(false);
     if (ok) {
       this.amendmentDone.set('approved');
@@ -317,7 +317,7 @@ export class ContractPublicPage implements AfterViewInit {
     const a = this.amendment();
     if (!a || this.amendmentRejecting()) return;
     this.amendmentRejecting.set(true);
-    const ok = await this.amendmentService.reject(a.id);
+    const ok = await this.amendmentService.rejectViaToken(a.id, a.approval_token);
     this.amendmentRejecting.set(false);
     if (ok) {
       this.amendmentDone.set('rejected');

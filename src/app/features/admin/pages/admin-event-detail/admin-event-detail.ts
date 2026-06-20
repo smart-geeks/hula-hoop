@@ -194,9 +194,11 @@ export class AdminEventDetail {
     return a !== null && (a.status === 'draft' || a.status === 'pending_approval');
   });
 
-  readonly amendmentNewTotal = computed(() =>
-    this.amendmentItems().reduce((s, i) => s + i.subtotal, 0)
-  );
+  readonly amendmentNewTotal = computed(() => {
+    const subtotal = this.amendmentItems().reduce((s, i) => s + i.subtotal, 0);
+    const descuento = this.quote()?.descuento ?? 0;
+    return subtotal - descuento;
+  });
 
   constructor() {
     this.loadData();
