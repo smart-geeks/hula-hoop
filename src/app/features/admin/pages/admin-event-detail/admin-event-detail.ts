@@ -535,8 +535,11 @@ export class AdminEventDetail {
       const item = { ...updated[index] };
       if (field === 'descripcion') {
         item.descripcion = value as string;
-      } else {
-        (item as Record<string, number>)[field] = Number(value);
+      } else if (field === 'cantidad') {
+        item.cantidad = Number(value);
+        item.subtotal = item.cantidad * item.precio_unitario;
+      } else if (field === 'precio_unitario') {
+        item.precio_unitario = Number(value);
         item.subtotal = item.cantidad * item.precio_unitario;
       }
       updated[index] = item;

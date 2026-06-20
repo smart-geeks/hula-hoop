@@ -45,7 +45,7 @@ export class GalleryService {
     return data ?? [];
   }
 
-  async uploadImage(file: File): Promise<GalleryImage | null> {
+  async uploadImage(file: File, venueId: string): Promise<GalleryImage | null> {
     const client = this.supabase.client;
     if (!client) return null;
 
@@ -63,7 +63,7 @@ export class GalleryService {
 
     const { data, error } = await client
       .from('gallery_images')
-      .insert({ storage_path: fileName, title: file.name.replace(/\.[^.]+$/, '') })
+      .insert({ storage_path: fileName, title: file.name.replace(/\.[^.]+$/, ''), venue_id: venueId })
       .select()
       .single();
 

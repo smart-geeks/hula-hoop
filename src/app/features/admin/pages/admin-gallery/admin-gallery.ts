@@ -75,7 +75,7 @@ export class AdminGallery {
     let successCount = 0;
 
     for (const file of event.files) {
-      const result = await this.galleryService.uploadImage(file);
+      const result = await this.galleryService.uploadImage(file, '00000000-0000-0000-0000-000000000001');
       if (result) successCount++;
     }
 
