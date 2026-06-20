@@ -1067,7 +1067,7 @@
               (change)="addExtraFromCatalog(availableExtras()[$any($event.target).selectedIndex - 1]); $any($event.target).selectedIndex = 0">
               <option value="">Selecciona un extra...</option>
               @for (extra of availableExtras(); track extra.id) {
-                <option [value]="extra.id">{{ extra.name }} — {{ extra.price_cents | currency:'MXN':'symbol-narrow':'1.0-0' }}</option>
+                <option [value]="extra.id">{{ extra.name }} — {{ extraDisplayPrice(extra) | currency:'MXN':'symbol-narrow':'1.0-0' }}</option>
               }
             </select>
           </div>

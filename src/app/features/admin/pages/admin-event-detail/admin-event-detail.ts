@@ -6,7 +6,6 @@ import {
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ContractService } from '../../../../core/services/contract.service';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -32,7 +31,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 @Component({
   selector: 'app-admin-event-detail',
   templateUrl: './admin-event-detail.html',
-  imports: [CurrencyPipe, DatePipe, RouterLink, FormsModule],
+  imports: [CurrencyPipe, DatePipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventDetail {
@@ -510,10 +509,14 @@ export class AdminEventDetail {
     const item: AmendmentItem = {
       descripcion: extra.name,
       cantidad: 1,
-      precio_unitario: extra.price_cents,
-      subtotal: extra.price_cents,
+      precio_unitario: extra.price_cents / 100,
+      subtotal: extra.price_cents / 100,
     };
     this.amendmentItems.update(items => [...items, item]);
+  }
+
+  extraDisplayPrice(extra: Extra): number {
+    return extra.price_cents / 100;
   }
 
   addFreeLineItem(): void {
@@ -609,39 +612,39 @@ export class AdminEventDetail {
 
     const monto = this.amendPayMonto();
     const fecha = this.amendPayFecha();
-    const metodo = this.amendPayMetodo();
     if (monto <= 0 || !fecha) return;
 
     this.amendPaySaving.set(true);
+    try {
+      const success = await this.contractService.addPayment(c.id, {
+        monto,
+        fecha,
+        metodo: this.amendPayMetodo(),
+        tipo: 'extra',
+        notas: this.amendPayNotas() || 'Pago por modificación de cotización',
+      });
 
-    const success = await this.contractService.addPayment(c.id, {
-      monto,
-      fecha,
-      metodo,
-      tipo: 'extra',
-      notas: this.amendPayNotas() || 'Pago por modificación de cotización',
-    });
+      if (!success) {
+        this.showToast('error', 'Error al registrar el pago');
+        return;
+      }
 
-    if (!success) {
-      this.showToast('error', 'Error al registrar el pago');
+      await this.loadData();
+      const updatedContract = this.contract();
+      const lastPayment = updatedContract?.payments
+        ?.sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime())[0];
+
+      if (lastPayment) {
+        await this.amendmentService.linkPaymentAndSubmit(a.id, lastPayment.id);
+        const updatedAmendment = await this.amendmentService.getActiveByContract(c.id);
+        this.amendment.set(updatedAmendment);
+      }
+
+      this.amendPayDialog.set(false);
+      this.sendLinkDialog.set(true);
+    } finally {
       this.amendPaySaving.set(false);
-      return;
     }
-
-    await this.loadData();
-    const updatedContract = this.contract();
-    const lastPayment = updatedContract?.payments
-      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-
-    if (lastPayment) {
-      await this.amendmentService.linkPaymentAndSubmit(a.id, lastPayment.id);
-      const updatedAmendment = await this.amendmentService.getActiveByContract(c.id);
-      this.amendment.set(updatedAmendment);
-    }
-
-    this.amendPaySaving.set(false);
-    this.amendPayDialog.set(false);
-    this.sendLinkDialog.set(true);
   }
 
   getAmendmentWhatsappLink(): string {
@@ -651,7 +654,7 @@ export class AdminEventDetail {
     const formattedPhone = phone.length === 10 ? '52' + phone : phone;
     const link = `${window.location.origin}/contrato/${c.id}`;
     const a = this.amendment();
-    const delta = a ? (a.delta_monto / 100).toLocaleString('es-MX') : '0';
+    const delta = a ? a.delta_monto.toLocaleString('es-MX') : '0';
     const text = encodeURIComponent(
       `*Hula Hoop - Modificación de tu evento*\n\n` +
       `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
@@ -685,6 +688,8 @@ export class AdminEventDetail {
     const link = `${window.location.origin}/contrato/${c.id}`;
     navigator.clipboard.writeText(link).then(() => {
       this.showToast('success', 'Link copiado al portapapeles');
+    }).catch(() => {
+      this.showToast('error', 'No se pudo copiar el link');
     });
   }
 
