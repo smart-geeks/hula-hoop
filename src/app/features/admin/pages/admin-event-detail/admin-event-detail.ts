@@ -643,6 +643,7 @@ export class AdminEventDetail {
         await this.amendmentService.linkPaymentAndSubmit(a.id, lastPayment.id);
         const updatedAmendment = await this.amendmentService.getActiveByContract(c.id);
         this.amendment.set(updatedAmendment);
+        this.ticketPrint.printPayment(updatedContract!, lastPayment, this.quote());
       }
 
       this.amendPayDialog.set(false);
