@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { ClientService } from '../../../../core/services/client.service';
 import { ContractService } from '../../../../core/services/contract.service';
@@ -15,6 +16,7 @@ import { ExtraService } from '../../../../core/services/extra.service';
 import { SnackOptionService } from '../../../../core/services/snack-option.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
 import type { Client } from '../../../../core/interfaces/client';
 import type { PartyPackage } from '../../../../core/interfaces/package';
@@ -64,14 +66,18 @@ export class AdminQuotes {
   private readonly snackOptionService = inject(SnackOptionService);
   private readonly timeSlotService    = inject(TimeSlotService);
   private readonly reservationService = inject(ReservationService);
+  private readonly ticketPrint        = inject(PosTicketPrintService);
+  private readonly router             = inject(Router);
 
   // ── Catalog data ─────────────────────────────────────────
   readonly packages     = signal<PartyPackage[]>([]);
   readonly extras       = signal<Extra[]>([]);
   readonly snackOptions = signal<SnackOption[]>([]);
   readonly allSlots     = signal<TimeSlot[]>([]);
-  readonly allClients   = signal<Client[]>([]);
-  readonly quotes       = signal<Quote[]>([]);
+  readonly allClients      = signal<Client[]>([]);
+  readonly quotes          = signal<Quote[]>([]);
+  /** Maps quote_id → contract.id for approved quotes */
+  readonly contractByQuote = signal<Map<string, string>>(new Map());
 
   // ── Page state ───────────────────────────────────────────
   readonly loading      = signal(true);
@@ -224,13 +230,14 @@ export class AdminQuotes {
   }
 
   private async loadAll(): Promise<void> {
-    const [quotes, clients, packages, extras, snacks, slots] = await Promise.all([
+    const [quotes, clients, packages, extras, snacks, slots, contracts] = await Promise.all([
       this.quoteService.getAll(),
       this.clientService.getAll(),
       this.packageService.getActivePackages(),
       this.extraService.getActiveExtras(),
       this.snackOptionService.getActiveSnackOptions(),
       this.timeSlotService.getActiveSlots(),
+      this.contractService.getAll(),
     ]);
     this.quotes.set(quotes);
     this.allClients.set(clients);
@@ -238,6 +245,11 @@ export class AdminQuotes {
     this.extras.set(extras);
     this.snackOptions.set(snacks);
     this.allSlots.set(slots);
+    const map = new Map<string, string>();
+    for (const c of contracts) {
+      if (c.quote_id) map.set(c.quote_id, c.id);
+    }
+    this.contractByQuote.set(map);
     this.loading.set(false);
   }
 
@@ -528,6 +540,10 @@ export class AdminQuotes {
     this.anticoDialog.set(null);
   }
 
+  goToEvent(contractId: string): void {
+    void this.router.navigate(['/admin/evento', contractId]);
+  }
+
   async submitAnticipo(): Promise<void> {
     const quote = this.anticoDialog();
     if (!quote || this.anticoSaving()) return;
@@ -574,9 +590,23 @@ export class AdminQuotes {
     this.quotes.update((list) =>
       list.map((q) => (q.id === quote.id ? { ...q, estado: 'aprobada' as QuoteStatus } : q)),
     );
+
+    // Update local map so the event link appears immediately for this quote
+    this.contractByQuote.update((m) => new Map(m).set(quote.id, contract.id));
+
+    // Print receipt and navigate to event detail
+    const fullContract = await this.contractService.getById(contract.id);
+    if (fullContract) {
+      const lastPayment = fullContract.payments?.at(-1) ?? null;
+      if (lastPayment) {
+        this.ticketPrint.printPayment(fullContract, lastPayment, quote);
+      }
+    }
+
     this.closeAnticoDialog();
     this.showToast('success', `Contrato ${contract.folio} creado — anticipo registrado`);
     this.anticoSaving.set(false);
+    void this.router.navigate(['/admin/evento', contract.id]);
   }
 
   // ── Send (WhatsApp / Email) ───────────────────────────────

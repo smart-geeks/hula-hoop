@@ -110,6 +110,16 @@
                 </button>
                 }
 
+                <!-- Ir al evento (aprobada con contrato) -->
+                @if (contractByQuote().get(quote.id); as contractId) {
+                <button (click)="goToEvent(contractId)"
+                  class="px-2 py-1.5 rounded-lg text-xs font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors flex items-center gap-1"
+                  title="Ver evento">
+                  <i class="pi pi-calendar text-xs"></i>
+                  <span class="hidden sm:inline">Evento</span>
+                </button>
+                }
+
                 <!-- PDF -->
                 <button (click)="downloadPdf(quote)"
                   class="p-2 rounded-lg text-slate-400 hover:text-rojo-brillante hover:bg-red-50 transition-colors"
