@@ -270,6 +270,7 @@ export class AdminContracts {
       monto:  +(raw.monto ?? 0),
       fecha:  raw.fecha!,
       metodo: raw.metodo as 'efectivo' | 'tarjeta' | 'transferencia',
+      tipo:   'abono',
       notas:  raw.notas?.trim() || null,
     });
 

@@ -102,6 +102,7 @@ export class ContractService {
           monto:       data.deposito_pagado,
           fecha:       created.created_at ? created.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
           metodo:      'efectivo',
+          tipo:        'anticipo',
           notas:       'Depósito inicial registrado en la creación del contrato',
         });
       if (payError) {

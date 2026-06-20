@@ -565,6 +565,7 @@ export class AdminQuotes {
       monto,
       fecha:  this.anticoFecha(),
       metodo: this.anticoMetodo(),
+      tipo:   'anticipo',
       notas:  `Anticipo — cotización ${quote.folio}`,
     });
 

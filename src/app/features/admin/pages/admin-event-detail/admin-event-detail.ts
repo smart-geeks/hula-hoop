@@ -212,7 +212,7 @@ export class AdminEventDetail {
 
     this.paySaving.set(true);
     const success = await this.contractService.addPayment(c.id, {
-      monto, fecha, metodo, notas: notas || 'Pago registrado desde Event Hub',
+      monto, fecha, metodo, tipo: 'abono', notas: notas || 'Pago registrado desde Event Hub',
     });
 
     if (success) {
@@ -243,6 +243,7 @@ export class AdminEventDetail {
           monto: Number(c.deposito_pagado),
           fecha: c.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
           metodo: 'efectivo' as const,
+          tipo: 'anticipo' as const,
           notas: 'Pago inicial / abonos',
           created_at: c.created_at || new Date().toISOString(),
         };
