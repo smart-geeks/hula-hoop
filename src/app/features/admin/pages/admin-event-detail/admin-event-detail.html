@@ -1040,8 +1040,8 @@
       </div>
     }
 
-    <!-- Edit button (visible when firmado and not editing, even with pending amendment) -->
-    @if (!amendmentEditing() && !isLocked() && contract()?.estado === 'firmado') {
+    <!-- Edit button (visible in all states except concluido/cancelado) -->
+    @if (!amendmentEditing() && !isLocked()) {
       <div class="flex justify-end">
         <button
           type="button"
