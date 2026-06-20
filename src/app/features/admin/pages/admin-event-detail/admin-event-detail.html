@@ -975,6 +975,165 @@
       </div>
       }
     </div>
+
+    <!-- Amendment badge (when there's a pending amendment) -->
+    @if (amendment() && amendment()!.status === 'pending_approval') {
+      <div class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <i class="pi pi-clock text-amber-500"></i>
+        <span>Modificación pendiente de autorización del cliente</span>
+      </div>
+    }
+
+    <!-- Edit button (only when: firmado, no pending amendment, not editing) -->
+    @if (!amendmentEditing() && !isLocked() && contract()?.estado === 'firmado' && !hasActiveAmendment()) {
+      <div class="flex justify-end">
+        <button
+          type="button"
+          (click)="startAmendmentEdit()"
+          class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          <i class="pi pi-pencil"></i>
+          Modificar Cotización
+        </button>
+      </div>
+    }
+
+    <!-- Inline amendment editor -->
+    @if (amendmentEditing()) {
+      <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <h4 class="mb-3 text-sm font-semibold text-blue-900">Editar Cotización</h4>
+
+        <!-- Items table -->
+        <div class="mb-4 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-blue-200 text-left text-xs text-blue-700">
+                <th class="pb-2 pr-2">Descripción</th>
+                <th class="pb-2 pr-2 text-center">Cant.</th>
+                <th class="pb-2 pr-2 text-right">Precio u.</th>
+                <th class="pb-2 pr-2 text-right">Subtotal</th>
+                <th class="pb-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of amendmentItems(); track $index) {
+                <tr class="border-b border-blue-100">
+                  <td class="py-1 pr-2">
+                    <input
+                      type="text"
+                      [value]="item.descripcion"
+                      (input)="updateItemField($index, 'descripcion', $any($event.target).value)"
+                      class="w-full rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none"
+                      placeholder="Descripción" />
+                  </td>
+                  <td class="py-1 pr-2">
+                    <input
+                      type="number"
+                      [value]="item.cantidad"
+                      (input)="updateItemField($index, 'cantidad', $any($event.target).value)"
+                      min="1"
+                      class="w-16 rounded border border-slate-300 px-2 py-1 text-center text-sm focus:border-blue-400 focus:outline-none" />
+                  </td>
+                  <td class="py-1 pr-2">
+                    <input
+                      type="number"
+                      [value]="item.precio_unitario"
+                      (input)="updateItemField($index, 'precio_unitario', $any($event.target).value)"
+                      min="0"
+                      class="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm focus:border-blue-400 focus:outline-none" />
+                  </td>
+                  <td class="py-1 pr-2 text-right text-slate-700">
+                    {{ item.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </td>
+                  <td class="py-1">
+                    <button
+                      type="button"
+                      (click)="removeItem($index)"
+                      class="text-red-400 hover:text-red-600">
+                      <i class="pi pi-times"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Add from catalog -->
+        @if (availableExtras().length > 0) {
+          <div class="mb-3 flex items-center gap-2">
+            <label class="text-xs font-medium text-blue-700">+ Del catálogo:</label>
+            <select
+              class="rounded border border-blue-300 bg-white px-2 py-1 text-sm"
+              (change)="addExtraFromCatalog(availableExtras()[$any($event.target).selectedIndex - 1]); $any($event.target).selectedIndex = 0">
+              <option value="">Selecciona un extra...</option>
+              @for (extra of availableExtras(); track extra.id) {
+                <option [value]="extra.id">{{ extra.name }} — {{ extra.price_cents | currency:'MXN':'symbol-narrow':'1.0-0' }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Add free line -->
+        <div class="mb-4">
+          <button
+            type="button"
+            (click)="addFreeLineItem()"
+            class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+            <i class="pi pi-plus"></i>
+            Agregar línea libre
+          </button>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label class="mb-1 block text-xs font-medium text-blue-700">Motivo del cambio</label>
+          <input
+            type="text"
+            [value]="amendmentNotas()"
+            (input)="amendmentNotas.set($any($event.target).value)"
+            class="w-full rounded border border-blue-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+            placeholder="Ej: Upgrade decoración Grand" />
+        </div>
+
+        <!-- Totals summary -->
+        <div class="mb-4 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm">
+          <div class="flex justify-between text-slate-600">
+            <span>Total anterior:</span>
+            <span>{{ (quote()?.total ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between font-medium text-slate-700">
+            <span>Total nuevo:</span>
+            <span>{{ amendmentNewTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="mt-1 flex justify-between border-t border-blue-100 pt-1 font-semibold"
+               [class]="amendmentDelta() >= 0 ? 'text-orange-600' : 'text-emerald-600'">
+            <span>Diferencia:</span>
+            <span>{{ amendmentDelta() >= 0 ? '+' : '' }}{{ amendmentDelta() | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            (click)="cancelAmendmentEdit()"
+            class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="saveAmendmentAndOpenPayment()"
+            [disabled]="amendmentSaving()"
+            class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            @if (amendmentSaving()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            }
+            Guardar y Registrar Pago →
+          </button>
+        </div>
+      </div>
+    }
+
   </div>
   }
   }
@@ -1266,6 +1425,95 @@
     </div>
   </div>
 </div>
+}
+
+<!-- ══ AMENDMENT PAYMENT DIALOG ═══════════════════════════ -->
+@if (amendPayDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+      <h3 class="mb-4 text-base font-semibold text-slate-800">Registrar pago del extra</h3>
+
+      <div class="space-y-4">
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600">Monto (MXN)</label>
+          <input type="number" [value]="amendPayMonto()"
+            (input)="amendPayMonto.set(+$any($event.target).value)"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600">Fecha</label>
+          <input type="date" [value]="amendPayFecha()"
+            (input)="amendPayFecha.set($any($event.target).value)"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600">Método de pago</label>
+          <select [value]="amendPayMetodo()"
+            (change)="amendPayMetodo.set($any($event.target).value)"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600">Notas</label>
+          <input type="text" [value]="amendPayNotas()"
+            (input)="amendPayNotas.set($any($event.target).value)"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" (click)="amendPayDialog.set(false)"
+          class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button type="button" (click)="submitAmendmentPayment()"
+          [disabled]="amendPaySaving()"
+          class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+          @if (amendPaySaving()) { <i class="pi pi-spin pi-spinner"></i> }
+          Confirmar Pago
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ SEND LINK DIALOG ══════════════════════════════════ -->
+@if (sendLinkDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl text-center">
+      <div class="mb-3 text-3xl">✅</div>
+      <h3 class="mb-1 text-base font-semibold text-slate-800">
+        Pago de {{ amendPayMonto() | currency:'MXN':'symbol-narrow':'1.0-0' }} registrado
+      </h3>
+      <p class="mb-5 text-sm text-slate-500">¿Deseas enviar los cambios al cliente para su autorización?</p>
+
+      <div class="flex flex-col gap-2">
+        <a [href]="getAmendmentWhatsappLink()" target="_blank"
+          class="flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600">
+          <i class="pi pi-whatsapp"></i>
+          Enviar por WhatsApp
+        </a>
+        <a [href]="getAmendmentEmailLink()"
+          class="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <i class="pi pi-envelope"></i>
+          Enviar por Email
+        </a>
+        <button type="button" (click)="copyAmendmentLink()"
+          class="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <i class="pi pi-copy"></i>
+          Copiar link
+        </button>
+      </div>
+
+      <button type="button" (click)="sendLinkDialog.set(false)"
+        class="mt-4 text-xs text-slate-400 hover:text-slate-600">
+        Cerrar
+      </button>
+    </div>
+  </div>
 }
 
 <!-- Task Creation Dialog Modal -->

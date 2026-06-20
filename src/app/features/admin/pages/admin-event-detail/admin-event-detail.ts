@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ContractService } from '../../../../core/services/contract.service';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -14,12 +15,16 @@ import { ExpenseService } from '../../../../core/services/expense.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { QuoteAmendmentService } from '../../../../core/services/quote-amendment.service';
+import { ExtraService } from '../../../../core/services/extra.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
 import type { Contract, ContractStatus, ContractPayment } from '../../../../core/interfaces/contract';
 import type { Quote } from '../../../../core/interfaces/quote';
 import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 import type { AdminExpense } from '../../../../core/interfaces/expense';
 import { EXPENSE_CATEGORIES } from '../../../../core/interfaces/expense';
+import type { QuoteAmendment, AmendmentItem } from '../../../../core/interfaces/quote-amendment';
+import type { Extra } from '../../../../core/interfaces/extra';
 
 type DetailTab = 'resumen' | 'contrato' | 'pagos' | 'cotizacion' | 'tareas' | 'gastos';
 type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
@@ -27,7 +32,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 @Component({
   selector: 'app-admin-event-detail',
   templateUrl: './admin-event-detail.html',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [CurrencyPipe, DatePipe, RouterLink, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventDetail {
@@ -40,6 +45,8 @@ export class AdminEventDetail {
   private readonly authService       = inject(AuthService);
   private readonly route            = inject(ActivatedRoute);
   private readonly router           = inject(Router);
+  private readonly amendmentService = inject(QuoteAmendmentService);
+  private readonly extraService     = inject(ExtraService);
 
   // ── Core data ─────────────────────────────────────────────
   readonly loading  = signal(true);
@@ -145,6 +152,25 @@ export class AdminEventDetail {
     return 'border-slate-200';
   });
 
+  // ── Amendment ─────────────────────────────────────────────
+  readonly amendment         = signal<QuoteAmendment | null>(null);
+  readonly amendmentEditing  = signal(false);
+  readonly amendmentItems    = signal<AmendmentItem[]>([]);
+  readonly amendmentNotas    = signal('');
+  readonly amendmentSaving   = signal(false);
+  readonly availableExtras   = signal<Extra[]>([]);
+
+  // ── Amendment payment dialog ──────────────────────────────
+  readonly amendPayDialog  = signal(false);
+  readonly amendPayMonto   = signal(0);
+  readonly amendPayFecha   = signal('');
+  readonly amendPayMetodo  = signal<PayMethod>('efectivo');
+  readonly amendPayNotas   = signal('');
+  readonly amendPaySaving  = signal(false);
+
+  // ── Send link dialog ──────────────────────────────────────
+  readonly sendLinkDialog = signal(false);
+
   // ── Expediente Digital ────────────────────────────────
   readonly uploadingDoc    = signal<'ine' | 'comprobante' | 'firma' | 'pdf' | null>(null);
   readonly expandedReplace = signal<string | null>(null);
@@ -154,6 +180,23 @@ export class AdminEventDetail {
       string,
       { replaced_by: string; replaced_at: string } | null
     >,
+  );
+
+  readonly amendmentDelta = computed(() => {
+    const q = this.quote();
+    if (!q) return 0;
+    const originalTotal = q.total ?? 0;
+    const newTotal = this.amendmentItems().reduce((s, i) => s + i.subtotal, 0);
+    return newTotal - originalTotal;
+  });
+
+  readonly hasActiveAmendment = computed(() => {
+    const a = this.amendment();
+    return a !== null && (a.status === 'draft' || a.status === 'pending_approval');
+  });
+
+  readonly amendmentNewTotal = computed(() =>
+    this.amendmentItems().reduce((s, i) => s + i.subtotal, 0)
   );
 
   constructor() {
@@ -178,6 +221,11 @@ export class AdminEventDetail {
     if (contract?.quote_id) {
       const q = await this.quoteService.getById(contract.quote_id);
       this.quote.set(q);
+    }
+
+    if (id) {
+      const activeAmendment = await this.amendmentService.getActiveByContract(id);
+      this.amendment.set(activeAmendment);
     }
 
     this.loading.set(false);
@@ -430,6 +478,214 @@ export class AdminEventDetail {
     );
     if (extras.length === 0) return '—';
     return extras.map((it: any) => `${it.descripcion} (x${it.cantidad})`).join(', ');
+  }
+
+  // ── Amendment methods ──────────────────────────────────────
+  async startAmendmentEdit(): Promise<void> {
+    const q = this.quote();
+    const c = this.contract();
+    if (!q || !c) return;
+
+    const extras = await this.extraService.getActiveExtrasByVenue(c.venue_id);
+    this.availableExtras.set(extras);
+
+    const currentItems: AmendmentItem[] = (q.items ?? []).map(item => ({
+      descripcion: item.descripcion,
+      cantidad: item.cantidad,
+      precio_unitario: item.precio_unitario,
+      subtotal: item.subtotal,
+    }));
+    this.amendmentItems.set(currentItems);
+    this.amendmentNotas.set('');
+    this.amendmentEditing.set(true);
+  }
+
+  cancelAmendmentEdit(): void {
+    this.amendmentEditing.set(false);
+    this.amendmentItems.set([]);
+    this.amendmentNotas.set('');
+  }
+
+  addExtraFromCatalog(extra: Extra): void {
+    const item: AmendmentItem = {
+      descripcion: extra.name,
+      cantidad: 1,
+      precio_unitario: extra.price_cents,
+      subtotal: extra.price_cents,
+    };
+    this.amendmentItems.update(items => [...items, item]);
+  }
+
+  addFreeLineItem(): void {
+    const item: AmendmentItem = {
+      descripcion: '',
+      cantidad: 1,
+      precio_unitario: 0,
+      subtotal: 0,
+    };
+    this.amendmentItems.update(items => [...items, item]);
+  }
+
+  updateItemField(index: number, field: keyof AmendmentItem, value: string | number): void {
+    this.amendmentItems.update(items => {
+      const updated = [...items];
+      const item = { ...updated[index] };
+      if (field === 'descripcion') {
+        item.descripcion = value as string;
+      } else {
+        (item as Record<string, number>)[field] = Number(value);
+        item.subtotal = item.cantidad * item.precio_unitario;
+      }
+      updated[index] = item;
+      return updated;
+    });
+  }
+
+  removeItem(index: number): void {
+    this.amendmentItems.update(items => items.filter((_, i) => i !== index));
+  }
+
+  async saveAmendmentAndOpenPayment(): Promise<void> {
+    const c = this.contract();
+    const q = this.quote();
+    if (!c || !q) return;
+
+    const items = this.amendmentItems();
+    const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
+    const descuento = q.descuento ?? 0;
+    const total = subtotal - descuento;
+    const delta = total - (q.total ?? 0);
+
+    this.amendmentSaving.set(true);
+
+    const existing = this.amendment();
+    let result: QuoteAmendment | null;
+
+    if (existing && existing.status === 'draft') {
+      result = await this.amendmentService.updateDraft(existing.id, {
+        proposed_items: items,
+        proposed_subtotal: subtotal,
+        proposed_descuento: descuento,
+        proposed_total: total,
+        delta_monto: delta,
+        notas: this.amendmentNotas(),
+      });
+    } else {
+      const profile = this.authService.userProfile();
+      result = await this.amendmentService.createDraft({
+        quote_id: q.id,
+        contract_id: c.id,
+        proposed_items: items,
+        proposed_subtotal: subtotal,
+        proposed_descuento: descuento,
+        proposed_total: total,
+        delta_monto: delta,
+        notas: this.amendmentNotas(),
+        created_by: profile?.id,
+      });
+    }
+
+    this.amendmentSaving.set(false);
+
+    if (!result) {
+      this.showToast('error', 'Error al guardar los cambios');
+      return;
+    }
+
+    this.amendment.set(result);
+    this.amendmentEditing.set(false);
+
+    this.amendPayMonto.set(Math.abs(delta));
+    this.amendPayFecha.set(new Date().toISOString().split('T')[0]);
+    this.amendPayMetodo.set('efectivo');
+    this.amendPayNotas.set(`Extra: ${this.amendmentNotas() || 'Modificación de cotización'}`);
+    this.amendPayDialog.set(true);
+  }
+
+  async submitAmendmentPayment(): Promise<void> {
+    const c = this.contract();
+    const a = this.amendment();
+    if (!c || !a || this.amendPaySaving()) return;
+
+    const monto = this.amendPayMonto();
+    const fecha = this.amendPayFecha();
+    const metodo = this.amendPayMetodo();
+    if (monto <= 0 || !fecha) return;
+
+    this.amendPaySaving.set(true);
+
+    const success = await this.contractService.addPayment(c.id, {
+      monto,
+      fecha,
+      metodo,
+      tipo: 'extra',
+      notas: this.amendPayNotas() || 'Pago por modificación de cotización',
+    });
+
+    if (!success) {
+      this.showToast('error', 'Error al registrar el pago');
+      this.amendPaySaving.set(false);
+      return;
+    }
+
+    await this.loadData();
+    const updatedContract = this.contract();
+    const lastPayment = updatedContract?.payments
+      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+    if (lastPayment) {
+      await this.amendmentService.linkPaymentAndSubmit(a.id, lastPayment.id);
+      const updatedAmendment = await this.amendmentService.getActiveByContract(c.id);
+      this.amendment.set(updatedAmendment);
+    }
+
+    this.amendPaySaving.set(false);
+    this.amendPayDialog.set(false);
+    this.sendLinkDialog.set(true);
+  }
+
+  getAmendmentWhatsappLink(): string {
+    const c = this.contract();
+    if (!c) return '';
+    const phone = (c.client?.telefono ?? '').replace(/\D/g, '');
+    const formattedPhone = phone.length === 10 ? '52' + phone : phone;
+    const link = `${window.location.origin}/contrato/${c.id}`;
+    const a = this.amendment();
+    const delta = a ? (a.delta_monto / 100).toLocaleString('es-MX') : '0';
+    const text = encodeURIComponent(
+      `*Hula Hoop - Modificación de tu evento*\n\n` +
+      `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
+      `Hemos actualizado los detalles de tu evento del *${this.formatDate(c.fecha_evento)}*.\n\n` +
+      `Diferencia: *$${delta} MXN* (ya registrado el pago).\n\n` +
+      `Por favor revisa y autoriza los cambios aquí:\n` +
+      `🔗 ${link}\n\n` +
+      `¡Muchas gracias!`
+    );
+    return `https://wa.me/${formattedPhone}?text=${text}`;
+  }
+
+  getAmendmentEmailLink(): string {
+    const c = this.contract();
+    if (!c) return '';
+    const email = c.client?.email ?? '';
+    const link = `${window.location.origin}/contrato/${c.id}`;
+    const subject = encodeURIComponent(`Modificación de tu evento — Hula Hoop`);
+    const body = encodeURIComponent(
+      `Hola ${c.client?.nombre ?? 'Cliente'},\n\n` +
+      `Hemos actualizado los detalles de tu evento del ${this.formatDate(c.fecha_evento)}.\n\n` +
+      `Por favor revisa y autoriza los cambios aquí:\n${link}\n\n` +
+      `Atentamente,\nHula Hoop Eventos`
+    );
+    return `mailto:${email}?subject=${subject}&body=${body}`;
+  }
+
+  copyAmendmentLink(): void {
+    const c = this.contract();
+    if (!c) return;
+    const link = `${window.location.origin}/contrato/${c.id}`;
+    navigator.clipboard.writeText(link).then(() => {
+      this.showToast('success', 'Link copiado al portapapeles');
+    });
   }
 
   goBack(): void {
