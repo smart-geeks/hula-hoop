@@ -587,7 +587,7 @@
               @if (c.pdf_url) {
                 <hr class="border-slate-200 my-2" />
                 <div class="flex items-center justify-between text-sm py-1">
-                  <span class="flex items-center gap-2 text-slate-700 font-bold text-slate-800">
+                  <span class="flex items-center gap-2 text-slate-700 font-bold">
                     <i class="pi pi-file-pdf text-rojo-brillante"></i>
                     Contrato Oficial PDF
                   </span>
@@ -598,7 +598,19 @@
               }
             </div>
 
-            <div class="pt-4">
+            <!-- Ver contrato actualizado -->
+            <button type="button" (click)="viewContract()"
+              class="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-rojo-brillante px-4 py-3 text-sm font-semibold text-rojo-brillante hover:bg-rojo-brillante hover:text-white transition-colors">
+              <i class="pi pi-file-edit"></i>
+              Ver contrato actualizado
+              @if (approvedAmendments().length > 0) {
+                <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                  + {{ approvedAmendments().length }} addendum
+                </span>
+              }
+            </button>
+
+            <div class="pt-2">
               <p class="text-xs text-slate-400">Cualquier duda o aclaración sobre tu evento, por favor contáctanos.</p>
             </div>
           </div>

@@ -172,6 +172,7 @@ export class AdminEventDetail {
 
   // ── Expediente Digital ────────────────────────────────
   readonly uploadingDoc    = signal<'ine' | 'comprobante' | 'firma' | 'pdf' | null>(null);
+  readonly uploadingFirmaRep = signal(false);
   readonly expandedReplace = signal<string | null>(null);
 
   readonly docMeta = computed(() =>
@@ -802,6 +803,27 @@ export class AdminEventDetail {
     input.value = '';
   }
 
+  async onFirmaRepUpload(event: Event): Promise<void> {
+    const c = this.contract();
+    if (!c) return;
+    const input = event.target as HTMLInputElement;
+    if (!input?.files?.length) return;
+    const file = input.files[0];
+
+    this.uploadingFirmaRep.set(true);
+    const url = await this.contractService.uploadFirmaRepresentante(c.id, file);
+    this.uploadingFirmaRep.set(false);
+
+    if (url) {
+      const updated = await this.contractService.getById(c.id);
+      if (updated) this.contract.set(updated);
+      this.showToast('success', 'Firma del representante subida correctamente');
+    } else {
+      this.showToast('error', 'Error al subir la firma del representante');
+    }
+    input.value = '';
+  }
+
   sendContractEmail(): void {
     const c = this.contract();
     if (!c) return;
@@ -851,9 +873,11 @@ export class AdminEventDetail {
     window.open(`https://wa.me/${formattedPhone}?text=${text}`, '_blank');
   }
 
-  downloadContract(): void {
+  async downloadContract(): Promise<void> {
     const c = this.contract();
     if (!c) return;
+
+    const approvedAmendments = await this.amendmentService.getApprovedByContract(c.id);
 
     const win = window.open('', '_blank');
     if (!win) return;
@@ -964,19 +988,90 @@ export class AdminEventDetail {
 
       <div class="signatures">
         <div class="signature-block">
-          <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; font-style: italic; color: #94a3b8; font-size: 14px;">
-            Hula Hoop Eventos
+          <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center;">
+            ${c.firma_representante_url
+              ? `<img src="${c.firma_representante_url}" style="max-height: 55px;" />`
+              : `<span style="font-style:italic;color:#94a3b8;font-size:13px">Hula Hoop Eventos</span>`}
           </div>
           <div class="signature-line">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
         </div>
         <div class="signature-block">
-          <div style="height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pb-1">
+          <div style="height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
             ${c.firma_url ? `<img src="${c.firma_url}" style="max-height: 55px;" />` : ''}
           </div>
           <div class="signature-line">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
           ${c.fecha_firma ? `<div style="font-size: 9px; color: #64748b; margin-top: 4px;">Firmado digitalmente el ${fechaCelebracion}</div>` : ''}
         </div>
       </div>
+
+      ${approvedAmendments.length > 0 ? `
+      <div style="page-break-before:always;margin-top:60px">
+        <div style="border:2px solid #e2e8f0;border-radius:6px;padding:24px">
+          <div style="font-weight:800;font-size:14px;text-transform:uppercase;color:#0f172a;margin-bottom:4px;text-align:center">
+            ADDENDUM AL CONTRATO ${c.folio}
+          </div>
+          <div style="text-align:center;font-size:11px;color:#64748b;margin-bottom:20px">
+            Modificaciones autorizadas por el cliente con posterioridad a la firma del contrato original
+          </div>
+          ${approvedAmendments.map((am, idx) => {
+            const fechaAprobacion = am.approved_at
+              ? new Date(am.approved_at).toLocaleDateString('es-MX', { dateStyle: 'long' })
+              : '—';
+            const itemRows = (am.proposed_items as Array<{descripcion:string;cantidad:number;precio_unitario:number;subtotal:number}>)
+              .map(it => `<tr>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0">${it.descripcion}</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center">${it.cantidad}</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">$${Number(it.precio_unitario).toLocaleString('es-MX')} MXN</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">$${Number(it.subtotal).toLocaleString('es-MX')} MXN</td>
+              </tr>`).join('');
+            return `
+            <div style="margin-bottom:24px">
+              <div style="font-weight:700;font-size:12px;color:#0f172a;margin-bottom:8px">
+                MODIFICACIÓN ${idx + 1} — Aprobada el ${fechaAprobacion}
+              </div>
+              ${am.notas ? `<p style="font-size:11px;color:#475569;margin-bottom:8px;text-indent:0">${am.notas}</p>` : ''}
+              <table style="width:100%;border-collapse:collapse;font-size:11px">
+                <thead>
+                  <tr style="background:#f8fafc">
+                    <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:left">Descripción</th>
+                    <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center">Cant.</th>
+                    <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Precio U.</th>
+                    <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>${itemRows}</tbody>
+              </table>
+              <div style="text-align:right;font-size:12px;font-weight:700;margin-top:8px;color:#0f172a">
+                Nuevo total del contrato: $${Number(am.proposed_total).toLocaleString('es-MX')} MXN
+                &nbsp;|&nbsp; Diferencia: <span style="color:${Number(am.delta_monto)>=0?'#16a34a':'#dc2626'}">
+                  ${Number(am.delta_monto)>=0?'+':''}$${Number(am.delta_monto).toLocaleString('es-MX')} MXN
+                </span>
+              </div>
+            </div>`;
+          }).join('<hr style="border:none;border-top:1px dashed #e2e8f0;margin:16px 0">')}
+
+          <div style="margin-top:30px;font-size:11px;color:#334155">
+            Las partes ratifican su conformidad con las modificaciones aquí descritas, mismas que forman parte integral del contrato original.
+          </div>
+          <div class="signatures" style="margin-top:40px">
+            <div class="signature-block">
+              <div style="height:50px;display:flex;align-items:flex-end;justify-content:center">
+                ${c.firma_representante_url
+                  ? `<img src="${c.firma_representante_url}" style="max-height:45px"/>`
+                  : `<span style="font-style:italic;color:#94a3b8;font-size:12px">Hula Hoop Eventos</span>`}
+              </div>
+              <div class="signature-line">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
+            </div>
+            <div class="signature-block">
+              <div style="height:50px;display:flex;align-items:flex-end;justify-content:center">
+                ${c.firma_url ? `<img src="${c.firma_url}" style="max-height:45px"/>` : ''}
+              </div>
+              <div class="signature-line">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="footer">Este contrato fue generado por Hula Hoop · Calle Ejemplar · Tel: (55) 1234-5678 · info@hulahoop.mx</div>
     </body></html>`);

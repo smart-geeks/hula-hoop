@@ -82,6 +82,21 @@ export class QuoteAmendmentService {
     return updated;
   }
 
+  async getApprovedByContract(contractId: string): Promise<QuoteAmendment[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('quote_amendments')
+      .select('*')
+      .eq('contract_id', contractId)
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: true });
+
+    if (error) { console.error('Error fetching approved amendments:', error.message); return []; }
+    return data ?? [];
+  }
+
   async approve(amendmentId: string): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;

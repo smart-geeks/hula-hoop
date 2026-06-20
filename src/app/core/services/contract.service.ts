@@ -232,6 +232,27 @@ export class ContractService {
     return this.getById(contractId);
   }
 
+  async uploadFirmaRepresentante(contractId: string, file: File): Promise<string | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const ext = file.name.split('.').pop() || 'png';
+    const fileName = `contracts/firma_rep/${contractId}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from('gallery')
+      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) { console.error('Error uploading firma representante:', uploadError); return null; }
+
+    const { data } = client.storage.from('gallery').getPublicUrl(fileName);
+    const publicUrl = data?.publicUrl ?? null;
+    if (publicUrl) {
+      await this.update(contractId, { firma_representante_url: publicUrl } as UpdateContractData & { firma_representante_url: string });
+    }
+    return publicUrl;
+  }
+
   async addPayment(
     contractId: string,
     payment: Omit<ContractPayment, 'id' | 'contract_id' | 'created_at'>,

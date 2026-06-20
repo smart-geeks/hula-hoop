@@ -39,10 +39,11 @@ export class ContractPublicPage implements AfterViewInit {
   readonly venueSlug          = signal<string | null>(null);
   readonly submitting         = signal(false);
 
-  readonly amendment          = signal<QuoteAmendment | null>(null);
-  readonly amendmentApproving = signal(false);
-  readonly amendmentRejecting = signal(false);
-  readonly amendmentDone      = signal<'approved' | 'rejected' | null>(null);
+  readonly amendment           = signal<QuoteAmendment | null>(null);
+  readonly approvedAmendments  = signal<QuoteAmendment[]>([]);
+  readonly amendmentApproving  = signal(false);
+  readonly amendmentRejecting  = signal(false);
+  readonly amendmentDone       = signal<'approved' | 'rejected' | null>(null);
 
   // Wizard state: 1 = INE, 2 = Comprobante, 3 = Firma, 4 = Success
   readonly currentStep     = signal(1);
@@ -96,6 +97,9 @@ export class ContractPublicPage implements AfterViewInit {
 
       const activeAmendment = await this.amendmentService.getActiveByContract(id);
       this.amendment.set(activeAmendment);
+
+      const approved = await this.amendmentService.getApprovedByContract(id);
+      this.approvedAmendments.set(approved);
 
       // Determine starting step based on already uploaded documents
       if (!c.ine_url) {
@@ -327,6 +331,180 @@ export class ContractPublicPage implements AfterViewInit {
       this.amendmentDone.set('rejected');
       this.amendment.set(null);
     }
+  }
+
+  viewContract(): void {
+    const c = this.contract();
+    if (!c) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    const q = this.quote();
+    const amendments = this.approvedAmendments();
+
+    const pkg = q?.items?.[0]?.descripcion ?? '—';
+    const snack = q?.items?.find((i: {descripcion: string}) => i.descripcion.startsWith('Merienda:'))?.descripcion.replace('Merienda:', '').trim() ?? '—';
+    const extras = q?.items?.filter((i: {descripcion: string}) => i.descripcion !== pkg && !i.descripcion.startsWith('Merienda:'))
+      .map((i: {descripcion: string; cantidad: number}) => `${i.descripcion} (x${i.cantidad})`).join(', ') || '—';
+
+    const fechaEvento = c.fecha_evento
+      ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : '—';
+    const fechaCelebracion = c.fecha_firma
+      ? new Date(c.fecha_firma + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
+      : new Date().toLocaleDateString('es-MX', { dateStyle: 'long' });
+
+    const fmtTime = (t: string | null | undefined) => {
+      if (!t) return '—';
+      const [h, m] = t.split(':');
+      const hour = parseInt(h, 10);
+      return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+    };
+
+    const addendaHtml = amendments.length > 0 ? `
+      <div style="page-break-before:always;margin-top:60px">
+        <div style="border:2px solid #e2e8f0;border-radius:6px;padding:24px">
+          <div style="font-weight:800;font-size:14px;text-transform:uppercase;color:#0f172a;text-align:center;margin-bottom:4px">
+            ADDENDUM AL CONTRATO ${c.folio}
+          </div>
+          <div style="text-align:center;font-size:11px;color:#64748b;margin-bottom:20px">
+            Modificaciones autorizadas por el cliente con posterioridad a la firma del contrato original
+          </div>
+          ${amendments.map((am, idx) => {
+            const fechaAprobacion = am.approved_at
+              ? new Date(am.approved_at).toLocaleDateString('es-MX', { dateStyle: 'long' })
+              : '—';
+            const rows = (am.proposed_items as Array<{descripcion:string;cantidad:number;precio_unitario:number;subtotal:number}>)
+              .map(it => `<tr>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0">${it.descripcion}</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center">${it.cantidad}</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">$${Number(it.precio_unitario).toLocaleString('es-MX')} MXN</td>
+                <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">$${Number(it.subtotal).toLocaleString('es-MX')} MXN</td>
+              </tr>`).join('');
+            return `<div style="margin-bottom:24px">
+              <div style="font-weight:700;font-size:12px;color:#0f172a;margin-bottom:8px">MODIFICACIÓN ${idx + 1} — Aprobada el ${fechaAprobacion}</div>
+              ${am.notas ? `<p style="font-size:11px;color:#475569;margin-bottom:8px">${am.notas}</p>` : ''}
+              <table style="width:100%;border-collapse:collapse;font-size:11px">
+                <thead><tr style="background:#f8fafc">
+                  <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:left">Descripción</th>
+                  <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center">Cant.</th>
+                  <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Precio U.</th>
+                  <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Subtotal</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+              <div style="text-align:right;font-size:12px;font-weight:700;margin-top:8px;color:#0f172a">
+                Nuevo total: $${Number(am.proposed_total).toLocaleString('es-MX')} MXN &nbsp;|&nbsp;
+                Diferencia: <span style="color:${Number(am.delta_monto)>=0?'#16a34a':'#dc2626'}">${Number(am.delta_monto)>=0?'+':''}$${Number(am.delta_monto).toLocaleString('es-MX')} MXN</span>
+              </div>
+            </div>`;
+          }).join('<hr style="border:none;border-top:1px dashed #e2e8f0;margin:16px 0">')}
+          <div style="margin-top:20px;font-size:11px;color:#334155">
+            Las partes ratifican su conformidad con las modificaciones aquí descritas.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:40px;text-align:center">
+            <div>
+              <div style="height:50px;display:flex;align-items:flex-end;justify-content:center">
+                ${c.firma_representante_url ? `<img src="${c.firma_representante_url}" style="max-height:45px"/>` : '<span style="font-style:italic;color:#94a3b8;font-size:12px">Hula Hoop Eventos</span>'}
+              </div>
+              <div style="border-top:1px solid #475569;margin-top:10px;padding-top:8px;font-size:12px;font-weight:600">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
+            </div>
+            <div>
+              <div style="height:50px;display:flex;align-items:flex-end;justify-content:center">
+                ${c.firma_url ? `<img src="${c.firma_url}" style="max-height:45px"/>` : ''}
+              </div>
+              <div style="border-top:1px solid #475569;margin-top:10px;padding-top:8px;font-size:12px;font-weight:600">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
+            </div>
+          </div>
+        </div>
+      </div>` : '';
+
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8">
+      <title>Contrato ${c.folio} — Hula Hoop</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#334155;line-height:1.6;padding:50px 60px;background:#fff;font-size:13px;text-align:justify}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:35px;padding-bottom:15px;border-bottom:2px solid #e2e8f0}
+        .logo{font-size:24px;font-weight:800;color:#E30D1C;letter-spacing:-0.5px}
+        .title{font-size:15px;font-weight:800;text-align:center;text-transform:uppercase;margin:30px 0 20px 0;color:#1e293b}
+        .section-title{font-weight:700;text-transform:uppercase;margin:20px 0 10px 0;font-size:12px;color:#0f172a}
+        p{margin-bottom:12px;text-indent:24px}
+        ol{margin:10px 0 15px 30px} ol li{margin-bottom:8px}
+        .details-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12px}
+        .details-table td{padding:8px 12px;border:1px solid #cbd5e1}
+        .details-table td.label{font-weight:700;background:#f8fafc;width:25%}
+        .signatures{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:60px;page-break-inside:avoid;text-align:center}
+        .sig-line{border-top:1px solid #475569;margin-top:10px;padding-top:8px;font-size:12px;font-weight:600}
+        .footer{margin-top:60px;border-top:1px solid #e2e8f0;padding-top:15px;font-size:10px;color:#94a3b8;text-align:center}
+        @media print{body{padding:20px 30px}}
+      </style>
+    </head><body>
+      <div class="header">
+        <div class="logo">HULA HOOP</div>
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:14px">CONTRATO DE ADHESIÓN</div>
+          <div style="color:#64748b;font-size:12px">FOLIO: ${c.folio}</div>
+        </div>
+      </div>
+      <div class="title">CONTRATO DE PRESTACIÓN DE SERVICIOS PARA EVENTO SOCIAL</div>
+      <p>CONTRATO DE PRESTACIÓN DE SERVICIOS QUE CELEBRAN, POR UNA PARTE, EL SALÓN DE EVENTOS HULA HOOP (EN LO SUCESIVO <strong>"EL PRESTADOR"</strong>), Y POR LA OTRA PARTE, LA PERSONA CUYOS DATOS APARECEN EN LA TABLA DE ESPECIFICACIONES DE ESTE DOCUMENTO (EN LO SUCESIVO <strong>"EL CLIENTE"</strong>), AL TENOR DE LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:</p>
+      <div class="section-title">ESPECIFICACIONES DEL SERVICIO Y EVENTO</div>
+      <table class="details-table">
+        <tr>
+          <td class="label">Cliente</td><td>${c.client?.nombre ?? '—'}</td>
+          <td class="label">Fecha Evento</td><td>${fechaEvento}</td>
+        </tr>
+        <tr>
+          <td class="label">Teléfono</td><td>${c.client?.telefono ?? '—'}</td>
+          <td class="label">Horario</td><td>De ${fmtTime(c.hora_inicio)} a ${fmtTime(c.hora_fin)}</td>
+        </tr>
+        <tr>
+          <td class="label">Paquete</td><td>${pkg}</td>
+          <td class="label">Merienda</td><td>${snack}</td>
+        </tr>
+        <tr>
+          <td class="label">Extras</td><td colspan="3">${extras}</td>
+        </tr>
+        <tr>
+          <td class="label">Total Contrato</td><td><strong>$${c.total_contrato.toLocaleString('es-MX')} MXN</strong></td>
+          <td class="label">Anticipo Pagado</td><td style="color:#16a34a;font-weight:600">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
+        </tr>
+        <tr>
+          <td class="label">Saldo Pendiente</td><td style="color:#dc2626;font-weight:700"><strong>$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</strong></td>
+          <td class="label">Salón Renta</td><td>$${c.salon_renta.toLocaleString('es-MX')} MXN</td>
+        </tr>
+      </table>
+      <div class="section-title">CLÁUSULAS</div>
+      <ol>
+        <li><strong>PRIMERA (OBJETO):</strong> "EL PRESTADOR" se obliga a prestar el servicio de renta del salón de eventos Hula Hoop para la realización del evento social de "EL CLIENTE", de conformidad con los términos descritos en el presente contrato.</li>
+        <li><strong>SEGUNDA (PRECIO Y CONDICIONES DE PAGO):</strong> "EL CLIENTE" se obliga a pagar a "EL PRESTADOR" la cantidad total señalada como "Total Contrato". El anticipo reserva la fecha. El saldo pendiente deberá liquidarse antes del inicio del evento.</li>
+        <li><strong>TERCERA (POLÍTICA DE CANCELACIÓN):</strong> Cualquier cancelación por parte de "EL CLIENTE" implicará la pérdida total del anticipo pagado. El cambio de fecha queda sujeto a disponibilidad.</li>
+        <li><strong>CUARTA (REGLAMENTO INTERNO):</strong> "EL CLIENTE" y sus invitados se obligan a observar las normas de uso y seguridad de las instalaciones, respondiendo por cualquier daño causado.</li>
+        <li><strong>QUINTA (VIGENCIA Y JURISDICCIÓN):</strong> El presente contrato surte efectos desde la firma de ambas partes. Las partes se someten a las leyes y tribunales de la localidad del establecimiento.</li>
+      </ol>
+      <p style="margin-top:20px;text-indent:0">Leído por las partes y enterados de su alcance legal, se firma por duplicado el día ${fechaCelebracion}.</p>
+      <div class="signatures">
+        <div>
+          <div style="height:60px;display:flex;align-items:flex-end;justify-content:center">
+            ${c.firma_representante_url ? `<img src="${c.firma_representante_url}" style="max-height:55px"/>` : '<span style="font-style:italic;color:#94a3b8;font-size:13px">Hula Hoop Eventos</span>'}
+          </div>
+          <div class="sig-line">Por EL PRESTADOR<br>HULA HOOP EVENTOS</div>
+        </div>
+        <div>
+          <div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">
+            ${c.firma_url ? `<img src="${c.firma_url}" style="max-height:55px"/>` : ''}
+          </div>
+          <div class="sig-line">Por EL CLIENTE<br>${c.client?.nombre ?? '________________________'}</div>
+          ${c.fecha_firma ? `<div style="font-size:9px;color:#64748b;margin-top:4px">Firmado digitalmente el ${fechaCelebracion}</div>` : ''}
+        </div>
+      </div>
+      ${addendaHtml}
+      <div class="footer">Hula Hoop · info@hulahoop.mx</div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
   }
 
   formatDate(dateStr: string): string {
