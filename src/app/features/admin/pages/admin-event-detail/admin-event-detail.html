@@ -409,6 +409,14 @@
             class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1">
             <i class="pi pi-print"></i> Imprimir / PDF
           </button>
+          <button (click)="openRepFirmaDialog()"
+            [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 ' +
+              (contract()?.firma_representante_url
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100')">
+            <i [class]="'pi text-xs ' + (contract()?.firma_representante_url ? 'pi-check-circle' : 'pi-pen-to-square')"></i>
+            {{ contract()?.firma_representante_url ? 'Re-firmar rep.' : 'Firma representante' }}
+          </button>
           <button (click)="sendContractEmail()"
             class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1">
             <i class="pi pi-envelope"></i> Enviar por Correo
@@ -1560,6 +1568,89 @@
         class="mt-4 text-xs text-slate-400 hover:text-slate-600">
         Cerrar
       </button>
+    </div>
+  </div>
+}
+
+<!-- Rep Signature Canvas Modal -->
+@if (repFirmaDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+       (click)="closeRepFirmaDialog()">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+         (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div>
+          <h3 class="font-semibold text-slate-800">Firma del Representante</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Dibuja la firma de Hula Hoop en el recuadro</p>
+        </div>
+        <button type="button" (click)="closeRepFirmaDialog()"
+          class="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          aria-label="Cerrar">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Canvas area -->
+      <div class="px-5 pt-5 pb-3">
+        <div class="relative rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 overflow-hidden"
+             style="height: 200px;">
+          <canvas id="repSigCanvas"
+            class="w-full h-full cursor-crosshair touch-none"
+            (mousedown)="startRepDrawing($event)"
+            (mousemove)="drawRep($event)"
+            (mouseup)="stopRepDrawing()"
+            (mouseleave)="stopRepDrawing()"
+            (touchstart)="startRepDrawingTouch($event)"
+            (touchmove)="drawRepTouch($event)"
+            (touchend)="stopRepDrawing()">
+          </canvas>
+          @if (!isRepCanvasSigned()) {
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <p class="text-slate-300 text-sm select-none">Dibuja aquí la firma</p>
+            </div>
+          }
+        </div>
+
+        <div class="flex justify-end mt-2">
+          <button type="button" (click)="clearRepCanvas()"
+            class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors">
+            <i class="pi pi-refresh text-xs"></i> Limpiar
+          </button>
+        </div>
+
+        @if (contract()?.firma_url && isRepCanvasSigned()) {
+          <div class="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">
+            <i class="pi pi-info-circle"></i>
+            Al guardar, ambas firmas quedarán registradas y el contrato se añadirá automáticamente al expediente digital.
+          </div>
+        }
+        @if (!contract()?.firma_url) {
+          <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+            <i class="pi pi-exclamation-triangle"></i>
+            El cliente aún no ha firmado. Se guardará la firma del representante pero el contrato esperará la firma del cliente.
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="flex gap-2 px-5 py-4 border-t border-slate-100">
+        <button type="button" (click)="closeRepFirmaDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button" (click)="saveRepFirma()"
+          [disabled]="!isRepCanvasSigned() || repFirmaSaving()"
+          class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          @if (repFirmaSaving()) {
+            <i class="pi pi-spin pi-spinner text-xs"></i> Guardando...
+          } @else {
+            <i class="pi pi-check text-xs"></i> Guardar firma
+          }
+        </button>
+      </div>
+
     </div>
   </div>
 }

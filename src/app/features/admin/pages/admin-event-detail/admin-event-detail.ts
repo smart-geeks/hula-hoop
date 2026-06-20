@@ -175,6 +175,13 @@ export class AdminEventDetail {
   readonly uploadingFirmaRep = signal(false);
   readonly expandedReplace = signal<string | null>(null);
 
+  // ── Rep Signature Canvas Dialog ───────────────────────
+  readonly repFirmaDialog    = signal(false);
+  readonly isRepCanvasSigned = signal(false);
+  readonly repFirmaSaving    = signal(false);
+  private repIsDrawing = false;
+  private repCtx: CanvasRenderingContext2D | null = null;
+
   readonly docMeta = computed(() =>
     (this.contract()?.doc_metadata ?? {}) as Record<
       string,
@@ -873,15 +880,144 @@ export class AdminEventDetail {
     window.open(`https://wa.me/${formattedPhone}?text=${text}`, '_blank');
   }
 
+  // ── Rep Signature Canvas Methods ─────────────────────────
+
+  openRepFirmaDialog(): void {
+    this.repFirmaDialog.set(true);
+    this.isRepCanvasSigned.set(false);
+    this.repCtx = null;
+    setTimeout(() => this.initRepCanvas(), 150);
+  }
+
+  closeRepFirmaDialog(): void {
+    this.repFirmaDialog.set(false);
+    this.repIsDrawing = false;
+    this.repCtx = null;
+  }
+
+  private initRepCanvas(): void {
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    this.repCtx = canvas.getContext('2d');
+    if (this.repCtx) {
+      this.repCtx.strokeStyle = '#020617';
+      this.repCtx.lineWidth = 3;
+      this.repCtx.lineCap = 'round';
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+  }
+
+  startRepDrawing(event: MouseEvent): void {
+    this.repIsDrawing = true;
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    this.repCtx?.beginPath();
+    this.repCtx?.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+    this.isRepCanvasSigned.set(true);
+  }
+
+  drawRep(event: MouseEvent): void {
+    if (!this.repIsDrawing || !this.repCtx) return;
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    this.repCtx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+    this.repCtx.stroke();
+  }
+
+  startRepDrawingTouch(event: TouchEvent): void {
+    event.preventDefault();
+    this.repIsDrawing = true;
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+    this.repCtx?.beginPath();
+    this.repCtx?.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    this.isRepCanvasSigned.set(true);
+  }
+
+  drawRepTouch(event: TouchEvent): void {
+    event.preventDefault();
+    if (!this.repIsDrawing || !this.repCtx) return;
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+    this.repCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    this.repCtx.stroke();
+  }
+
+  stopRepDrawing(): void {
+    this.repIsDrawing = false;
+  }
+
+  clearRepCanvas(): void {
+    const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement | null;
+    if (!canvas || !this.repCtx) return;
+    this.repCtx.clearRect(0, 0, canvas.width, canvas.height);
+    this.isRepCanvasSigned.set(false);
+  }
+
+  private getRepCanvasBlob(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      const canvas = document.getElementById('repSigCanvas') as HTMLCanvasElement | null;
+      if (!canvas) { resolve(null); return; }
+      canvas.toBlob((blob) => resolve(blob), 'image/png');
+    });
+  }
+
+  async saveRepFirma(): Promise<void> {
+    const c = this.contract();
+    if (!c || !this.isRepCanvasSigned() || this.repFirmaSaving()) return;
+    this.repFirmaSaving.set(true);
+    try {
+      const blob = await this.getRepCanvasBlob();
+      if (!blob) { this.showToast('error', 'No se pudo capturar la firma'); return; }
+      const file = new File([blob], `firma_rep_${c.id}.png`, { type: 'image/png' });
+      const url = await this.contractService.uploadFirmaRepresentante(c.id, file);
+      if (!url) { this.showToast('error', 'Error al guardar la firma'); return; }
+      const updated = await this.contractService.getById(c.id);
+      if (updated) {
+        this.contract.set(updated);
+        if (updated.firma_url && updated.firma_representante_url) {
+          await this.autoSaveSignedContract(updated);
+        }
+      }
+      this.closeRepFirmaDialog();
+      this.showToast('success', 'Firma del representante guardada');
+    } finally {
+      this.repFirmaSaving.set(false);
+    }
+  }
+
+  private async autoSaveSignedContract(c: Contract): Promise<void> {
+    const approvedAmendments = await this.amendmentService.getApprovedByContract(c.id);
+    const html = this.buildContractHtml(c, approvedAmendments);
+    const blob = new Blob([html], { type: 'text/html' });
+    const file = new File([blob], `contrato_${c.id}.html`, { type: 'text/html' });
+    const saved = await this.contractService.saveContractHtml(c.id, file);
+    if (saved) {
+      const refreshed = await this.contractService.getById(c.id);
+      if (refreshed) this.contract.set(refreshed);
+      this.showToast('success', 'Contrato firmado guardado en expediente digital ✓');
+    }
+  }
+
+  // ── Contract HTML Builder ─────────────────────────────────
+
   async downloadContract(): Promise<void> {
     const c = this.contract();
     if (!c) return;
-
     const approvedAmendments = await this.amendmentService.getApprovedByContract(c.id);
-
     const win = window.open('', '_blank');
     if (!win) return;
+    win.document.write(this.buildContractHtml(c, approvedAmendments));
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 400);
+  }
 
+  private buildContractHtml(c: Contract, approvedAmendments: QuoteAmendment[]): string {
     const quoteData = this.quote();
     const pkg = this.getContractPackage(quoteData);
     const snack = this.getContractSnack(quoteData);
@@ -896,7 +1032,7 @@ export class AdminEventDetail {
         ? new Date(c.created_at).toLocaleDateString('es-MX', { dateStyle: 'long' })
         : new Date().toLocaleDateString('es-MX', { dateStyle: 'long' });
 
-    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+    return `<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
       <title>Contrato ${c.folio} — Hula Hoop</title>
       <style>
@@ -1074,9 +1210,6 @@ export class AdminEventDetail {
       ` : ''}
 
       <div class="footer">Este contrato fue generado por Hula Hoop · Calle Ejemplar · Tel: (55) 1234-5678 · info@hulahoop.mx</div>
-    </body></html>`);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 400);
+    </body></html>`;
   }
 }

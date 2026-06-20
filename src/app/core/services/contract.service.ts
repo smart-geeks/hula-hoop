@@ -253,6 +253,25 @@ export class ContractService {
     return publicUrl;
   }
 
+  async saveContractHtml(contractId: string, htmlFile: File): Promise<string | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const fileName = `contracts/signed/${contractId}-${Date.now()}.html`;
+    const { error: uploadError } = await client.storage
+      .from('gallery')
+      .upload(fileName, htmlFile, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) { console.error('Error saving signed contract:', uploadError); return null; }
+
+    const { data } = client.storage.from('gallery').getPublicUrl(fileName);
+    const publicUrl = data?.publicUrl ?? null;
+    if (publicUrl) {
+      await this.update(contractId, { pdf_url: publicUrl });
+    }
+    return publicUrl;
+  }
+
   async addPayment(
     contractId: string,
     payment: Omit<ContractPayment, 'id' | 'contract_id' | 'created_at'>,
