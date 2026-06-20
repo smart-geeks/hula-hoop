@@ -27,16 +27,15 @@ BEGIN
   -- Delete existing quote items
   DELETE FROM quote_items WHERE quote_id = v_amendment.quote_id;
 
-  -- Insert proposed items
+  -- Insert proposed items (subtotal is GENERATED ALWAYS, omit it)
   FOR v_item IN SELECT * FROM jsonb_array_elements(v_amendment.proposed_items)
   LOOP
-    INSERT INTO quote_items (quote_id, descripcion, cantidad, precio_unitario, subtotal)
+    INSERT INTO quote_items (quote_id, descripcion, cantidad, precio_unitario)
     VALUES (
       v_amendment.quote_id,
       v_item->>'descripcion',
       (v_item->>'cantidad')::INTEGER,
-      (v_item->>'precio_unitario')::NUMERIC,
-      (v_item->>'subtotal')::NUMERIC
+      (v_item->>'precio_unitario')::NUMERIC
     );
   END LOOP;
 

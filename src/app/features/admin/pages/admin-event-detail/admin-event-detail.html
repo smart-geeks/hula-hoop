@@ -978,14 +978,28 @@
 
     <!-- Amendment badge (when there's a pending amendment) -->
     @if (amendment() && amendment()!.status === 'pending_approval') {
-      <div class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <i class="pi pi-clock text-amber-500"></i>
-        <span>Modificación pendiente de autorización del cliente</span>
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-sm text-amber-800">
+            <i class="pi pi-clock text-amber-500"></i>
+            <span class="font-medium">Modificación pendiente de autorización del cliente</span>
+          </div>
+          <button
+            type="button"
+            (click)="sendLinkDialog.set(true)"
+            class="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700">
+            <i class="pi pi-send text-xs"></i>
+            Enviar recordatorio
+          </button>
+        </div>
+        <p class="mt-1.5 text-xs text-amber-700">
+          El cliente debe autorizar los cambios desde el portal antes de que se apliquen al contrato.
+        </p>
       </div>
     }
 
-    <!-- Edit button (only when: firmado, no pending amendment, not editing) -->
-    @if (!amendmentEditing() && !isLocked() && contract()?.estado === 'firmado' && !hasActiveAmendment()) {
+    <!-- Edit button (visible when firmado and not editing, even with pending amendment) -->
+    @if (!amendmentEditing() && !isLocked() && contract()?.estado === 'firmado') {
       <div class="flex justify-end">
         <button
           type="button"
