@@ -6,7 +6,7 @@ export interface ContractPayment {
   monto: number;
   fecha: string;
   metodo: 'efectivo' | 'tarjeta' | 'transferencia';
-  tipo: 'anticipo' | 'abono' | 'liquidacion' | 'extra';
+  tipo: 'anticipo' | 'abono' | 'liquidacion' | 'extra' | 'modificacion';
   notas: string | null;
   created_at: string;
 }

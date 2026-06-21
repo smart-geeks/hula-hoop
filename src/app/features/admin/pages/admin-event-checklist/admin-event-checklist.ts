@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { Location } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { EventTaskService } from '../../../../core/services/event-task.service';
 import { ContractService } from '../../../../core/services/contract.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
@@ -16,7 +16,7 @@ import type { Contract } from '../../../../core/interfaces/contract';
 @Component({
   selector: 'app-admin-event-checklist',
   templateUrl: './admin-event-checklist.html',
-  imports: [RouterLink],
+  imports: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventChecklist {

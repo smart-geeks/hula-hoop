@@ -7,7 +7,7 @@ import {
   ViewChild,
   AfterViewInit,
 } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ContractService } from '../../../../core/services/contract.service';
@@ -21,7 +21,7 @@ import type { QuoteAmendment } from '../../../../core/interfaces/quote-amendment
 @Component({
   selector: 'app-contract-public-page',
   templateUrl: './contract-public-page.html',
-  imports: [CommonModule, CurrencyPipe, DatePipe, RouterLink, FormsModule],
+  imports: [CommonModule, CurrencyPipe, RouterLink, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContractPublicPage implements AfterViewInit {
