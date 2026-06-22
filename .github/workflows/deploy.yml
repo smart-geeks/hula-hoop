@@ -32,27 +32,52 @@ jobs:
       - name: Compilar Proyecto (Angular SSR) 📦
         run: bun run build
 
-      - name: Subir Archivos al VPS (SCP) 📤
+      - name: Verificar artefactos del build 🔍
+        run: |
+          echo "=== Estructura dist/ ==="
+          ls -la dist/hula-hoop/
+          ls -la dist/hula-hoop/server/
+          echo "=== server.mjs existe ===" && test -f dist/hula-hoop/server/server.mjs && echo "OK" || echo "FALTANTE"
+
+      - name: Empaquetar build para transferencia 📦
+        run: |
+          tar -czf deploy-package.tar.gz \
+            dist/ \
+            ecosystem.config.js \
+            package.json \
+            tools/printer-bridge.js
+
+      - name: Subir paquete al VPS (SCP) 📤
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Copiamos la build de Angular SSR, la configuración de PM2, el package.json y la herramienta del puente de impresión
-          source: "dist/**,ecosystem.config.js,package.json,tools/printer-bridge.js"
+          source: "deploy-package.tar.gz"
           target: "/var/www/hula-hoop"
 
-      - name: Reiniciar Servicios en VPS (SSH) 🔄
+      - name: Desplegar y reiniciar servicios en VPS 🔄
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /var/www/hula-hoop
-            # Asegurar que las dependencias de producción estén instaladas
+
+            echo "→ Extrayendo paquete..."
+            tar -xzf deploy-package.tar.gz --overwrite
+            rm -f deploy-package.tar.gz
+
+            echo "→ Instalando dependencias de producción..."
             bun install --production
-            # Arrancar o reiniciar los procesos de la app y del puente de impresión de forma limpia
+
+            echo "→ Reiniciando servicios PM2..."
             pm2 startOrRestart ecosystem.config.js --env production
-            # Guardar el estado de PM2 para persistencia en reinicios del VPS
+
+            echo "→ Guardando estado PM2..."
             pm2 save
+
+            echo "✓ Deploy completado"
+            pm2 list
