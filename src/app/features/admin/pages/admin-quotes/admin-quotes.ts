@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, isPlatformBrowser, PLATFORM_ID } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -77,6 +77,7 @@ export class AdminQuotes {
   private readonly venueService       = inject(VenueService);
   private readonly ticketPrint        = inject(PosTicketPrintService);
   private readonly router             = inject(Router);
+  private readonly platformId         = inject(PLATFORM_ID);
 
   // ── Catalog data ─────────────────────────────────────────
   readonly packages     = signal<PartyPackage[]>([]);
@@ -495,6 +496,7 @@ export class AdminQuotes {
       fecha_evento:   this.selectedDate() || undefined,
       hora_inicio:    this.selectedSlot()?.start_time,
       hora_fin:       this.selectedSlot()?.end_time,
+      time_slot_id:   this.selectedSlot()?.id,
       guest_count:    this.guestCount(),
       estado:         'borrador' as QuoteStatus,
       subtotal:       this.subtotalAmount(),
@@ -797,6 +799,14 @@ export class AdminQuotes {
       .catch(() => this.showToast('error', 'No se pudo copiar el link'));
   }
 
+  copyPublicLink(quote: Quote): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const url = `${window.location.origin}/cotizacion/${quote.public_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showToast('success', 'Link copiado al portapapeles');
+    });
+  }
+
   // ── PDF ───────────────────────────────────────────────────
   downloadPdf(quote: Quote): void {
     const win = window.open('', '_blank');
@@ -880,6 +890,15 @@ export class AdminQuotes {
         ${(quote.deposit_amount ?? 0) > 0 && (quote.total - (quote.deposit_amount ?? 0)) > 0 ? `<tr class="balance-row"><td>Saldo al evento</td><td>$${(quote.total - (quote.deposit_amount ?? 0)).toLocaleString('es-MX')}</td></tr>` : ''}
       </table>
       ${quote.notas ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin-top:16px;font-size:13px"><strong>Notas:</strong> ${quote.notas}</div>` : ''}
+      ${(() => {
+        const cotizacionUrl = `${window.location.origin}/cotizacion/${quote.public_token}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(cotizacionUrl)}`;
+        return `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
+  <p style="font-size:11px;color:#64748b;margin:0 0 4px;">Accede o paga tu anticipo en línea:</p>
+  <p style="font-size:12px;font-weight:600;color:#1e293b;word-break:break-all;margin:0 0 8px;">${cotizacionUrl}</p>
+  <img src="${qrUrl}" width="120" height="120" alt="QR" style="display:block;margin:0 auto;" />
+</div>`;
+      })()}
       <div class="footer">Esta cotización fue generada por Hula Hoop · Válida por 15 días</div>
     </body></html>`);
     win.document.close();
