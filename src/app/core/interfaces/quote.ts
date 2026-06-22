@@ -25,6 +25,10 @@ export interface Quote {
   descuento: number;
   total: number;
   deposit_amount: number | null;
+  time_slot_id: string | null;
+  mp_preference_id: string | null;
+  snack_option_id: string | null;
+  package_id: string | null;
   notas: string | null;
   created_at: string;
   // Relations
@@ -45,6 +49,9 @@ export interface CreateQuoteData {
   descuento?: number;
   total: number;
   deposit_amount?: number;
+  time_slot_id?: string;
+  snack_option_id?: string;
+  package_id?: string;
   notas?: string;
   items: Omit<QuoteItem, 'id' | 'quote_id' | 'subtotal'>[];
 }

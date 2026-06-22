@@ -13,7 +13,7 @@ export class PaymentService {
 
   async createPayment(
     reservationId: string,
-    reservationType: 'private' | 'playdate',
+    reservationType: 'private' | 'playdate' | 'quote',
   ): Promise<PaymentPreference | null> {
     const client = this.supabase.client;
     if (!client) return null;
