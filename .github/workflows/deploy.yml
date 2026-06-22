@@ -64,6 +64,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+
+            # SSH non-interactive sessions don't load ~/.bashrc/.profile,
+            # so bun and npm-global binaries (pm2) won't be in PATH.
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:/usr/local/bin:$PATH"
+
             cd /var/www/hula-hoop
 
             echo "→ Extrayendo paquete..."
