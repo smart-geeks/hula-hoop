@@ -1,229 +1,158 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  signal,
-} from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { CurrencyPipe } from '@angular/common';
 import { QuoteService } from '../../../../core/services/quote.service';
-import { VenueService } from '../../../../core/services/venue.service';
-import { ReservationService } from '../../../../core/services/reservation.service';
 import { PaymentService } from '../../../../core/services/payment.service';
-import { TimeSlotService } from '../../../../core/services/time-slot.service';
-import { PackageService } from '../../../../core/services/package.service';
-import { ExtraService } from '../../../../core/services/extra.service';
-import { SnackOptionService } from '../../../../core/services/snack-option.service';
 import { ContractService } from '../../../../core/services/contract.service';
+import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { Quote } from '../../../../core/interfaces/quote';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
-export interface AvailableDate {
-  date:    string;   // YYYY-MM-DD
-  label:   string;   // formatted for display
-  dayType: 'weekday' | 'weekend';
-  slot:    Pick<TimeSlot, 'start_time' | 'end_time'>;
+interface AltDate {
+  date:   string;
+  label:  string;
+  slotId: string;
+  slot:   Pick<TimeSlot, 'start_time' | 'end_time'>;
 }
 
 @Component({
   selector: 'app-quote-public-page',
   templateUrl: './quote-public-page.html',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [ButtonModule, TagModule, ToastModule, RouterLink, CurrencyPipe],
+  providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QuotePublicPage {
-  private readonly quoteService  = inject(QuoteService);
-  private readonly venueService  = inject(VenueService);
-  private readonly route         = inject(ActivatedRoute);
-  private readonly router        = inject(Router);
+  private readonly route           = inject(ActivatedRoute);
+  private readonly router          = inject(Router);
+  private readonly quoteService    = inject(QuoteService);
+  private readonly paymentService  = inject(PaymentService);
+  private readonly contractService = inject(ContractService);
+  private readonly timeSlotService = inject(TimeSlotService);
+  private readonly messageService  = inject(MessageService);
+  private readonly platformId      = inject(PLATFORM_ID);
 
-  private readonly reservationService = inject(ReservationService);
-  private readonly paymentService     = inject(PaymentService);
-  private readonly timeSlotService    = inject(TimeSlotService);
-  private readonly packageService     = inject(PackageService);
-  private readonly extraService       = inject(ExtraService);
-  private readonly snackOptionService = inject(SnackOptionService);
-  private readonly contractService    = inject(ContractService);
-
-  readonly loading      = signal(true);
-  readonly notFound     = signal(false);
-  readonly quote        = signal<Quote | null>(null);
-  readonly venueSlug    = signal<string | null>(null);
-  readonly submitting   = signal(false);
-  readonly rescueSaving = signal(false);
-
-  /** Set when the slot is taken — shows the rescue UI with alternative dates. */
-  readonly slotConflict = signal<{
-    originalDate:   string;
-    originalSlot:   string;
-    availableDates: AvailableDate[];
+  readonly loading       = signal(true);
+  readonly notFound      = signal(false);
+  readonly quote         = signal<Quote | null>(null);
+  readonly paymentStatus = signal<string | null>(null);
+  readonly checkingSlot  = signal(false);
+  readonly paying        = signal(false);
+  readonly rescheduling  = signal(false);
+  readonly slotConflict  = signal<{
+    slot:           string;
+    availableDates: AltDate[];
   } | null>(null);
 
+  readonly isPaid = computed(() => this.quote()?.estado === 'aprobada');
+
+  readonly quoteItems = computed(() => this.quote()?.items ?? []);
+
   constructor() {
-    const token = this.route.snapshot.paramMap.get('token');
-    if (!token) {
-      this.notFound.set(true);
-      this.loading.set(false);
-    } else {
-      this.loadQuote(token);
-    }
+    this.loadQuote();
   }
 
-  private async loadQuote(token: string): Promise<void> {
-    const q = await this.quoteService.getByPublicToken(token);
-    if (!q) {
-      this.notFound.set(true);
-    } else {
-      this.quote.set(q);
-      const venue = await this.venueService.getVenueById(q.venue_id);
-      this.venueSlug.set(venue?.slug ?? null);
-    }
+  private async loadQuote(): Promise<void> {
+    const token  = this.route.snapshot.paramMap.get('token');
+    const status = this.route.snapshot.queryParamMap.get('status');
+    if (status) this.paymentStatus.set(status);
+    if (status === 'approved') void this.launchConfetti();
+
+    if (!token) { this.notFound.set(true); this.loading.set(false); return; }
+
+    const quote = await this.quoteService.getByPublicToken(token);
+    if (!quote) { this.notFound.set(true); this.loading.set(false); return; }
+    this.quote.set(quote);
     this.loading.set(false);
   }
 
-  async approveAndPay(overrideDate?: string): Promise<void> {
+  async payNow(): Promise<void> {
     const q = this.quote();
-    const slug = this.venueSlug();
-    if (!q || !slug || this.submitting() || this.rescueSaving()) return;
+    if (!q || this.paying() || this.checkingSlot() || this.isPaid()) return;
+    this.checkingSlot.set(true);
 
-    const targetDate = overrideDate ?? q.fecha_evento ?? '';
-    if (overrideDate) {
-      this.rescueSaving.set(true);
-    } else {
-      this.submitting.set(true);
-    }
-
-    try {
-      // ── Conflict check (skip if re-using an existing reservation) ──────────
-      const existingReservation = await this.reservationService.getPrivateReservationByQuoteId(q.id);
-
-      if (!existingReservation && q.hora_inicio && targetDate) {
-        const conflict = await this.contractService.checkSlotConflict(
-          q.venue_id, targetDate, q.hora_inicio, q.hora_fin ?? undefined,
-        );
-        if (conflict) {
-          const availableDates = await this.buildAvailableDates(q.venue_id, q.hora_inicio);
-          this.slotConflict.set({
-            originalDate: targetDate,
-            originalSlot: q.hora_inicio + (q.hora_fin ? ` – ${q.hora_fin}` : ''),
-            availableDates,
-          });
-          this.submitting.set(false);
-          this.rescueSaving.set(false);
-          return;
-        }
-      }
-
-      // ── Create or reuse reservation ────────────────────────────────────────
-      let reservation = existingReservation;
-
-      if (!reservation) {
-        const [slots, pkgs, extras, snacks] = await Promise.all([
-          this.timeSlotService.getActiveSlotsByVenue(q.venue_id),
-          this.packageService.getActivePackagesByVenue(q.venue_id),
-          this.extraService.getActiveExtrasByVenue(q.venue_id),
-          this.snackOptionService.getActiveSnackOptions(),
-        ]);
-
-        const slotMatch = slots.find((s) => s.start_time === q.hora_inicio) || slots[0];
-        if (!slotMatch) throw new Error('No se encontró un horario disponible para esta cotización.');
-
-        const pkgMatch = pkgs.find((p) =>
-          q.items?.some((it) => it.descripcion.toLowerCase() === p.name.toLowerCase()),
-        ) || pkgs[0];
-        if (!pkgMatch) throw new Error('No se encontró el paquete asociado a esta cotización.');
-
-        const snackMatch = snacks.find((s) =>
-          q.items?.some((it) => it.descripcion.toLowerCase().includes(s.name.toLowerCase())),
-        );
-
-        const selectedExtras: Array<{ extra_id: string; quantity: number; unit_price_cents: number }> = [];
-        if (q.items) {
-          for (const it of q.items) {
-            const matchedExtra = extras.find((e) => e.name.toLowerCase() === it.descripcion.toLowerCase());
-            if (matchedExtra) {
-              selectedExtras.push({
-                extra_id: matchedExtra.id,
-                quantity: Number(it.cantidad),
-                unit_price_cents: matchedExtra.price_cents,
-              });
-            }
-          }
-        }
-
-        reservation = await this.reservationService.createPrivateReservation({
-          venue_id:         q.venue_id,
-          profile_id:       null,
-          guest_name:       q.client?.nombre || 'Invitado',
-          guest_email:      q.client?.email || '',
-          guest_phone:      q.client?.telefono || '',
-          reservation_date: targetDate,
-          time_slot_id:     slotMatch.id,
-          package_id:       pkgMatch.id,
-          guest_count:      q.guest_count || 10,
-          subtotal_cents:   Math.round(Number(q.subtotal) * 100),
-          total_cents:      Math.round(Number(q.total) * 100),
-          deposit_cents:    Math.round(Number(q.deposit_amount || q.total) * 100),
-          notes:            q.notas || undefined,
-          snack_option_id:  snackMatch?.id,
-          quote_id:         q.id,
-          extras:           selectedExtras,
+    if (q.hora_inicio && q.fecha_evento) {
+      const conflict = await this.contractService.checkSlotConflict(
+        q.venue_id, q.fecha_evento, q.hora_inicio, q.hora_fin ?? undefined,
+      );
+      if (conflict) {
+        const slots = await this.timeSlotService.getActiveSlotsByVenue(q.venue_id);
+        const currentSlot = slots.find(s => s.start_time === q.hora_inicio) ?? null;
+        const altDates = currentSlot
+          ? await this.buildAltDates(q.venue_id, currentSlot, slots)
+          : [];
+        this.slotConflict.set({
+          slot: `${q.hora_inicio}${q.hora_fin ? ' – ' + q.hora_fin : ''}`,
+          availableDates: altDates,
         });
+        this.checkingSlot.set(false);
+        return;
       }
+    }
 
-      if (!reservation) throw new Error('Error al generar la reservación.');
-
-      const preference = await this.paymentService.createPayment(reservation.id, 'private');
-      if (preference) {
-        this.paymentService.redirectToCheckout(preference);
-      } else {
-        throw new Error('No se pudo generar la preferencia de pago.');
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al procesar la cotización. Intenta de nuevo.';
-      console.error('Error approving quote:', err);
-      alert(msg);
-      this.submitting.set(false);
-      this.rescueSaving.set(false);
+    this.checkingSlot.set(false);
+    this.paying.set(true);
+    const pref = await this.paymentService.createPayment(q.id, 'quote');
+    if (pref) {
+      this.paymentService.redirectToCheckout(pref);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo iniciar el pago.' });
+      this.paying.set(false);
     }
   }
 
-  /** Called from rescue UI — books a specific alternative date. */
-  async bookAlternativeDate(alt: AvailableDate): Promise<void> {
+  async rescheduleAndPay(alt: AltDate): Promise<void> {
+    const q = this.quote();
+    if (!q || this.rescheduling()) return;
+    this.rescheduling.set(true);
+
+    const updated = await this.quoteService.update(q.id, {
+      fecha_evento: alt.date,
+      hora_inicio:  alt.slot.start_time,
+      hora_fin:     alt.slot.end_time,
+      time_slot_id: alt.slotId,
+    });
+
+    if (!updated) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo reprogramar.' });
+      this.rescheduling.set(false);
+      return;
+    }
+
+    this.quote.set(updated);
     this.slotConflict.set(null);
-    await this.approveAndPay(alt.date);
+    this.rescheduling.set(false);
+    await this.payNow();
   }
 
-  /** Computes next available dates (same slot) for the rescue UI. */
-  private async buildAvailableDates(venueId: string, horaInicio: string): Promise<AvailableDate[]> {
-    const today   = new Date();
-    const toDate  = new Date(today.getTime() + 90 * 86400000);
-    const from    = today.toISOString().split('T')[0];
-    const to      = toDate.toISOString().split('T')[0];
+  private async buildAltDates(venueId: string, currentSlot: TimeSlot, allSlots: TimeSlot[]): Promise<AltDate[]> {
+    const today  = new Date();
+    const toDate = new Date(today.getTime() + 90 * 86400000);
+    const from   = today.toISOString().split('T')[0];
+    const to     = toDate.toISOString().split('T')[0];
 
-    const [booked, slots] = await Promise.all([
-      this.contractService.getBookedDates(venueId, from, to, horaInicio),
-      this.timeSlotService.getActiveSlotsByVenue(venueId),
-    ]);
-
-    const bookedSet  = new Set(booked.map((b) => b.fecha));
-    const targetSlot = slots.find((s) => s.start_time === horaInicio) ?? slots[0];
-    if (!targetSlot) return [];
-
-    const results: AvailableDate[] = [];
-    const cursor = new Date(today.getTime() + 86400000); // start from tomorrow
+    const booked    = await this.contractService.getBookedDates(venueId, from, to, currentSlot.start_time);
+    const bookedSet = new Set(booked.map(b => b.fecha));
+    const results: AltDate[] = [];
+    const cursor = new Date(today.getTime() + 86400000);
 
     while (results.length < 6 && cursor <= toDate) {
-      const iso      = cursor.toISOString().split('T')[0];
-      const dow      = cursor.getDay();
+      const iso     = cursor.toISOString().split('T')[0];
+      const dow     = cursor.getDay();
       const dayType: 'weekday' | 'weekend' = (dow === 0 || dow === 6) ? 'weekend' : 'weekday';
-
-      if (targetSlot.day_type === dayType && !bookedSet.has(iso)) {
+      const match   = allSlots.find(s => s.start_time === currentSlot.start_time && s.day_type === dayType)
+                   ?? (currentSlot.day_type === dayType ? currentSlot : undefined);
+      if (match && !bookedSet.has(iso)) {
         results.push({
-          date:    iso,
-          label:   cursor.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }),
-          dayType,
-          slot:    { start_time: targetSlot.start_time, end_time: targetSlot.end_time },
+          date:   iso,
+          label:  cursor.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }),
+          slotId: match.id,
+          slot:   { start_time: match.start_time, end_time: match.end_time },
         });
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -232,15 +161,27 @@ export class QuotePublicPage {
   }
 
   formatDate(dateStr: string): string {
-    return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   printPdf(): void {
     window.print();
+  }
+
+  shareWhatsApp(): void {
+    const q = this.quote();
+    if (!q) return;
+    const url = `${window.location.origin}/cotizacion/${q.public_token}`;
+    const text = encodeURIComponent(`Hola, te comparto tu cotización de Hula Hoop: ${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }
+
+  private async launchConfetti(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const confetti = (await import('canvas-confetti')).default;
+    confetti({ particleCount: 80, spread: 70, origin: { x: 0.15, y: 0.6 } });
+    confetti({ particleCount: 80, spread: 70, origin: { x: 0.85, y: 0.6 } });
+    setTimeout(() => confetti({ particleCount: 50, spread: 100, origin: { x: 0.5, y: 0.4 } }), 300);
   }
 }
