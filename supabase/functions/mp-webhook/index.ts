@@ -175,7 +175,7 @@ serve(async (req) => {
           .gte('created_at', `${year}-01-01`)
         const folio = `CT-${year}-${String((contractCount ?? 0) + 1).padStart(3, '0')}`
 
-        const depositPaid = Math.round(payment.transaction_amount * 100)
+        const depositPaidPesos = payment.transaction_amount // already in pesos for MXN
 
         // Crear contrato
         const { data: contract, error: contractErr } = await supabaseAdminQ
@@ -191,7 +191,7 @@ serve(async (req) => {
             num_invitados:   quote.guest_count,
             salon_renta:     quote.subtotal,
             total:           quote.total,
-            deposito_pagado: depositPaid / 100,
+            deposito_pagado: depositPaidPesos,
             estado:          'borrador',
             notas:           quote.notas ?? null,
           })
@@ -207,14 +207,17 @@ serve(async (req) => {
         }
 
         // Registrar pago de anticipo
-        await supabaseAdminQ.from('contract_payments').insert({
+        const { error: paymentInsertErr } = await supabaseAdminQ.from('contract_payments').insert({
           contract_id: contract.id,
-          monto:       depositPaid / 100,
+          monto:       depositPaidPesos,
           fecha:       new Date().toISOString().split('T')[0],
           metodo:      'tarjeta',
           tipo:        'anticipo',
           notas:       `Pago online MercadoPago #${paymentId}`,
         })
+        if (paymentInsertErr) {
+          console.error(`Failed to insert contract_payment for contract ${contract.id}:`, paymentInsertErr)
+        }
 
         // Marcar quote como aprobada
         await supabaseAdminQ
