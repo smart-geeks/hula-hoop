@@ -1,0 +1,3 @@
+-- Applied via Supabase MCP on 2026-06-20
+-- Fixes subtotal/total recalculation when approving quote amendments.
+-- SQL applied directly to remote; this file documents the migration version.

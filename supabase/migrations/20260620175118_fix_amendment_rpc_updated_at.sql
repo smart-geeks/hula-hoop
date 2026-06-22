@@ -1,0 +1,3 @@
+-- Applied via Supabase MCP on 2026-06-20
+-- Fixes updated_at handling in the approve_quote_amendment RPC function.
+-- SQL applied directly to remote; this file documents the migration version.
