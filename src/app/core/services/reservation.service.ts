@@ -3,7 +3,6 @@ import { SupabaseService } from './supabase.service';
 import type {
   PrivateReservation,
   PlaydateReservation,
-  CreatePrivateReservationData,
   CreatePlaydateReservationData,
   ReservationStatus,
 } from '../interfaces/reservation';
@@ -20,82 +19,7 @@ export interface AvailablePlaydateSlot {
 export class ReservationService {
   private readonly supabase = inject(SupabaseService);
 
-  async getPrivateReservationByQuoteId(quoteId: string): Promise<PrivateReservation | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
-
-    const { data, error } = await client
-      .from('private_reservations')
-      .select('*')
-      .eq('quote_id', quoteId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching private reservation by quote_id:', error.message);
-      return null;
-    }
-
-    return data as PrivateReservation;
-  }
-
   // ── Private Reservations ──────────────────────────────────
-
-  async createPrivateReservation(data: CreatePrivateReservationData): Promise<PrivateReservation | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
-
-    const { extras, ...reservationData } = data;
-
-    // Insert the reservation
-    const { data: reservation, error } = await client
-      .from('private_reservations')
-      .insert(reservationData)
-      .select()
-      .single();
-
-    if (error || !reservation) {
-      console.error('Error creating private reservation:', error?.message);
-      throw new Error(error?.message || 'Error desconocido al insertar en la base de datos');
-    }
-
-    // Insert extras if any
-    if (extras.length > 0) {
-      const extrasToInsert = extras.map((e) => ({
-        reservation_id: reservation.id,
-        extra_id: e.extra_id,
-        quantity: e.quantity,
-        unit_price_cents: e.unit_price_cents,
-      }));
-
-      const { error: extrasError } = await client
-        .from('private_reservation_extras')
-        .insert(extrasToInsert);
-
-      if (extrasError) {
-        console.error('Error inserting reservation extras:', extrasError.message);
-      }
-    }
-
-    return reservation as PrivateReservation;
-  }
-
-  async getPrivateReservationByToken(accessToken: string): Promise<PrivateReservation | null> {
-    const client = this.supabase.client;
-    if (!client) return null;
-
-    const { data, error } = await client
-      .from('private_reservations')
-      .select('*, packages(days_to_liquidate)')
-      .eq('access_token', accessToken)
-      .single();
-
-    if (error) {
-      console.error('Error fetching private reservation:', error.message);
-      return null;
-    }
-
-    return data as PrivateReservation;
-  }
 
   async getPrivateReservationsByProfile(profileId: string): Promise<PrivateReservation[]> {
     const client = this.supabase.client;
@@ -130,19 +54,6 @@ export class ReservationService {
     }
 
     return data as PrivateReservation[];
-  }
-
-  async reschedulePrivateReservation(id: string, newDate: string, newSlotId: string): Promise<boolean> {
-    const client = this.supabase.client;
-    if (!client) return false;
-
-    const { error } = await client
-      .from('private_reservations')
-      .update({ reservation_date: newDate, time_slot_id: newSlotId })
-      .eq('id', id);
-
-    if (error) { console.error('Error rescheduling reservation:', error.message); return false; }
-    return true;
   }
 
   async updatePrivateReservationStatus(id: string, status: ReservationStatus): Promise<boolean> {

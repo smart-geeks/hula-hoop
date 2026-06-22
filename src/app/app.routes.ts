@@ -39,12 +39,7 @@ export const routes: Routes = [
       import('./features/contracts/pages/contract-public-page/contract-public-page')
         .then(m => m.ContractPublicPage),
   },
-  {
-    path: 'reserva/:accessToken',
-    loadComponent: () =>
-      import('./features/reservations/pages/reservation-detail-page/reservation-detail-page')
-        .then(m => m.ReservationDetailPage),
-  },
+
   {
     path: 'aviso-de-privacidad',
     loadComponent: () =>

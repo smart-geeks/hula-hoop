@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, effect } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { ReservationPrintService, ReservationPrintData } from '../../../../core/services/reservation-print.service';
+import { Router } from '@angular/router';
 import { StepperModule } from 'primeng/stepper';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ButtonModule } from 'primeng/button';
@@ -19,7 +18,6 @@ import { PackageService } from '../../../../core/services/package.service';
 import { ExtraService } from '../../../../core/services/extra.service';
 import { SnackOptionService } from '../../../../core/services/snack-option.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
-import { ReservationService } from '../../../../core/services/reservation.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PaymentService } from '../../../../core/services/payment.service';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -65,7 +63,6 @@ export class PrivateReservationPage {
   private readonly extraService = inject(ExtraService);
   private readonly snackOptionService = inject(SnackOptionService);
   private readonly configService = inject(VenueConfigService);
-  private readonly reservationService = inject(ReservationService);
   private readonly authService = inject(AuthService);
   private readonly paymentService = inject(PaymentService);
   private readonly quoteService = inject(QuoteService);
@@ -75,15 +72,12 @@ export class PrivateReservationPage {
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
-  private readonly route  = inject(ActivatedRoute);
-  private readonly printService = inject(ReservationPrintService);
 
   // ── State ──
   readonly activeStep     = signal(1);
-  readonly linkedQuoteId  = signal<string | null>(null);
   readonly loading = signal(true);
   readonly submitting = signal(false);
-  readonly lastGeneratedReservation = signal<any | null>(null);
+  readonly lastGeneratedReservation = signal<Quote | null>(null);
   readonly generatedQuoteToken = signal<string | null>(null);
   readonly generatingQuote = signal(false);
 
@@ -185,8 +179,6 @@ export class PrivateReservationPage {
   readonly isAdmin = computed(() => this.authService.isAdmin());
 
   constructor() {
-    const quoteId = this.route.snapshot.queryParamMap.get('quote_id');
-    this.linkedQuoteId.set(quoteId);
     this.loadData();
 
     this.contactForm.valueChanges.subscribe(() => {
@@ -813,42 +805,6 @@ export class PrivateReservationPage {
     }
 
     return items;
-  }
-
-  private buildPrintData(
-    res: any,
-    date: Date,
-    slot: TimeSlot,
-    pkg: PartyPackage,
-    snackName: string | null,
-    extras: SelectedExtra[]
-  ): ReservationPrintData {
-    const guest_count_label = `${this.guestCount()} invitados`;
-    const liquidation_date = this.getLiquidationDateString(date, pkg.days_to_liquidate);
-
-    return {
-      type: 'private',
-      statusLabel: 'Pendiente de pago',
-      guest_name: res.guest_name,
-      guest_email: res.guest_email,
-      guest_phone: res.guest_phone,
-      reservation_date: this.formatDateDisplay(date),
-      time_slot_label: `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`,
-      guest_count_label,
-      snack_name: snackName,
-      notes: res.notes,
-      extras: extras.map(se => ({
-        name: se.extra.name,
-        quantity: se.quantity,
-        unit_price_cents: se.extra.price_cents,
-        pay_at_venue: se.extra.pay_at_venue
-      })),
-      subtotal_cents: this.subtotalCents(),
-      total_cents: this.totalCents(),
-      paid_deposit_cents: 0,
-      liquidation_date,
-      access_token: res.access_token,
-    };
   }
 
   private clearCachedQuoteToken(): void {
