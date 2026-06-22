@@ -56,6 +56,24 @@ jobs:
           source: "deploy-package.tar.gz"
           target: "/var/www/hula-hoop"
 
+      - name: Diagnóstico de entorno VPS 🔍
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "HOME=$HOME"
+            echo "USER=$(whoami)"
+            echo "PATH=$PATH"
+            echo "--- bun locations ---"
+            find /root /home /usr/local /usr -name bun -type f 2>/dev/null || true
+            echo "--- pm2 locations ---"
+            find /root /home /usr/local /usr -name pm2 -type f 2>/dev/null || true
+            echo "--- which ---"
+            which bun 2>/dev/null || echo "bun: not in PATH"
+            which pm2 2>/dev/null || echo "pm2: not in PATH"
+
       - name: Desplegar y reiniciar servicios en VPS 🔄
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -65,10 +83,21 @@ jobs:
           script: |
             set -e
 
-            # SSH non-interactive sessions don't load ~/.bashrc/.profile,
-            # so bun and npm-global binaries (pm2) won't be in PATH.
-            export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:/usr/local/bin:$PATH"
+            # Locate bun regardless of install path
+            BUN_BIN=$(find /root /home /usr/local/bin /usr/bin -name bun -type f 2>/dev/null | head -1)
+            if [ -z "$BUN_BIN" ]; then
+              echo "ERROR: bun executable not found on this server"
+              exit 1
+            fi
+            export PATH="$(dirname "$BUN_BIN"):/usr/local/bin:$PATH"
+            echo "✓ bun found at: $BUN_BIN"
+
+            # Locate pm2 (may be a symlink or script)
+            PM2_BIN=$(find /root /home /usr/local/bin /usr/bin -name pm2 2>/dev/null | head -1)
+            if [ -n "$PM2_BIN" ]; then
+              export PATH="$(dirname "$PM2_BIN"):$PATH"
+              echo "✓ pm2 found at: $PM2_BIN"
+            fi
 
             cd /var/www/hula-hoop
 
