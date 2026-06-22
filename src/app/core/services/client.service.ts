@@ -87,6 +87,23 @@ export class ClientService {
     return true;
   }
 
+  async getByEmail(email: string): Promise<Client | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('clients')
+      .select('*')
+      .ilike('email', email)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching client by email:', error.message);
+      return null;
+    }
+    return data;
+  }
+
   async search(query: string): Promise<Client[]> {
     const client = this.supabase.client;
     if (!client) return [];

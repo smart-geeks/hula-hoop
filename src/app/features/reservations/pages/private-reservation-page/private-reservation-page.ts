@@ -24,12 +24,14 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { PaymentService } from '../../../../core/services/payment.service';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { ContractService } from '../../../../core/services/contract.service';
+import { ClientService } from '../../../../core/services/client.service';
 import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 import type { Extra } from '../../../../core/interfaces/extra';
 import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
+import type { Quote, CreateQuoteData } from '../../../../core/interfaces/quote';
 
 interface SelectedExtra {
   extra: Extra;
@@ -68,6 +70,7 @@ export class PrivateReservationPage {
   private readonly paymentService = inject(PaymentService);
   private readonly quoteService = inject(QuoteService);
   private readonly contractService = inject(ContractService);
+  private readonly clientService = inject(ClientService);
   private readonly publicVenue = inject(PublicVenueService);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
@@ -537,6 +540,19 @@ export class PrivateReservationPage {
     }, 500);
   }
 
+  // ── Client lookup / creation ──
+  private async findOrCreateClient(email: string, nombre: string, telefono: string): Promise<string | undefined> {
+    if (!email) return undefined;
+    const existing = await this.clientService.getByEmail(email);
+    if (existing) return existing.id;
+    const created = await this.clientService.create({
+      nombre,
+      email,
+      telefono: telefono || undefined,
+    });
+    return created?.id;
+  }
+
   // ── Step 5: Submit ──
   async submitReservation(): Promise<void> {
     if (this.contactForm.invalid) {
@@ -556,6 +572,12 @@ export class PrivateReservationPage {
       const contact = this.contactForm.getRawValue();
       const snack = this.selectedSnackOption();
 
+      const clientId = await this.findOrCreateClient(
+        contact.guest_email,
+        contact.guest_name,
+        contact.guest_phone,
+      );
+
       const quote = await this.quoteService.create({
         fecha:           new Date().toISOString().split('T')[0],
         fecha_evento:    this.formatDateISO(date),
@@ -570,6 +592,7 @@ export class PrivateReservationPage {
         total:           this.totalCents() / 100,
         deposit_amount:  this.depositCents() / 100,
         estado:          'enviada',
+        client_id:       clientId,
         notas:           contact.notes?.trim() || undefined,
         items:           this.buildQuoteItems(),
       });
@@ -613,6 +636,12 @@ export class PrivateReservationPage {
       const contact = this.contactForm.getRawValue();
       const snack = this.selectedSnackOption();
 
+      const clientId = await this.findOrCreateClient(
+        contact.guest_email,
+        contact.guest_name,
+        contact.guest_phone,
+      );
+
       const quote = await this.quoteService.create({
         fecha:           new Date().toISOString().split('T')[0],
         fecha_evento:    this.formatDateISO(date),
@@ -627,6 +656,7 @@ export class PrivateReservationPage {
         total:           this.totalCents() / 100,
         deposit_amount:  this.depositCents() / 100,
         estado:          'enviada',
+        client_id:       clientId,
         notas:           contact.notes?.trim() || undefined,
         items:           this.buildQuoteItems(),
       });
@@ -637,7 +667,7 @@ export class PrivateReservationPage {
           severity: 'success',
           summary: 'Cotización creada con éxito',
         });
-        await this.router.navigate(['/admin/cotizaciones', quote.id]);
+        await this.router.navigate(['/admin/cotizaciones']);
       } else {
         this.messageService.add({
           severity: 'error',
@@ -674,9 +704,15 @@ export class PrivateReservationPage {
       const contact = this.contactForm.getRawValue();
       const snack = this.selectedSnackOption();
 
-      let quote = this.lastGeneratedReservation() as import('../../../../core/interfaces/quote').Quote | null;
+      let quote = this.lastGeneratedReservation() as Quote | null;
 
       if (!quote) {
+        const clientId = await this.findOrCreateClient(
+          contact.guest_email,
+          contact.guest_name,
+          contact.guest_phone,
+        );
+
         quote = await this.quoteService.create({
           fecha:           new Date().toISOString().split('T')[0],
           fecha_evento:    this.formatDateISO(date),
@@ -691,6 +727,7 @@ export class PrivateReservationPage {
           total:           this.totalCents() / 100,
           deposit_amount:  this.depositCents() / 100,
           estado:          'enviada',
+          client_id:       clientId,
           notas:           contact.notes?.trim() || undefined,
           items:           this.buildQuoteItems(),
         });
@@ -743,8 +780,8 @@ export class PrivateReservationPage {
     });
   }
 
-  private buildQuoteItems(): import('../../../../core/interfaces/quote').CreateQuoteData['items'] {
-    const items: import('../../../../core/interfaces/quote').CreateQuoteData['items'] = [];
+  private buildQuoteItems(): CreateQuoteData['items'] {
+    const items: CreateQuoteData['items'] = [];
 
     const pkg = this.selectedPackage();
     if (pkg) {
