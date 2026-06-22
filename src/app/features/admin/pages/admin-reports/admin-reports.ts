@@ -72,13 +72,47 @@ export class AdminReports {
   readonly eventosData     = signal<EventoRow[]>([]);
   readonly plData          = signal<PLGlobalRow | null>(null);
   readonly plEventRows     = signal<PLEventRow[]>([]);
-  readonly plEventTotals   = computed(() => {
+  readonly plEventSearch   = signal('');
+  readonly selectedPlEvent = signal<PLEventRow | null>(null);
+
+  readonly filteredPlEventRows = computed(() => {
+    const q = this.plEventSearch().toLowerCase().trim();
     const rows = this.plEventRows();
+    if (!q) return rows;
+    return rows.filter(r =>
+      r.folio.toLowerCase().includes(q) ||
+      r.cliente.toLowerCase().includes(q),
+    );
+  });
+
+  readonly plEventTotals = computed(() => {
+    const rows = this.filteredPlEventRows();
     return {
       ingresos:      rows.reduce((s, r) => s + r.ingresos, 0),
       gastos:        rows.reduce((s, r) => s + r.gastos, 0),
       utilidad_neta: rows.reduce((s, r) => s + r.utilidad_neta, 0),
     };
+  });
+
+  /** Tarjetas superiores: evento seleccionado → sus datos; sin selección → global */
+  readonly activePlSummary = computed(() => {
+    const sel = this.selectedPlEvent();
+    if (sel) {
+      return {
+        ingresos_contratos: sel.ingresos,
+        ventas_pos:         0,
+        total_ingresos:     sel.ingresos,
+        compras:            0,
+        gastos:             sel.gastos,
+        total_egresos:      sel.gastos,
+        utilidad_neta:      sel.utilidad_neta,
+        isEvent:            true,
+        label:              `${sel.folio} — ${sel.cliente}`,
+      };
+    }
+    const g = this.plData();
+    if (!g) return null;
+    return { ...g, isEvent: false, label: '' };
   });
   readonly pipelineData    = signal<PipelineRow[]>([]);
   readonly clientesData    = signal<ClienteRow[]>([]);
