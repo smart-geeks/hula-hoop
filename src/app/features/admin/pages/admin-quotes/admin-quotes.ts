@@ -16,6 +16,7 @@ import { ExtraService } from '../../../../core/services/extra.service';
 import { SnackOptionService } from '../../../../core/services/snack-option.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
+import { VenueService } from '../../../../core/services/venue.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
 import type { Client } from '../../../../core/interfaces/client';
@@ -23,6 +24,13 @@ import type { PartyPackage } from '../../../../core/interfaces/package';
 import type { Extra } from '../../../../core/interfaces/extra';
 import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+
+export interface AvailableDate {
+  date:    string;
+  label:   string;
+  dayType: 'weekday' | 'weekend';
+  slot:    Pick<TimeSlot, 'start_time' | 'end_time'>;
+}
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
@@ -66,6 +74,7 @@ export class AdminQuotes {
   private readonly snackOptionService = inject(SnackOptionService);
   private readonly timeSlotService    = inject(TimeSlotService);
   private readonly reservationService = inject(ReservationService);
+  private readonly venueService       = inject(VenueService);
   private readonly ticketPrint        = inject(PosTicketPrintService);
   private readonly router             = inject(Router);
 
@@ -134,6 +143,14 @@ export class AdminQuotes {
   readonly anticoFecha   = signal('');
   readonly anticoMetodo  = signal<PayMethod>('efectivo');
   readonly anticoSaving  = signal(false);
+
+  // ── Slot conflict detection (list view) ───────────────────
+  /** Maps quote.id → conflicting contract info when a pending quote's slot is already taken. */
+  readonly conflictMap             = signal<Map<string, { folio: string; cliente: string }>>(new Map());
+  readonly rescheduleDialog        = signal<Quote | null>(null);
+  readonly rescheduleAvailableDates = signal<AvailableDate[]>([]);
+  readonly rescheduleSaving        = signal(false);
+  readonly rescheduleLoadingDates  = signal(false);
 
   // ── Computed ─────────────────────────────────────────────
   readonly STATUS_CONFIG = STATUS_CONFIG;
@@ -251,6 +268,7 @@ export class AdminQuotes {
     }
     this.contractByQuote.set(map);
     this.loading.set(false);
+    void this.checkConflictsForPendingQuotes(quotes);
   }
 
   // ── Wizard navigation ─────────────────────────────────────
@@ -394,6 +412,7 @@ export class AdminQuotes {
 
   private async loadSlotsForDate(date: string, preselectedStart?: string): Promise<void> {
     this.loadingSlots.set(true);
+    const venueId = this.venueService.currentVenueId();
     const d = new Date(date + 'T12:00:00');
     const day = d.getDay();
     const isWeekend = day === 0 || day === 6;
@@ -403,8 +422,13 @@ export class AdminQuotes {
 
     const results: SlotAvailability[] = await Promise.all(
       slotsForDay.map(async (slot) => {
-        const blocked = await this.reservationService.isSlotBlockedByPrivate(date, slot.id);
-        return { slot, blocked };
+        const [blockedByPrivate, blockedByContract] = await Promise.all([
+          this.reservationService.isSlotBlockedByPrivate(date, slot.id),
+          venueId
+            ? this.contractService.checkSlotConflict(venueId, date, slot.start_time, slot.end_time)
+            : Promise.resolve(false),
+        ]);
+        return { slot, blocked: blockedByPrivate || blockedByContract };
       }),
     );
 
@@ -538,6 +562,114 @@ export class AdminQuotes {
 
   closeAnticoDialog(): void {
     this.anticoDialog.set(null);
+  }
+
+  // ── Reschedule (conflict resolution for admin) ────────────
+  openRescheduleDialog(quote: Quote): void {
+    this.rescheduleDialog.set(quote);
+    this.rescheduleAvailableDates.set([]);
+    void this.loadRescheduleOptions(quote);
+  }
+
+  closeRescheduleDialog(): void {
+    this.rescheduleDialog.set(null);
+  }
+
+  async confirmReschedule(alt: AvailableDate): Promise<void> {
+    const quote = this.rescheduleDialog();
+    if (!quote || this.rescheduleSaving()) return;
+    this.rescheduleSaving.set(true);
+
+    const updated = await this.quoteService.update(quote.id, { fecha_evento: alt.date });
+    if (updated) {
+      this.quotes.update((list) =>
+        list.map((q) => (q.id === quote.id ? { ...q, fecha_evento: alt.date } : q)),
+      );
+      this.conflictMap.update((m) => { const n = new Map(m); n.delete(quote.id); return n; });
+      this.closeRescheduleDialog();
+      this.showToast('success', `Fecha cambiada a ${alt.label}`);
+    } else {
+      this.showToast('error', 'No se pudo actualizar la fecha');
+    }
+    this.rescheduleSaving.set(false);
+  }
+
+  private async loadRescheduleOptions(quote: Quote): Promise<void> {
+    this.rescheduleLoadingDates.set(true);
+    const venueId = this.venueService.currentVenueId();
+    if (!venueId || !quote.hora_inicio) {
+      this.rescheduleLoadingDates.set(false);
+      return;
+    }
+    const dates = await this.buildAvailableDatesForQuote(venueId, quote.hora_inicio);
+    this.rescheduleAvailableDates.set(dates);
+    this.rescheduleLoadingDates.set(false);
+  }
+
+  private async checkConflictsForPendingQuotes(quotes: Quote[]): Promise<void> {
+    const venueId = this.venueService.currentVenueId();
+    if (!venueId) return;
+    const today = new Date().toISOString().split('T')[0];
+    const pending = quotes.filter(
+      (q) =>
+        (q.estado === 'borrador' || q.estado === 'enviada') &&
+        q.fecha_evento != null &&
+        q.fecha_evento >= today &&
+        q.hora_inicio != null,
+    );
+    const results = await Promise.all(
+      pending.map(async (q) => {
+        const hasConflict = await this.contractService.checkSlotConflict(
+          venueId, q.fecha_evento!, q.hora_inicio!, q.hora_fin ?? undefined,
+        );
+        if (!hasConflict) return null;
+        const info = await this.contractService.getConflictingContractInfo(
+          venueId, q.fecha_evento!, q.hora_inicio!,
+        );
+        return info ? { quoteId: q.id, info } : null;
+      }),
+    );
+    const map = new Map<string, { folio: string; cliente: string }>();
+    for (const r of results) {
+      if (r) map.set(r.quoteId, r.info);
+    }
+    this.conflictMap.set(map);
+  }
+
+  private async buildAvailableDatesForQuote(venueId: string, horaInicio: string): Promise<AvailableDate[]> {
+    const today  = new Date();
+    const toDate = new Date(today.getTime() + 90 * 86400000);
+    const from   = today.toISOString().split('T')[0];
+    const to     = toDate.toISOString().split('T')[0];
+
+    const [booked, slots] = await Promise.all([
+      this.contractService.getBookedDates(venueId, from, to, horaInicio),
+      this.timeSlotService.getActiveSlots(),
+    ]);
+
+    const bookedSet  = new Set(booked.map((b) => b.fecha));
+    const targetSlot = slots.find((s) => s.start_time === horaInicio) ?? slots[0];
+    if (!targetSlot) return [];
+
+    const results: AvailableDate[] = [];
+    const cursor = new Date(today.getTime() + 86400000);
+
+    while (results.length < 6 && cursor <= toDate) {
+      const iso     = cursor.toISOString().split('T')[0];
+      const dow     = cursor.getDay();
+      const dayType: 'weekday' | 'weekend' = (dow === 0 || dow === 6) ? 'weekend' : 'weekday';
+
+      if (targetSlot.day_type === dayType && !bookedSet.has(iso)) {
+        results.push({
+          date:    iso,
+          label:   cursor.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }),
+          dayType,
+          slot:    { start_time: targetSlot.start_time, end_time: targetSlot.end_time },
+        });
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return results;
   }
 
   goToEvent(contractId: string): void {

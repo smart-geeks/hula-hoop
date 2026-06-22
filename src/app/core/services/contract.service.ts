@@ -292,6 +292,31 @@ export class ContractService {
     return true;
   }
 
+  /** Returns the folio + client name of the contract that already holds a slot, or null if free. */
+  async getConflictingContractInfo(
+    venueId:    string,
+    fecha:      string,
+    horaInicio: string,
+  ): Promise<{ folio: string; cliente: string } | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data } = await client
+      .from('contracts')
+      .select('folio, client:clients(nombre)')
+      .eq('venue_id', venueId)
+      .eq('fecha_evento', fecha)
+      .eq('hora_inicio', horaInicio)
+      .neq('estado', 'cancelado')
+      .limit(1)
+      .single();
+
+    if (!data) return null;
+    const clientData = Array.isArray(data.client) ? data.client[0] : data.client;
+    const nombre = (clientData as { nombre: string } | null)?.nombre ?? 'Cliente';
+    return { folio: data.folio, cliente: nombre };
+  }
+
   /** Returns true if venue+date+slot is already taken by an active contract or confirmed reservation. */
   async checkSlotConflict(
     venueId:     string,

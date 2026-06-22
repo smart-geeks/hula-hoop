@@ -100,8 +100,23 @@
             <td class="px-6 py-4">
               <div class="flex items-center justify-end gap-1">
 
-                <!-- Registrar anticipo → crear contrato (borrador / enviada) -->
-                @if (quote.estado === 'borrador' || quote.estado === 'enviada') {
+                <!-- Conflicto de slot: mostrar badge + Reprogramar -->
+                @if ((quote.estado === 'borrador' || quote.estado === 'enviada') && conflictMap().get(quote.id); as conflict) {
+                <div class="flex flex-col items-end gap-1">
+                  <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap"
+                    [title]="'Slot ocupado por ' + conflict.folio + ' — ' + conflict.cliente">
+                    <i class="pi pi-exclamation-triangle text-xs"></i>
+                    {{ conflict.folio }}
+                  </span>
+                  <button (click)="openRescheduleDialog(quote)"
+                    class="px-2 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                    title="Cambiar fecha de la cotización">
+                    <i class="pi pi-calendar text-xs"></i>
+                    <span class="hidden sm:inline">Reprogramar</span>
+                  </button>
+                </div>
+                } @else if (quote.estado === 'borrador' || quote.estado === 'enviada') {
+                <!-- Registrar anticipo → crear contrato -->
                 <button (click)="openAnticoDialog(quote)"
                   class="px-2 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1"
                   title="Registrar anticipo y crear contrato">
@@ -837,6 +852,82 @@
           <i class="pi pi-check text-sm"></i>
           }
           Confirmar anticipo
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ══ RESCHEDULE MODAL ═════════════════════════════════ -->
+  @if (rescheduleDialog(); as rq) {
+  <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    role="dialog" aria-modal="true" aria-label="Reprogramar cotización">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+      <!-- Header -->
+      <div class="px-6 py-5 bg-amber-50 border-b border-amber-100">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Reprogramar cotización</h3>
+            <p class="text-sm text-slate-500 mt-0.5">{{ rq.folio }} · {{ rq.client?.nombre ?? 'Sin cliente' }}</p>
+          </div>
+          <button (click)="closeRescheduleDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-100 text-slate-400 transition-colors">
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </div>
+        @if (conflictMap().get(rq.id); as conflict) {
+        <div class="mt-4 flex items-start gap-3 bg-white rounded-xl px-4 py-3">
+          <i class="pi pi-exclamation-triangle text-amber-500 text-sm mt-0.5 shrink-0"></i>
+          <p class="text-xs text-slate-600">
+            El slot de las <strong>{{ rq.hora_inicio }}</strong> del <strong>{{ rq.fecha_evento ? formatDate(rq.fecha_evento) : '—' }}</strong>
+            ya fue tomado por <strong>{{ conflict.folio }}</strong> ({{ conflict.cliente }}).
+            Elige una nueva fecha.
+          </p>
+        </div>
+        }
+      </div>
+
+      <!-- Available dates -->
+      <div class="px-6 py-5">
+        @if (rescheduleLoadingDates()) {
+        <div class="flex items-center justify-center gap-3 py-8 text-slate-400">
+          <div class="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm">Buscando fechas disponibles…</span>
+        </div>
+        } @else if (rescheduleAvailableDates().length === 0) {
+        <div class="py-8 text-center text-slate-400">
+          <i class="pi pi-calendar-times text-2xl mb-2 block"></i>
+          <p class="text-sm">No hay fechas disponibles en los próximos 3 meses.</p>
+          <p class="text-xs mt-1">Edita la cotización manualmente para asignar una fecha.</p>
+        </div>
+        } @else {
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          Próximas fechas disponibles (mismo horario)
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          @for (alt of rescheduleAvailableDates(); track alt.date) {
+          <button type="button" (click)="confirmReschedule(alt)" [disabled]="rescheduleSaving()"
+            class="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-left hover:border-amber-400 hover:bg-amber-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed group">
+            <div>
+              <p class="font-semibold text-slate-800 capitalize text-sm">{{ alt.label }}</p>
+              <p class="text-xs text-slate-500 mt-0.5">{{ alt.slot.start_time }}{{ alt.slot.end_time ? ' – ' + alt.slot.end_time : '' }}</p>
+            </div>
+            @if (rescheduleSaving()) {
+            <div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
+            } @else {
+            <i class="pi pi-arrow-right text-sm text-amber-500 group-hover:translate-x-1 transition-transform shrink-0"></i>
+            }
+          </button>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
+        <button (click)="closeRescheduleDialog()"
+          class="px-5 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
         </button>
       </div>
     </div>

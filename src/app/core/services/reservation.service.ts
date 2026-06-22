@@ -132,6 +132,19 @@ export class ReservationService {
     return data as PrivateReservation[];
   }
 
+  async reschedulePrivateReservation(id: string, newDate: string, newSlotId: string): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { error } = await client
+      .from('private_reservations')
+      .update({ reservation_date: newDate, time_slot_id: newSlotId })
+      .eq('id', id);
+
+    if (error) { console.error('Error rescheduling reservation:', error.message); return false; }
+    return true;
+  }
+
   async updatePrivateReservationStatus(id: string, status: ReservationStatus): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;
