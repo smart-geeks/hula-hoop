@@ -56,24 +56,6 @@ jobs:
           source: "deploy-package.tar.gz"
           target: "/var/www/hula-hoop"
 
-      - name: Diagnóstico de entorno VPS 🔍
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            echo "HOME=$HOME"
-            echo "USER=$(whoami)"
-            echo "PATH=$PATH"
-            echo "--- bun locations ---"
-            find /root /home /usr/local /usr -name bun -type f 2>/dev/null || true
-            echo "--- pm2 locations ---"
-            find /root /home /usr/local /usr -name pm2 -type f 2>/dev/null || true
-            echo "--- which ---"
-            which bun 2>/dev/null || echo "bun: not in PATH"
-            which pm2 2>/dev/null || echo "pm2: not in PATH"
-
       - name: Desplegar y reiniciar servicios en VPS 🔄
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -83,30 +65,20 @@ jobs:
           script: |
             set -e
 
-            # Locate bun regardless of install path
-            BUN_BIN=$(find /root /home /usr/local/bin /usr/bin -name bun -type f 2>/dev/null | head -1)
-            if [ -z "$BUN_BIN" ]; then
-              echo "ERROR: bun executable not found on this server"
-              exit 1
-            fi
-            export PATH="$(dirname "$BUN_BIN"):/usr/local/bin:$PATH"
-            echo "✓ bun found at: $BUN_BIN"
+            # Angular SSR bundles are self-contained (esbuild bundles all deps).
+            # No bun/npm install needed on the VPS — just extract and restart PM2.
 
-            # Locate pm2 (may be a symlink or script)
-            PM2_BIN=$(find /root /home /usr/local/bin /usr/bin -name pm2 2>/dev/null | head -1)
-            if [ -n "$PM2_BIN" ]; then
-              export PATH="$(dirname "$PM2_BIN"):$PATH"
-              echo "✓ pm2 found at: $PM2_BIN"
-            fi
+            # pm2 is usually a Node global — add common npm global bin paths
+            export PATH="/usr/local/bin:/usr/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
+
+            # Verify pm2 is available
+            command -v pm2 || { echo "ERROR: pm2 not found. Run: npm install -g pm2"; exit 1; }
 
             cd /var/www/hula-hoop
 
             echo "→ Extrayendo paquete..."
             tar -xzf deploy-package.tar.gz --overwrite
             rm -f deploy-package.tar.gz
-
-            echo "→ Instalando dependencias de producción..."
-            bun install --production
 
             echo "→ Reiniciando servicios PM2..."
             pm2 startOrRestart ecosystem.config.js --env production
