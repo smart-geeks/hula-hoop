@@ -22,6 +22,8 @@ import { VenueConfigService } from '../../../../core/services/venue-config.servi
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PaymentService } from '../../../../core/services/payment.service';
+import { QuoteService } from '../../../../core/services/quote.service';
+import { ContractService } from '../../../../core/services/contract.service';
 import { PublicVenueService } from '../../../../core/services/public-venue.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 import type { PartyPackage } from '../../../../core/interfaces/package';
@@ -64,6 +66,8 @@ export class PrivateReservationPage {
   private readonly reservationService = inject(ReservationService);
   private readonly authService = inject(AuthService);
   private readonly paymentService = inject(PaymentService);
+  private readonly quoteService = inject(QuoteService);
+  private readonly contractService = inject(ContractService);
   private readonly publicVenue = inject(PublicVenueService);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
@@ -273,7 +277,9 @@ export class PrivateReservationPage {
       slotStart.setHours(h, m, 0, 0);
       if (slotStart < cutoff) continue;
 
-      const blocked = await this.reservationService.isSlotBlockedByPrivate(dateStr, slot.id);
+      const venue = this.publicVenue.activeVenue();
+      const venueId = venue?.id ?? '00000000-0000-0000-0000-000000000001';
+      const blocked = await this.contractService.checkSlotConflict(venueId, dateStr, slot.start_time, slot.end_time);
       if (!blocked) {
         available.push(slot);
       }
@@ -546,73 +552,47 @@ export class PrivateReservationPage {
 
     this.submitting.set(true);
 
-    let reservation = this.lastGeneratedReservation();
-
-    if (!reservation) {
+    try {
       const contact = this.contactForm.getRawValue();
-      const user = this.authService.currentUser();
       const snack = this.selectedSnackOption();
-      const venue = this.publicVenue.activeVenue();
 
-      try {
-        reservation = await this.reservationService.createPrivateReservation({
-          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
-          profile_id: user?.id ?? null,
-          guest_name: contact.guest_name,
-          guest_email: contact.guest_email,
-          guest_phone: contact.guest_phone,
-          reservation_date: this.formatDateISO(date),
-          time_slot_id: slot.id,
-          package_id: pkg.id,
-          guest_count: this.guestCount(),
-          subtotal_cents: this.subtotalCents(),
-          total_cents: this.totalCents(),
-          deposit_cents: this.depositCents(),
-          notes: contact.notes || undefined,
-          snack_option_id: snack?.id,
-          quote_id: this.linkedQuoteId() ?? undefined,
-          extras: this.selectedExtras().map((se) => ({
-            extra_id: se.extra.id,
-            quantity: se.quantity,
-            unit_price_cents: se.extra.price_cents,
-          })),
-        });
+      const quote = await this.quoteService.create({
+        fecha:           new Date().toISOString().split('T')[0],
+        fecha_evento:    this.formatDateISO(date),
+        hora_inicio:     slot.start_time,
+        hora_fin:        slot.end_time,
+        time_slot_id:    slot.id,
+        guest_count:     this.guestCount(),
+        snack_option_id: snack?.id ?? undefined,
+        package_id:      pkg.id,
+        subtotal:        this.subtotalCents() / 100,
+        descuento:       0,
+        total:           this.totalCents() / 100,
+        deposit_amount:  this.depositCents() / 100,
+        estado:          'enviada',
+        notas:           contact.notes?.trim() || undefined,
+        items:           this.buildQuoteItems(),
+      });
 
-        if (reservation) {
-          this.lastGeneratedReservation.set(reservation);
-        }
-      } catch (err: any) {
+      if (quote) {
+        this.lastGeneratedReservation.set(quote);
+        await this.router.navigate(['/cotizacion', quote.public_token]);
+      } else {
         this.messageService.add({
           severity: 'error',
-          summary: 'Error al crear la reserva',
-          detail: err.message || 'Intenta de nuevo más tarde.',
+          summary: 'Error al crear la cotización',
+          detail: 'No se pudo crear la cotización. Intenta de nuevo más tarde.',
         });
-        this.submitting.set(false);
-        return;
       }
-    }
-
-    if (!reservation) {
-      this.submitting.set(false);
-      return;
-    }
-
-    // Create Mercado Pago payment preference
-    const preference = await this.paymentService.createPayment(reservation.id, 'private');
-
-    if (preference) {
-      this.paymentService.redirectToCheckout(preference);
-    } else {
-      // If payment creation fails, still redirect to detail page
+    } catch (err: any) {
       this.messageService.add({
-        severity: 'warn',
-        summary: 'Reserva creada',
-        detail: 'No se pudo iniciar el pago. Puedes intentar pagar desde el detalle de tu reserva.',
+        severity: 'error',
+        summary: 'Error al crear la cotización',
+        detail: err.message || 'Intenta de nuevo más tarde.',
       });
-      await this.router.navigate(['/reserva', reservation.access_token]);
+    } finally {
+      this.submitting.set(false);
     }
-
-    this.submitting.set(false);
   }
 
   async submitAdminLocalReservation(): Promise<void> {
@@ -629,67 +609,51 @@ export class PrivateReservationPage {
 
     this.submitting.set(true);
 
-    let reservation = this.lastGeneratedReservation();
-
-    if (!reservation) {
+    try {
       const contact = this.contactForm.getRawValue();
-      const user = this.authService.currentUser();
       const snack = this.selectedSnackOption();
-      const venue = this.publicVenue.activeVenue();
 
-      try {
-        reservation = await this.reservationService.createPrivateReservation({
-          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
-          profile_id: user?.id ?? null,
-          guest_name: contact.guest_name,
-          guest_email: contact.guest_email,
-          guest_phone: contact.guest_phone,
-          reservation_date: this.formatDateISO(date),
-          time_slot_id: slot.id,
-          package_id: pkg.id,
-          guest_count: this.guestCount(),
-          subtotal_cents: this.subtotalCents(),
-          total_cents: this.totalCents(),
-          deposit_cents: this.depositCents(),
-          notes: contact.notes || undefined,
-          snack_option_id: snack?.id,
-          quote_id: this.linkedQuoteId() ?? undefined,
-          extras: this.selectedExtras().map((se) => ({
-            extra_id: se.extra.id,
-            quantity: se.quantity,
-            unit_price_cents: se.extra.price_cents,
-          })),
+      const quote = await this.quoteService.create({
+        fecha:           new Date().toISOString().split('T')[0],
+        fecha_evento:    this.formatDateISO(date),
+        hora_inicio:     slot.start_time,
+        hora_fin:        slot.end_time,
+        time_slot_id:    slot.id,
+        guest_count:     this.guestCount(),
+        snack_option_id: snack?.id ?? undefined,
+        package_id:      pkg.id,
+        subtotal:        this.subtotalCents() / 100,
+        descuento:       0,
+        total:           this.totalCents() / 100,
+        deposit_amount:  this.depositCents() / 100,
+        estado:          'enviada',
+        notas:           contact.notes?.trim() || undefined,
+        items:           this.buildQuoteItems(),
+      });
+
+      if (quote) {
+        this.lastGeneratedReservation.set(quote);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Cotización creada con éxito',
         });
-
-        if (reservation) {
-          this.lastGeneratedReservation.set(reservation);
-        }
-      } catch (err: any) {
+        await this.router.navigate(['/admin/cotizaciones', quote.id]);
+      } else {
         this.messageService.add({
           severity: 'error',
-          summary: 'Error al crear la reserva',
-          detail: err.message || 'Intenta de nuevo más tarde.',
+          summary: 'Error al crear la cotización',
+          detail: 'No se pudo crear la cotización. Intenta de nuevo más tarde.',
         });
-        this.submitting.set(false);
-        return;
       }
-    }
-
-    if (!reservation) {
+    } catch (err: any) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al crear la cotización',
+        detail: err.message || 'Intenta de nuevo más tarde.',
+      });
+    } finally {
       this.submitting.set(false);
-      return;
     }
-
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Reserva creada con éxito',
-    });
-
-    await this.router.navigate(['/admin/reservas'], {
-      state: { openPaymentFor: reservation.id }
-    });
-
-    this.submitting.set(false);
   }
 
   async generateQuoteOnly(method: 'download' | 'whatsapp' | 'email'): Promise<void> {
@@ -709,62 +673,45 @@ export class PrivateReservationPage {
     try {
       const contact = this.contactForm.getRawValue();
       const snack = this.selectedSnackOption();
-      
-      let reservation = this.lastGeneratedReservation();
 
-      if (!reservation) {
-        const user = this.authService.currentUser();
-        const venue = this.publicVenue.activeVenue();
+      let quote = this.lastGeneratedReservation() as import('../../../../core/interfaces/quote').Quote | null;
 
-        reservation = await this.reservationService.createPrivateReservation({
-          venue_id: venue?.id ?? '00000000-0000-0000-0000-000000000001',
-          profile_id: user?.id ?? null,
-          guest_name: contact.guest_name,
-          guest_email: contact.guest_email,
-          guest_phone: contact.guest_phone,
-          reservation_date: this.formatDateISO(date),
-          time_slot_id: slot.id,
-          package_id: pkg.id,
-          guest_count: this.guestCount(),
-          subtotal_cents: this.subtotalCents(),
-          total_cents: this.totalCents(),
-          deposit_cents: this.depositCents(),
-          notes: contact.notes || undefined,
-          snack_option_id: snack?.id,
-          quote_id: this.linkedQuoteId() ?? undefined,
-          extras: this.selectedExtras().map((se) => ({
-            extra_id: se.extra.id,
-            quantity: se.quantity,
-            unit_price_cents: se.extra.price_cents,
-          })),
+      if (!quote) {
+        quote = await this.quoteService.create({
+          fecha:           new Date().toISOString().split('T')[0],
+          fecha_evento:    this.formatDateISO(date),
+          hora_inicio:     slot.start_time,
+          hora_fin:        slot.end_time,
+          time_slot_id:    slot.id,
+          guest_count:     this.guestCount(),
+          snack_option_id: snack?.id ?? undefined,
+          package_id:      pkg.id,
+          subtotal:        this.subtotalCents() / 100,
+          descuento:       0,
+          total:           this.totalCents() / 100,
+          deposit_amount:  this.depositCents() / 100,
+          estado:          'enviada',
+          notas:           contact.notes?.trim() || undefined,
+          items:           this.buildQuoteItems(),
         });
 
-        if (!reservation) {
-          throw new Error('No se pudo generar la reserva/cotización.');
+        if (!quote) {
+          throw new Error('No se pudo generar la cotización.');
         }
 
-        this.lastGeneratedReservation.set(reservation);
+        this.lastGeneratedReservation.set(quote);
       }
 
-      const snackName = snack?.name ?? null;
-      const printData = this.buildPrintData(
-        reservation,
-        date,
-        slot,
-        pkg,
-        snackName,
-        this.selectedExtras()
-      );
+      const publicLink = `${window.location.origin}/cotizacion/${quote.public_token}`;
 
       if (method === 'download') {
-        this.printService.print(printData);
+        window.open(publicLink, '_blank');
       } else if (method === 'whatsapp') {
-        const whatsappUrl = this.printService.getWhatsAppUrl(printData, false);
-        window.open(whatsappUrl, '_blank');
+        const text = `Hola ${contact.guest_name}, aquí tienes tu cotización para la fiesta privada en Hula Hoop:\n${publicLink}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       } else if (method === 'email') {
-        const link = `${window.location.origin}/reserva/${reservation.access_token}`;
         const subject = `Cotización Fiesta Privada - Hula Hoop`;
-        const body = `Hola ${contact.guest_name},\n\nAquí tienes el enlace a tu cotización para la fiesta privada en Hula Hoop:\n\n${link}\n\n¡Gracias!`;
+        const body = `Hola ${contact.guest_name},\n\nAquí tienes el enlace a tu cotización para la fiesta privada en Hula Hoop:\n\n${publicLink}\n\n¡Gracias!`;
         window.location.href = `mailto:${contact.guest_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       }
 
@@ -794,6 +741,41 @@ export class PrivateReservationPage {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  private buildQuoteItems(): import('../../../../core/interfaces/quote').CreateQuoteData['items'] {
+    const items: import('../../../../core/interfaces/quote').CreateQuoteData['items'] = [];
+
+    const pkg = this.selectedPackage();
+    if (pkg) {
+      items.push({
+        descripcion:     pkg.name,
+        cantidad:        1,
+        precio_unitario: pkg.price_cents / 100,
+      });
+    }
+
+    const snack = this.selectedSnackOption();
+    if (snack) {
+      // Snack options don't carry a separate price — included in package
+      items.push({
+        descripcion:     `Merienda: ${snack.name}`,
+        cantidad:        1,
+        precio_unitario: 0,
+      });
+    }
+
+    for (const se of this.selectedExtras()) {
+      items.push({
+        descripcion:     se.extra.pay_at_venue
+          ? `${se.extra.name} (cobro en local)`
+          : se.extra.name,
+        cantidad:        se.quantity,
+        precio_unitario: se.extra.pay_at_venue ? 0 : se.extra.price_cents / 100,
+      });
+    }
+
+    return items;
   }
 
   private buildPrintData(
