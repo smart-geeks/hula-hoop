@@ -21,73 +21,20 @@ export class ReservationService {
 
   // ── Private Reservations ──────────────────────────────────
 
-  async getPrivateReservationsByProfile(profileId: string): Promise<PrivateReservation[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
-
-    const { data, error } = await client
-      .from('private_reservations')
-      .select('*, packages(days_to_liquidate)')
-      .eq('profile_id', profileId)
-      .order('reservation_date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching private reservations:', error.message);
-      return [];
-    }
-
-    return data as PrivateReservation[];
+  async getPrivateReservationsByProfile(_profileId: string): Promise<PrivateReservation[]> {
+    return []; // private_reservations table removed
   }
 
   async getAllPrivateReservations(): Promise<PrivateReservation[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
-
-    const { data, error } = await client
-      .from('private_reservations')
-      .select('*, packages(days_to_liquidate)')
-      .order('reservation_date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching all private reservations:', error.message);
-      return [];
-    }
-
-    return data as PrivateReservation[];
+    return []; // private_reservations table removed
   }
 
-  async updatePrivateReservationStatus(id: string, status: ReservationStatus): Promise<boolean> {
-    const client = this.supabase.client;
-    if (!client) return false;
-
-    const { error } = await client
-      .from('private_reservations')
-      .update({ status })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error updating private reservation status:', error.message);
-      return false;
-    }
-
-    return true;
+  async updatePrivateReservationStatus(_id: string, _status: ReservationStatus): Promise<boolean> {
+    return false; // private_reservations table removed
   }
 
-  async updatePrivateReservationPaidAmount(id: string, paid_deposit_cents: number, status: ReservationStatus): Promise<boolean> {
-    const client = this.supabase.client;
-    if (!client) return false;
-
-    const { error } = await client
-      .from('private_reservations')
-      .update({ paid_deposit_cents, status })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error updating private reservation payment:', error.message);
-      return false;
-    }
-
-    return true;
+  async updatePrivateReservationPaidAmount(_id: string, _paid_deposit_cents: number, _status: ReservationStatus): Promise<boolean> {
+    return false; // private_reservations table removed
   }
 
   // ── Playdate Reservations ─────────────────────────────────
@@ -199,26 +146,8 @@ export class ReservationService {
 
   // ── Reservation Extras ───────────────────────────────────
 
-  async getPrivateReservationExtras(reservationId: string): Promise<{ name: string; quantity: number; unit_price_cents: number; pay_at_venue: boolean }[]> {
-    const client = this.supabase.client;
-    if (!client) return [];
-
-    const { data, error } = await client
-      .from('private_reservation_extras')
-      .select('quantity, unit_price_cents, extras(name, pay_at_venue)')
-      .eq('reservation_id', reservationId);
-
-    if (error) {
-      console.error('Error fetching reservation extras:', error.message);
-      return [];
-    }
-
-    return (data ?? []).map((row: any) => ({
-      name: row.extras?.name ?? 'Extra',
-      quantity: row.quantity,
-      unit_price_cents: row.unit_price_cents,
-      pay_at_venue: row.extras?.pay_at_venue ?? false,
-    }));
+  async getPrivateReservationExtras(_reservationId: string): Promise<{ name: string; quantity: number; unit_price_cents: number; pay_at_venue: boolean }[]> {
+    return []; // private_reservation_extras table removed
   }
 
   // ── Snack Option Name ─────────────────────────────────────
@@ -244,23 +173,8 @@ export class ReservationService {
   // ── Availability ──────────────────────────────────────────
 
   /** Check if a slot has a PAID (confirmed) private reservation for a given date */
-  async isSlotBlockedByPrivate(date: string, timeSlotId: string): Promise<boolean> {
-    const client = this.supabase.client;
-    if (!client) return false;
-
-    const { count, error } = await client
-      .from('private_reservations')
-      .select('*', { count: 'exact', head: true })
-      .eq('reservation_date', date)
-      .eq('time_slot_id', timeSlotId)
-      .eq('status', 'confirmed');
-
-    if (error) {
-      console.error('Error checking slot availability:', error.message);
-      return true; // Assume blocked on error
-    }
-
-    return (count ?? 0) > 0;
+  async isSlotBlockedByPrivate(_date: string, _timeSlotId: string): Promise<boolean> {
+    return false; // private_reservations table removed
   }
 
   /** Get remaining capacity for play day on a given date + slot */
