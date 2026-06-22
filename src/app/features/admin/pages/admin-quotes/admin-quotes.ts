@@ -556,6 +556,22 @@ export class AdminQuotes {
 
     this.anticoSaving.set(true);
 
+    // Validate slot availability before creating the contract
+    if (quote.fecha_evento && quote.hora_inicio) {
+      const conflict = await this.contractService.checkSlotConflict(
+        quote.venue_id,
+        quote.fecha_evento,
+        quote.hora_inicio,
+        quote.hora_fin ?? undefined,
+      );
+      if (conflict) {
+        const fecha = new Date(quote.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' });
+        this.showToast('error', `El slot del ${fecha} (${quote.hora_inicio}) ya tiene un contrato activo. Cambia la fecha de la cotización antes de registrar el anticipo.`);
+        this.anticoSaving.set(false);
+        return;
+      }
+    }
+
     const { data: contract, error } = await this.contractService.create({
       venue_id:        quote.venue_id,
       quote_id:        quote.id,

@@ -292,6 +292,50 @@ export class ContractService {
     return true;
   }
 
+  /** Returns true if venue+date+slot is already taken by an active contract or confirmed reservation. */
+  async checkSlotConflict(
+    venueId:     string,
+    fecha:       string,
+    horaInicio:  string,
+    horaFin?:    string,
+    excludeId?:  string,
+  ): Promise<boolean> {
+    const client = this.supabase.client;
+    if (!client) return false;
+
+    const { data, error } = await client.rpc('fn_check_slot_conflict', {
+      p_venue_id:         venueId,
+      p_fecha:            fecha,
+      p_hora_inicio:      horaInicio,
+      p_hora_fin:         horaFin ?? null,
+      p_exclude_contract: excludeId ?? null,
+    });
+
+    if (error) { console.error('fn_check_slot_conflict error:', error.message); return false; }
+    return !!data;
+  }
+
+  /** Returns booked {fecha, hora_inicio, hora_fin} entries in range for a venue. */
+  async getBookedDates(
+    venueId:     string,
+    fromDate:    string,
+    toDate:      string,
+    horaInicio?: string,
+  ): Promise<{ fecha: string; hora_inicio: string; hora_fin: string }[]> {
+    const client = this.supabase.client;
+    if (!client) return [];
+
+    const { data, error } = await client.rpc('fn_get_booked_dates', {
+      p_venue_id:    venueId,
+      p_from_date:   fromDate,
+      p_to_date:     toDate,
+      p_hora_inicio: horaInicio ?? null,
+    });
+
+    if (error) { console.error('fn_get_booked_dates error:', error.message); return []; }
+    return data ?? [];
+  }
+
   async delete(id: string): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;

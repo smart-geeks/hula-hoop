@@ -156,9 +156,59 @@
       <p class="text-center text-xs text-slate-400 mb-6">Esta cotización tiene una vigencia de 15 días a partir de su emisión.</p>
     }
 
+    <!-- ── Rescue card: slot conflict ──────────────────────────────────────── -->
+    @if (slotConflict(); as conflict) {
+      <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 mb-6 shadow-sm">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <i class="pi pi-exclamation-triangle text-2xl text-amber-600"></i>
+          </div>
+          <div>
+            <p class="font-bold text-amber-800 text-base">Este horario ya fue apartado</p>
+            <p class="text-sm text-amber-700 mt-1">
+              Otro cliente reservó el slot de las <strong>{{ conflict.originalSlot }}</strong>
+              para el día que tenías seleccionado. ¡No te preocupes!
+              Elige una nueva fecha y te reservamos en este momento.
+            </p>
+          </div>
+        </div>
+
+        @if (conflict.availableDates.length > 0) {
+          <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">
+            Próximas fechas disponibles (mismo horario)
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            @for (alt of conflict.availableDates; track alt.date) {
+              <button type="button"
+                (click)="bookAlternativeDate(alt)"
+                [disabled]="rescueSaving()"
+                class="flex items-center justify-between gap-3 px-4 py-3 bg-white border border-amber-200 rounded-xl text-left hover:border-rojo-brillante hover:bg-red-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed group">
+                <div>
+                  <p class="font-semibold text-slate-800 capitalize text-sm">{{ alt.label }}</p>
+                  <p class="text-xs text-slate-500 mt-0.5">
+                    {{ alt.slot.start_time }}{{ alt.slot.end_time ? ' – ' + alt.slot.end_time : '' }}
+                  </p>
+                </div>
+                @if (rescueSaving()) {
+                  <div class="w-4 h-4 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin shrink-0"></div>
+                } @else {
+                  <i class="pi pi-arrow-right text-sm text-rojo-brillante group-hover:translate-x-1 transition-transform shrink-0"></i>
+                }
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="text-sm text-amber-700 text-center py-3">
+            No encontramos fechas disponibles en los próximos 3 meses.
+            <br>Por favor contáctanos directamente para buscar una solución.
+          </p>
+        }
+      </div>
+    }
+
     <!-- Actions -->
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
-      @if (q.estado !== 'aprobada' && q.estado !== 'vencida' && q.fecha_evento && venueSlug()) {
+      @if (q.estado !== 'aprobada' && q.estado !== 'vencida' && q.fecha_evento && venueSlug() && !slotConflict()) {
         <button (click)="approveAndPay()" [disabled]="submitting()"
           class="flex items-center justify-center gap-2 px-6 py-3 bg-rojo-brillante text-white rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-md disabled:opacity-75 disabled:cursor-not-allowed">
           @if (submitting()) {
