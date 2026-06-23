@@ -40,7 +40,6 @@ export class ReservationPrintService {
   }
 
   getWhatsAppUrl(data: ReservationPrintData, includePhone = true): string {
-    const link = `${window.location.origin}/reserva/${data.access_token}`;
     const firstName = data.guest_name.split(' ')[0];
     const remaining = Math.max(0, data.total_cents - data.paid_deposit_cents);
 
@@ -54,9 +53,6 @@ export class ReservationPrintService {
       `💰 Total: ${this.fmt(data.total_cents)}`,
       data.paid_deposit_cents > 0 ? `✅ Abonado: ${this.fmt(data.paid_deposit_cents)}` : null,
       remaining > 0 ? `💳 Restante: ${this.fmt(remaining)}` : null,
-      ``,
-      `👉 Consulta todos los detalles aquí:`,
-      link,
       ``,
       `¡Nos vemos pronto, será una fiesta increíble! 🎊`,
     ].filter((l): l is string => l !== null).join('\n');
@@ -117,8 +113,6 @@ export class ReservationPrintService {
     const subtotalRow = data.subtotal_cents !== data.total_cents
       ? `<tr><td class="muted">Paquete</td><td class="right">${this.fmt(data.subtotal_cents)}</td></tr>`
       : '';
-
-    const link = `${window.location.origin}/reserva/${data.access_token}`;
 
     return `<!DOCTYPE html>
 <html lang="es">
@@ -215,8 +209,6 @@ export class ReservationPrintService {
   ${partialSection}
 
   <div class="footer">
-    <p>Consulta tu reserva en línea:</p>
-    <a href="${link}">${link}</a>
     <div class="brand">Hula Hoop · ¡Gracias por confiar en nosotros! 🎉</div>
   </div>
 
