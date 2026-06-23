@@ -3,9 +3,10 @@ import {
   Component,
   computed,
   inject,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { CurrencyPipe, isPlatformBrowser, PLATFORM_ID } from '@angular/common';
+import { CurrencyPipe, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';

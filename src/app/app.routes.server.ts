@@ -6,10 +6,6 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
-    path: 'reserva/:accessToken',
-    renderMode: RenderMode.Client,
-  },
-  {
     path: 'cotizacion/:token',
     renderMode: RenderMode.Client,
   },
