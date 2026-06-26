@@ -18,6 +18,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+    // Single-venue setup: exactly one row in payment_settings.
+    // TODO: filter by venue_id when multi-venue support is needed.
     const { data: ps } = await supabaseForCreds
       .from('payment_settings')
       .select('mp_mode, mp_sandbox_access_token, mp_prod_access_token, mp_sandbox_webhook_secret, mp_prod_webhook_secret')

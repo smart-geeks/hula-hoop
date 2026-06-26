@@ -520,7 +520,8 @@
                 class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
               <button (click)="showAccessToken.set(!showAccessToken())"
                 class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-                [title]="showAccessToken() ? 'Ocultar' : 'Mostrar'">
+                [title]="showAccessToken() ? 'Ocultar' : 'Mostrar'"
+                [attr.aria-label]="showAccessToken() ? 'Ocultar access token' : 'Mostrar access token'">
                 <i [class]="'pi text-sm ' + (showAccessToken() ? 'pi-eye-slash' : 'pi-eye')"></i>
               </button>
             </div>
@@ -569,7 +570,8 @@
                 class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
               <button (click)="showWebhookSecret.set(!showWebhookSecret())"
                 class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-                [title]="showWebhookSecret() ? 'Ocultar' : 'Mostrar'">
+                [title]="showWebhookSecret() ? 'Ocultar' : 'Mostrar'"
+                [attr.aria-label]="showWebhookSecret() ? 'Ocultar webhook secret' : 'Mostrar webhook secret'">
                 <i [class]="'pi text-sm ' + (showWebhookSecret() ? 'pi-eye-slash' : 'pi-eye')"></i>
               </button>
               <button (click)="generateAndSetSecret()"
@@ -588,7 +590,7 @@
           </div>
 
           <div class="pt-1">
-            <button (click)="savePaymentCredentials()" [disabled]="paymentSaving()"
+            <button (click)="savePaymentCredentials()" [disabled]="paymentSaving() || !hasCredentialChanges()"
               class="flex items-center gap-2 bg-rojo-brillante text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm disabled:opacity-60">
               @if (paymentSaving()) {
                 <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>

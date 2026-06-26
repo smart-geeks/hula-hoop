@@ -122,6 +122,13 @@ export class AdminConfig {
       : s.mp_sandbox_webhook_secret_masked;
   });
 
+  readonly hasCredentialChanges = computed(() => {
+    const token  = this.mpAccessToken().trim();
+    const secret = this.mpWebhookSecret().trim();
+    return (token !== '' && !token.startsWith('•')) ||
+           (secret !== '' && !secret.startsWith('•'));
+  });
+
   readonly form = this.fb.nonNullable.group({
     max_capacity_per_slot: [50, [Validators.required, Validators.min(1)]],
     playdate_ticket_price_cents: [19000, [Validators.required, Validators.min(0)]],
@@ -432,17 +439,20 @@ export class AdminConfig {
     if (!settings || !userId || settings.mp_mode === mode) return;
 
     this.paymentSaving.set(true);
-    const ok = await this.paymentSettingsService.saveMode(settings.id, mode, userId);
-    if (ok) {
-      this.paymentSettings.update(s => s ? { ...s, mp_mode: mode } : s);
-      this.mpAccessToken.set('');
-      this.mpWebhookSecret.set('');
-      this.showAccessToken.set(false);
-      this.showWebhookSecret.set(false);
-    } else {
-      this.messageService.add({ severity: 'error', summary: 'No se pudo cambiar el entorno' });
+    try {
+      const ok = await this.paymentSettingsService.saveMode(settings.id, mode, userId);
+      if (ok) {
+        this.paymentSettings.update(s => s ? { ...s, mp_mode: mode } : s);
+        this.mpAccessToken.set('');
+        this.mpWebhookSecret.set('');
+        this.showAccessToken.set(false);
+        this.showWebhookSecret.set(false);
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'No se pudo cambiar el entorno' });
+      }
+    } finally {
+      this.paymentSaving.set(false);
     }
-    this.paymentSaving.set(false);
   }
 
   async savePaymentCredentials(): Promise<void> {
@@ -476,14 +486,17 @@ export class AdminConfig {
     }
 
     this.paymentSaving.set(true);
-    const ok = await this.paymentSettingsService.saveCredentials(settings.id, changes);
-    if (ok) {
-      await this.loadPaymentSettings();
-      this.messageService.add({ severity: 'success', summary: 'Credenciales guardadas' });
-    } else {
-      this.messageService.add({ severity: 'error', summary: 'Error al guardar credenciales' });
+    try {
+      const ok = await this.paymentSettingsService.saveCredentials(settings.id, changes);
+      if (ok) {
+        await this.loadPaymentSettings();
+        this.messageService.add({ severity: 'success', summary: 'Credenciales guardadas' });
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error al guardar credenciales' });
+      }
+    } finally {
+      this.paymentSaving.set(false);
     }
-    this.paymentSaving.set(false);
   }
 
   generateAndSetSecret(): void {
@@ -492,8 +505,12 @@ export class AdminConfig {
   }
 
   copyWebhookUrl(): void {
-    navigator.clipboard.writeText(this.webhookUrl).then(() => {
-      this.messageService.add({ severity: 'info', summary: 'URL copiada al portapapeles' });
-    });
+    navigator.clipboard.writeText(this.webhookUrl)
+      .then(() => {
+        this.messageService.add({ severity: 'info', summary: 'URL copiada al portapapeles' });
+      })
+      .catch(() => {
+        this.messageService.add({ severity: 'warn', summary: 'No se pudo copiar al portapapeles' });
+      });
   }
 }

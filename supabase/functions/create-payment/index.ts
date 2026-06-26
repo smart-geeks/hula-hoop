@@ -30,6 +30,8 @@ serve(async (req) => {
     const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:4200'
 
     // Leer credenciales desde DB (con fallback a env vars para compatibilidad)
+    // Single-venue setup: exactly one row in payment_settings.
+    // TODO: filter by venue_id when multi-venue support is needed.
     const { data: ps } = await supabaseAdmin
       .from('payment_settings')
       .select('mp_mode, mp_sandbox_access_token, mp_prod_access_token')
