@@ -247,7 +247,7 @@ export class AdminPos {
     const [sessions, inventory, restaurantItems, extras, contracts, cashiers, productCategories] = await Promise.all([
       this.posService.getActiveSessions(),
       this.inventoryService.getAll(),
-      this.restaurantItemService.getActiveItemsByVenue(venueId),
+      this.restaurantItemService.getActiveItems(),
       this.extraService.getActiveExtrasByVenue(venueId),
       this.contractService.getAll(),
       this.cashierService.getActive(),
