@@ -9,6 +9,7 @@ import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 @Component({
   selector: 'app-playdate-confirmation-page',
   templateUrl: './playdate-confirmation-page.html',
+  styleUrl: './playdate-confirmation-page.css',
   imports: [DatePipe, CurrencyPipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -72,5 +73,10 @@ export class PlaydateConfirmationPage {
   get isCancelled(): boolean {
     const status = this.reservation()?.status;
     return status === 'cancelled';
+  }
+
+  get folio(): string {
+    const id = this.reservation()?.id ?? '';
+    return 'PD-' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
   }
 }
