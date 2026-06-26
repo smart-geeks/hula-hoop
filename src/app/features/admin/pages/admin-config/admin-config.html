@@ -8,7 +8,8 @@
     {id: 'general',    icon: 'pi-sliders-h', label: 'General'},
     {id: 'cajeros',    icon: 'pi-users',     label: 'Cajeros'},
     {id: 'categorias', icon: 'pi-tag',       label: 'Categorías'},
-    {id: 'impresora',  icon: 'pi-print',     label: 'Impresora'}
+    {id: 'impresora',  icon: 'pi-print',     label: 'Impresora'},
+    {id: 'pagos',      icon: 'pi-credit-card', label: 'Pagos'}
   ]; track tab.id) {
     <button
       (click)="setTab($any(tab.id))"
@@ -452,6 +453,150 @@
           <p class="text-xs text-slate-400 mt-2">Esta configuración se guarda en este dispositivo únicamente</p>
         </div>
       </div>
+    </div>
+  }
+
+  <!-- ── TAB CONTENT: PAGOS ───────────────────────────── -->
+  @if (activeTab() === 'pagos') {
+    <div class="max-w-lg animate-fade-in">
+
+      <!-- Entorno -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 mb-4">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Entorno</h2>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          @for (opt of [['sandbox','Sandbox – Pruebas'],['production','Producción']]; track opt[0]) {
+            <button (click)="setMode($any(opt[0]))"
+              [disabled]="paymentSaving() || paymentLoading()"
+              [class]="'py-2.5 rounded-xl border text-sm font-semibold transition-all disabled:opacity-50 '
+                + (paymentSettings()?.mp_mode === opt[0]
+                  ? (opt[0] === 'sandbox'
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                    : 'bg-emerald-600 text-white border-emerald-600 shadow-sm')
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50')">
+              {{ opt[1] }}
+            </button>
+          }
+        </div>
+        @if (paymentSettings()?.mp_mode === 'sandbox') {
+          <p class="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <i class="pi pi-exclamation-triangle shrink-0"></i>
+            Las transacciones no serán reales. Usa credenciales de prueba de Mercado Pago.
+          </p>
+        } @else if (paymentSettings()?.mp_mode === 'production') {
+          <p class="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+            <i class="pi pi-check-circle shrink-0"></i>
+            Modo producción activo. Los cobros son reales.
+          </p>
+        }
+      </div>
+
+      <!-- Credenciales -->
+      @if (paymentLoading()) {
+        <div class="flex justify-center py-8">
+          <div class="w-6 h-6 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      } @else if (paymentSettings()) {
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Credenciales MercadoPago</h2>
+            <p class="text-xs text-slate-400">Encuéntralas en mercadopago.com → Tu negocio → Credenciales.</p>
+          </div>
+
+          <!-- Access Token -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              Access Token
+              <span class="ml-1 font-normal normal-case text-slate-400">
+                ({{ paymentSettings()!.mp_mode === 'sandbox' ? 'Sandbox' : 'Producción' }})
+              </span>
+            </label>
+            <div class="flex gap-2">
+              <input
+                [type]="showAccessToken() ? 'text' : 'password'"
+                placeholder="Pegar nuevo Access Token..."
+                [value]="mpAccessToken()"
+                (input)="mpAccessToken.set($any($event.target).value)"
+                class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              <button (click)="showAccessToken.set(!showAccessToken())"
+                class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                [title]="showAccessToken() ? 'Ocultar' : 'Mostrar'">
+                <i [class]="'pi text-sm ' + (showAccessToken() ? 'pi-eye-slash' : 'pi-eye')"></i>
+              </button>
+            </div>
+            @if (activeTokenMasked()) {
+              <p class="text-xs text-slate-400 mt-1.5">
+                Configurado: <span class="font-mono tracking-wider">{{ activeTokenMasked() }}</span>
+              </p>
+            } @else {
+              <p class="text-xs text-amber-600 mt-1.5">Sin configurar para este entorno.</p>
+            }
+          </div>
+
+          <!-- Webhook URL -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              URL del Webhook
+              <span class="ml-1 font-normal normal-case text-slate-400">(solo lectura)</span>
+            </label>
+            <div class="flex gap-2">
+              <input type="text" readonly [value]="webhookUrl"
+                class="flex-1 px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-mono text-slate-500 focus:outline-none truncate" />
+              <button (click)="copyWebhookUrl()"
+                class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                title="Copiar URL">
+                <i class="pi pi-copy text-sm"></i>
+              </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-1.5">
+              Pégala en Mercado Pago → Tu negocio → Webhooks, junto con el secret de abajo.
+            </p>
+          </div>
+
+          <!-- Webhook Secret -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              Webhook Secret
+              <span class="ml-1 font-normal normal-case text-slate-400">(opcional)</span>
+            </label>
+            <div class="flex gap-2">
+              <input
+                [type]="showWebhookSecret() ? 'text' : 'password'"
+                placeholder="Pegar o generar un secret..."
+                [value]="mpWebhookSecret()"
+                (input)="mpWebhookSecret.set($any($event.target).value)"
+                class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              <button (click)="showWebhookSecret.set(!showWebhookSecret())"
+                class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                [title]="showWebhookSecret() ? 'Ocultar' : 'Mostrar'">
+                <i [class]="'pi text-sm ' + (showWebhookSecret() ? 'pi-eye-slash' : 'pi-eye')"></i>
+              </button>
+              <button (click)="generateAndSetSecret()"
+                class="px-3 border border-slate-200 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors"
+                title="Generar secret aleatorio">
+                <i class="pi pi-refresh text-sm"></i>
+              </button>
+            </div>
+            @if (activeSecretMasked()) {
+              <p class="text-xs text-slate-400 mt-1.5">
+                Configurado: <span class="font-mono tracking-wider">{{ activeSecretMasked() }}</span>
+              </p>
+            } @else {
+              <p class="text-xs text-slate-400 mt-1.5">Sin configurar. Los webhooks se aceptarán sin verificar firma.</p>
+            }
+          </div>
+
+          <div class="pt-1">
+            <button (click)="savePaymentCredentials()" [disabled]="paymentSaving()"
+              class="flex items-center gap-2 bg-rojo-brillante text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm disabled:opacity-60">
+              @if (paymentSaving()) {
+                <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+              }
+              Guardar credenciales
+            </button>
+          </div>
+        </div>
+      }
+
     </div>
   }
 }

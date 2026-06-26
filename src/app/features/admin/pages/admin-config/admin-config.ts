@@ -12,10 +12,12 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { CashierService } from '../../../../core/services/cashier.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { PrinterConfigService } from '../../../../core/services/printer-config.service';
+import { PaymentSettingsService } from '../../../../core/services/payment-settings.service';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
 import type { CashierProfile } from '../../../../core/interfaces/pos';
 import type { Category, CategoryTipo } from '../../../../core/interfaces/category';
 import type { PrinterConfig } from '../../../../core/interfaces/printer-config';
+import type { MaskedPaymentSettings, MpMode, PaymentSettingsUpdate } from '../../../../core/interfaces/payment-settings';
 
 @Component({
   selector: 'app-admin-config',
@@ -45,9 +47,9 @@ export class AdminConfig {
   readonly loading = signal(true);
   readonly saving  = signal(false);
 
-  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora'>('general');
+  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos'>('general');
 
-  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora'): void {
+  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos'): void {
     this.activeTab.set(tab);
   }
 
@@ -91,6 +93,35 @@ export class AdminConfig {
   readonly bluetoothScanning  = signal(false);
   readonly bluetoothSupported = 'bluetooth' in navigator;
 
+  private readonly paymentSettingsService = inject(PaymentSettingsService);
+
+  // ── Pagos ──────────────────────────────────────────────
+  readonly paymentSettings   = signal<MaskedPaymentSettings | null>(null);
+  readonly paymentLoading    = signal(false);
+  readonly paymentSaving     = signal(false);
+  readonly mpAccessToken     = signal('');
+  readonly mpWebhookSecret   = signal('');
+  readonly showAccessToken   = signal(false);
+  readonly showWebhookSecret = signal(false);
+
+  readonly webhookUrl = this.paymentSettingsService.webhookUrl;
+
+  readonly activeTokenMasked = computed(() => {
+    const s = this.paymentSettings();
+    if (!s) return null;
+    return s.mp_mode === 'production'
+      ? s.mp_prod_access_token_masked
+      : s.mp_sandbox_access_token_masked;
+  });
+
+  readonly activeSecretMasked = computed(() => {
+    const s = this.paymentSettings();
+    if (!s) return null;
+    return s.mp_mode === 'production'
+      ? s.mp_prod_webhook_secret_masked
+      : s.mp_sandbox_webhook_secret_masked;
+  });
+
   readonly form = this.fb.nonNullable.group({
     max_capacity_per_slot: [50, [Validators.required, Validators.min(1)]],
     playdate_ticket_price_cents: [19000, [Validators.required, Validators.min(0)]],
@@ -106,6 +137,7 @@ export class AdminConfig {
       if (venueId) {
         this.loadConfig();
         this.loadCashiers();
+        this.loadPaymentSettings();
       } else {
         // Venues not yet loaded — keep UI unblocked
         this.loading.set(false);
@@ -381,5 +413,87 @@ export class AdminConfig {
   savePrinterConfig(): void {
     this.printerCfgService.save(this.printerConfig());
     this.messageService.add({ severity: 'success', summary: 'Configuración de impresora guardada' });
+  }
+
+  // ── Pagos ──────────────────────────────────────────────
+
+  async loadPaymentSettings(): Promise<void> {
+    this.paymentLoading.set(true);
+    const data = await this.paymentSettingsService.getSettings();
+    this.paymentSettings.set(data);
+    this.mpAccessToken.set('');
+    this.mpWebhookSecret.set('');
+    this.paymentLoading.set(false);
+  }
+
+  async setMode(mode: MpMode): Promise<void> {
+    const settings = this.paymentSettings();
+    const userId   = this.authService.currentUser()?.id;
+    if (!settings || !userId || settings.mp_mode === mode) return;
+
+    this.paymentSaving.set(true);
+    const ok = await this.paymentSettingsService.saveMode(settings.id, mode, userId);
+    if (ok) {
+      this.paymentSettings.update(s => s ? { ...s, mp_mode: mode } : s);
+      this.mpAccessToken.set('');
+      this.mpWebhookSecret.set('');
+      this.showAccessToken.set(false);
+      this.showWebhookSecret.set(false);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'No se pudo cambiar el entorno' });
+    }
+    this.paymentSaving.set(false);
+  }
+
+  async savePaymentCredentials(): Promise<void> {
+    const settings = this.paymentSettings();
+    const userId   = this.authService.currentUser()?.id;
+    if (!settings || !userId) return;
+
+    const isProduction = settings.mp_mode === 'production';
+    const changes: PaymentSettingsUpdate = {
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    };
+
+    const token  = this.mpAccessToken().trim();
+    const secret = this.mpWebhookSecret().trim();
+
+    if (token && !token.startsWith('•')) {
+      if (isProduction) changes.mp_prod_access_token   = token;
+      else              changes.mp_sandbox_access_token = token;
+    }
+
+    if (secret && !secret.startsWith('•')) {
+      if (isProduction) changes.mp_prod_webhook_secret   = secret;
+      else              changes.mp_sandbox_webhook_secret = secret;
+    }
+
+    if (Object.keys(changes).length === 2) {
+      // Solo updated_by y updated_at — nada que guardar
+      this.messageService.add({ severity: 'warn', summary: 'No hay credenciales nuevas para guardar' });
+      return;
+    }
+
+    this.paymentSaving.set(true);
+    const ok = await this.paymentSettingsService.saveCredentials(settings.id, changes);
+    if (ok) {
+      await this.loadPaymentSettings();
+      this.messageService.add({ severity: 'success', summary: 'Credenciales guardadas' });
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error al guardar credenciales' });
+    }
+    this.paymentSaving.set(false);
+  }
+
+  generateAndSetSecret(): void {
+    this.mpWebhookSecret.set(this.paymentSettingsService.generateSecret());
+    this.showWebhookSecret.set(true);
+  }
+
+  copyWebhookUrl(): void {
+    navigator.clipboard.writeText(this.webhookUrl).then(() => {
+      this.messageService.add({ severity: 'info', summary: 'URL copiada al portapapeles' });
+    });
   }
 }
