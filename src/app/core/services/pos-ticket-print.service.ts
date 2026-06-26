@@ -1024,4 +1024,164 @@ export class PosTicketPrintService {
 </body>
 </html>`;
   }
+
+  // ── Play Day ticket ─────────────────────────────────────────────────────────
+
+  printPlaydateTicket(data: {
+    guestName: string;
+    reservationDate: string;
+    slotLabel: string;
+    kidsCount: number;
+    adultsCount: number;
+    extraAdultsCount: number;
+    totalCents: number;
+    accessToken: string;
+  }): void {
+    try {
+      const venue  = this.venueService.currentVenue();
+      const config = this.printerConfig.load();
+      const html   = this.buildPlaydateHtml(data, venue, config);
+
+      if (config.connectionType === 'ip' && config.ipAddress?.trim()) {
+        const logoUrl = venue?.logo_url || LOGO_URL;
+        if (this.cachedLogoUrl !== logoUrl || this.cachedPaperSize !== config.paperSize) {
+          this.preloadLogo(logoUrl, config.paperSize);
+        }
+        const bytes = this.buildPlaydateEscPos(data, venue, config, this.cachedLogoData);
+        this.printDirect(bytes, html, config);
+      } else {
+        this.openPrint(html);
+      }
+    } catch (error) {
+      console.error('[PrintService] Error en printPlaydateTicket:', error);
+      try {
+        const venue  = this.venueService.currentVenue();
+        const config = this.printerConfig.load();
+        this.openPrint(this.buildPlaydateHtml(data, venue, config));
+      } catch { /* silent */ }
+    }
+  }
+
+  private buildPlaydateHtml(data: {
+    guestName: string;
+    reservationDate: string;
+    slotLabel: string;
+    kidsCount: number;
+    adultsCount: number;
+    extraAdultsCount: number;
+    totalCents: number;
+    accessToken: string;
+  }, venue: Venue | null, config: PrinterConfig): string {
+    const dateLabel  = this.fmtEventDate(data.reservationDate);
+    const total      = this.fmt(data.totalCents / 100);
+    const folioShort = data.accessToken.split('-')[0].toUpperCase();
+    const footer     = config.footerLine?.trim() || '¡Hasta pronto!';
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ticket Play Day</title>
+  <style>${this.sharedStyles()}</style>
+</head>
+<body>
+
+  ${this.buildHeader(venue, config)}
+
+  <hr class="sep-solid" />
+  <div class="section-title">— RESERVA PLAY DAY —</div>
+  <hr class="sep-solid" />
+
+  <table>
+    <tr><td class="label xs">Folio</td><td class="r bold">${folioShort}</td></tr>
+    <tr><td class="label xs">Nombre</td><td class="r sm">${data.guestName}</td></tr>
+    <tr><td class="label xs">Fecha</td><td class="r sm">${dateLabel}</td></tr>
+    <tr><td class="label xs">Horario</td><td class="r sm">${data.slotLabel}</td></tr>
+  </table>
+
+  <hr class="sep-dashed" />
+
+  <table>
+    <tr><td class="xs">Niños</td><td class="r bold">${data.kidsCount}</td></tr>
+    <tr><td class="xs">Adultos acomp.</td><td class="r bold">${data.adultsCount}</td></tr>
+    ${data.extraAdultsCount > 0 ? `<tr><td class="xs">Adultos adicionales</td><td class="r bold">${data.extraAdultsCount}</td></tr>` : ''}
+  </table>
+
+  <hr class="sep-solid" />
+
+  <table>
+    <tr class="total-row">
+      <td class="bold">TOTAL</td>
+      <td class="r bold">${total}</td>
+    </tr>
+  </table>
+
+  <hr class="sep-solid" />
+
+  <div class="footer-msg bold">${footer}</div>
+  <div class="center xs" style="margin-top:3mm;color:#555">
+    ${venue?.nombre ?? 'Hula Hoop'} &bull; ${new Date().getFullYear()}
+  </div>
+
+</body>
+</html>`;
+  }
+
+  private buildPlaydateEscPos(data: {
+    guestName: string;
+    reservationDate: string;
+    slotLabel: string;
+    kidsCount: number;
+    adultsCount: number;
+    extraAdultsCount: number;
+    totalCents: number;
+    accessToken: string;
+  }, venue: Venue | null, config: PrinterConfig, logoImgData: ImageData | null = null): Uint8Array {
+    const builder = new EscPosBuilder(config.paperSize);
+
+    if (logoImgData) {
+      builder.alignCenter().rasterImage(logoImgData).feed(1);
+    }
+
+    builder.alignCenter().bold(true).doubleSize(true);
+    builder.textLine(venue?.nombre ?? 'HULA HOOP');
+    builder.doubleSize(false).bold(false);
+
+    if (venue?.direccion) builder.textLine(venue.direccion);
+    if (venue?.telefono)  builder.textLine(`Tel: ${venue.telefono}`);
+    if (config.headerLine1?.trim()) builder.textLine(config.headerLine1.trim());
+    if (config.headerLine2?.trim()) builder.textLine(config.headerLine2.trim());
+
+    builder.solidLine();
+    builder.bold(true).textLine('— RESERVA PLAY DAY —').bold(false);
+    builder.solidLine();
+
+    const folioShort = data.accessToken.split('-')[0].toUpperCase();
+    builder.alignLeft();
+    builder.row('Folio:', folioShort);
+    builder.row('Nombre:', data.guestName);
+    builder.row('Fecha:', this.fmtEventDate(data.reservationDate));
+    builder.row('Horario:', data.slotLabel);
+
+    builder.dashedLine();
+    builder.row('Niños:', String(data.kidsCount));
+    builder.row('Adultos acomp.:', String(data.adultsCount));
+    if (data.extraAdultsCount > 0) {
+      builder.row('Adultos adic.:', String(data.extraAdultsCount));
+    }
+
+    builder.solidLine();
+    builder.alignRight().bold(true);
+    builder.textLine(`TOTAL: ${this.fmt(data.totalCents / 100)}`);
+    builder.bold(false).alignCenter();
+
+    builder.solidLine();
+    const footer = config.footerLine?.trim() || '¡Hasta pronto!';
+    builder.bold(true).textLine(footer).bold(false);
+    builder.feed(1);
+    builder.textLine(`${venue?.nombre ?? 'Hula Hoop'} • ${new Date().getFullYear()}`);
+    builder.feed(4).cut();
+
+    return builder.build();
+  }
 }

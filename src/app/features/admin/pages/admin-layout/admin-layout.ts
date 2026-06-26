@@ -159,7 +159,7 @@ export class AdminLayout implements OnDestroy {
       items: [
         { label: 'Hoy', route: 'hoy', icon: 'pi-sun' },
         { label: 'Calendario', route: 'calendario', icon: 'pi-calendar' },
-        { label: 'Reservas', route: 'reservas', icon: 'pi-calendar-plus' },
+        { label: 'Play Day', route: 'reservas', icon: 'pi-ticket' },
         { label: 'Eventos', route: 'eventos', icon: 'pi-star' },
       ],
     },

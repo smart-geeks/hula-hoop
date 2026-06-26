@@ -272,6 +272,32 @@ export class ReservationService {
     return available;
   }
 
+  /** Backoffice: slots disponibles para una fecha específica (sin límite de 24h). */
+  async getPlaydateSlotsForDate(
+    date: Date,
+    activeSlots: TimeSlot[],
+    maxCapacity: number,
+  ): Promise<AvailablePlaydateSlot[]> {
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const dayType = isWeekend ? 'weekend' : 'weekday';
+    const dateStr = this.formatDateISO(date);
+    const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const dayLabel = dayNames[dayOfWeek];
+
+    const slotsForDay = activeSlots.filter(s => s.day_type === dayType);
+    const available: AvailablePlaydateSlot[] = [];
+
+    for (const slot of slotsForDay) {
+      const remaining = await this.getPlaydateAvailability(dateStr, slot.id, maxCapacity);
+      if (remaining > 0) {
+        available.push({ date: dateStr, dayLabel, slot, remaining });
+      }
+    }
+
+    return available;
+  }
+
   private formatDateISO(date: Date): string {
     const y = date.getFullYear();
     const mo = String(date.getMonth() + 1).padStart(2, '0');

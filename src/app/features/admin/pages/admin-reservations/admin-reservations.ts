@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy, Component, computed, inject, signal,
+} from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -10,45 +12,35 @@ import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
-import { ReservationService } from '../../../../core/services/reservation.service';
-import { ReservationPrintService } from '../../../../core/services/reservation-print.service';
+import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
-import type { PrivateReservation, PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
+import { VenueService } from '../../../../core/services/venue.service';
+import { VenueConfigService } from '../../../../core/services/venue-config.service';
+import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
+import type { PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 
-interface ReservationExtra {
-  name: string;
-  quantity: number;
-  unit_price_cents: number;
-  pay_at_venue: boolean;
-}
-
-interface AdminReservationRow {
+interface PlayDayRow {
   id: string;
-  type: 'private' | 'playdate';
   guest_name: string;
   guest_email: string;
   guest_phone: string;
   reservation_date: string;
+  time_slot_id: string;
   time_slot_label: string;
   status: ReservationStatus;
   total_cents: number;
-  subtotal_cents: number;
-  deposit_cents: number;
-  guest_count: number;
-  notes: string;
-  access_token: string;
-  detail: string;
-  created_at: string;
-  snack_option_id: string | null;
   paid_deposit_cents: number;
-  liquidation_date: string | null;
-  raw_liquidation_date: string | null;
-  contract_id?: string | null;
-  quote_id?: string | null;
+  kids_count: number;
+  adults_count: number;
+  extra_adults_count: number;
+  access_token: string;
+  created_at: string;
+  detail: string;
 }
 
 @Component({
@@ -65,93 +57,107 @@ interface AdminReservationRow {
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
-    CurrencyMxnPipe,
+    InputTextModule,
     InputNumberModule,
-    RouterLink,
+    CurrencyMxnPipe,
+    CurrencyPipe,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminReservations {
   private readonly reservationService = inject(ReservationService);
-  private readonly timeSlotService = inject(TimeSlotService);
+  private readonly timeSlotService    = inject(TimeSlotService);
+  private readonly venueService       = inject(VenueService);
+  private readonly venueConfigService = inject(VenueConfigService);
+  private readonly printService       = inject(PosTicketPrintService);
   private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
-  private readonly printService = inject(ReservationPrintService);
+  private readonly messageService     = inject(MessageService);
 
   readonly loading = signal(true);
-  readonly allRows = signal<AdminReservationRow[]>([]);
+  readonly allRows = signal<PlayDayRow[]>([]);
   private slotsMap = new Map<string, TimeSlot>();
+  private allActiveSlots: TimeSlot[] = [];
 
-  // Filters
+  // ── Filters ────────────────────────────────────────────────────────────────
   readonly filterSearch = signal('');
-  readonly filterType = signal<string | null>(null);
   readonly filterStatus = signal<string | null>(null);
-  readonly filterDate = signal<Date | null>(null);
-  readonly filterLiquidation = signal<Date | null>(null);
-
-  readonly typeOptions = [
-    { label: 'Todos', value: null },
-    { label: 'Fiesta Privada', value: 'private' },
-    { label: 'Play Day', value: 'playdate' },
-  ];
+  readonly filterDate   = signal<Date | null>(null);
 
   readonly statusOptions = [
-    { label: 'Todos', value: null },
-    { label: 'Pendiente de pago', value: 'pending_payment' },
-    { label: 'Confirmada', value: 'confirmed' },
-    { label: 'Completada', value: 'completed' },
-    { label: 'Cancelada', value: 'cancelled' },
-    { label: 'Expirada', value: 'expired' },
+    { label: 'Todos',              value: null },
+    { label: 'Pendiente de pago',  value: 'pending_payment' },
+    { label: 'Confirmada',         value: 'confirmed' },
+    { label: 'Completada',         value: 'completed' },
+    { label: 'Cancelada',          value: 'cancelled' },
   ];
 
   readonly statusChangeOptions: { label: string; value: ReservationStatus }[] = [
     { label: 'Pendiente de pago', value: 'pending_payment' },
-    { label: 'Confirmada', value: 'confirmed' },
-    { label: 'Completada', value: 'completed' },
-    { label: 'Cancelada', value: 'cancelled' },
-    { label: 'Expirada', value: 'expired' },
+    { label: 'Confirmada',        value: 'confirmed' },
+    { label: 'Completada',        value: 'completed' },
+    { label: 'Cancelada',         value: 'cancelled' },
   ];
 
-  // Detail dialog
+  // ── Detail dialog ──────────────────────────────────────────────────────────
   readonly detailVisible = signal(false);
-  readonly detailRow = signal<AdminReservationRow | null>(null);
-  readonly detailExtras = signal<ReservationExtra[]>([]);
-  readonly detailSnackName = signal<string | null>(null);
-  readonly detailLoading = signal(false);
+  readonly detailRow     = signal<PlayDayRow | null>(null);
 
-  // Payment dialog
-  readonly paymentVisible = signal(false);
-  readonly paymentRow = signal<AdminReservationRow | null>(null);
-  readonly paymentInput = signal<number>(0);
+  // ── Payment dialog ─────────────────────────────────────────────────────────
+  readonly paymentVisible    = signal(false);
+  readonly paymentRow        = signal<PlayDayRow | null>(null);
+  readonly paymentInput      = signal<number>(0);
   readonly paymentSubmitting = signal(false);
 
+  // ── New reservation modal ──────────────────────────────────────────────────
+  readonly newResVisible      = signal(false);
+  readonly newResStep         = signal<1 | 2 | 3>(1);
+  readonly newResDate         = signal<Date | null>(null);
+  readonly newResSlots        = signal<AvailablePlaydateSlot[]>([]);
+  readonly newResSlot         = signal<AvailablePlaydateSlot | null>(null);
+  readonly newResSlotsLoading = signal(false);
+  readonly newResKids         = signal(1);
+  readonly newResAdults       = signal(1);
+  readonly newResExtraAdults  = signal(0);
+  readonly newResName         = signal('');
+  readonly newResEmail        = signal('');
+  readonly newResPhone        = signal('');
+  readonly newResSubmitting   = signal(false);
+
+  private ticketPriceCents     = 19000;
+  private extraAdultPriceCents = 6000;
+
+  readonly newResTotal = computed(() => {
+    const kids  = this.newResKids();
+    const extra = this.newResExtraAdults();
+    return kids * this.ticketPriceCents + extra * this.extraAdultPriceCents;
+  });
+
+  readonly newResMaxExtra = computed(() => {
+    const slot = this.newResSlot();
+    if (!slot) return 0;
+    const used = this.newResKids() + this.newResAdults();
+    return Math.max(0, slot.remaining - used);
+  });
+
+  // ── Computed ───────────────────────────────────────────────────────────────
   readonly filteredRows = computed(() => {
     let rows = this.allRows();
-    const q = this.filterSearch().toLowerCase().trim();
-    const type = this.filterType();
+    const q      = this.filterSearch().toLowerCase().trim();
     const status = this.filterStatus();
-    const date = this.filterDate();
-    const liquidation = this.filterLiquidation();
+    const date   = this.filterDate();
 
     if (q) {
-      rows = rows.filter((r) =>
+      rows = rows.filter(r =>
         `${r.guest_name} ${r.guest_email} ${r.guest_phone}`.toLowerCase().includes(q),
       );
     }
-    if (type) {
-      rows = rows.filter((r) => r.type === type);
-    }
     if (status) {
-      rows = rows.filter((r) => r.status === status);
+      rows = rows.filter(r => r.status === status);
     }
     if (date) {
-      const dateStr = this.formatDateISO(date);
-      rows = rows.filter((r) => r.reservation_date === dateStr);
-    }
-    if (liquidation) {
-      const liqStr = this.formatDateISO(liquidation);
-      rows = rows.filter((r) => r.raw_liquidation_date === liqStr);
+      const ds = this.formatDateISO(date);
+      rows = rows.filter(r => r.reservation_date === ds);
     }
     return rows;
   });
@@ -159,44 +165,43 @@ export class AdminReservations {
   readonly stats = computed(() => {
     const rows = this.allRows();
     return {
-      total: rows.length,
-      pending: rows.filter((r) => r.status === 'pending_payment').length,
-      confirmed: rows.filter((r) => r.status === 'confirmed').length,
-      completed: rows.filter((r) => r.status === 'completed').length,
+      total:     rows.length,
+      pending:   rows.filter(r => r.status === 'pending_payment').length,
+      confirmed: rows.filter(r => r.status === 'confirmed').length,
+      completed: rows.filter(r => r.status === 'completed').length,
     };
   });
 
   constructor() {
-    this.loadReservations();
+    this.loadData();
   }
 
-  async loadReservations(): Promise<void> {
+  async loadData(): Promise<void> {
     this.loading.set(true);
-
-    const [privateRes, playdateRes, slots] = await Promise.all([
-      this.reservationService.getAllPrivateReservations(),
+    const [playdates, slots, config] = await Promise.all([
       this.reservationService.getAllPlaydateReservations(),
       this.timeSlotService.getActiveSlots(),
+      this.venueConfigService.getConfig(),
     ]);
 
-    // Build slots lookup map
+    this.allActiveSlots = slots;
     this.slotsMap = new Map(slots.map(s => [s.id, s]));
 
-    const rows: AdminReservationRow[] = [
-      ...privateRes.map((r) => this.mapPrivate(r)),
-      ...playdateRes.map((r) => this.mapPlaydate(r)),
-    ];
+    if (config) {
+      this.ticketPriceCents     = config.playdate_ticket_price_cents ?? 19000;
+      this.extraAdultPriceCents = config.playdate_extra_adult_price_cents ?? 6000;
+    }
 
+    const rows: PlayDayRow[] = playdates.map(r => this.mapPlaydate(r));
     rows.sort((a, b) => {
-      const dateCmp = b.reservation_date.localeCompare(a.reservation_date);
-      if (dateCmp !== 0) return dateCmp;
-      return b.created_at.localeCompare(a.created_at);
+      const dc = b.reservation_date.localeCompare(a.reservation_date);
+      return dc !== 0 ? dc : b.created_at.localeCompare(a.created_at);
     });
 
     this.allRows.set(rows);
     this.loading.set(false);
 
-    // Auto-open payment dialog if redirected with state
+    // Auto-abrir pago si viene de router state
     const state = window.history.state;
     if (state?.openPaymentFor) {
       const row = rows.find(r => r.id === state.openPaymentFor);
@@ -207,28 +212,21 @@ export class AdminReservations {
     }
   }
 
-  confirmStatusChange(row: AdminReservationRow, newStatus: ReservationStatus): void {
+  // ── Status change ──────────────────────────────────────────────────────────
+  confirmStatusChange(row: PlayDayRow, newStatus: ReservationStatus): void {
     if (row.status === newStatus) return;
-
-    const statusLabel = this.statusChangeOptions.find((o) => o.value === newStatus)?.label ?? newStatus;
-
+    const label = this.statusChangeOptions.find(o => o.value === newStatus)?.label ?? newStatus;
     this.confirmationService.confirm({
-      message: `¿Cambiar estado de la reserva de "${row.guest_name}" a "${statusLabel}"?`,
+      message: `¿Cambiar estado de "${row.guest_name}" a "${label}"?`,
       header: 'Confirmar cambio de estado',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Cambiar',
       rejectLabel: 'Cancelar',
       accept: async () => {
-        let success: boolean;
-        if (row.type === 'private') {
-          success = await this.reservationService.updatePrivateReservationStatus(row.id, newStatus);
-        } else {
-          success = await this.reservationService.updatePlaydateReservationStatus(row.id, newStatus);
-        }
-
-        if (success) {
-          this.messageService.add({ severity: 'success', summary: `Estado cambiado a "${statusLabel}"` });
-          await this.loadReservations();
+        const ok = await this.reservationService.updatePlaydateReservationStatus(row.id, newStatus);
+        if (ok) {
+          this.messageService.add({ severity: 'success', summary: `Estado cambiado a "${label}"` });
+          await this.loadData();
         } else {
           this.messageService.add({ severity: 'error', summary: 'Error al cambiar estado' });
         }
@@ -236,28 +234,17 @@ export class AdminReservations {
     });
   }
 
-  async openDetail(row: AdminReservationRow): Promise<void> {
+  // ── Detail ─────────────────────────────────────────────────────────────────
+  openDetail(row: PlayDayRow): void {
     this.detailRow.set(row);
-    this.detailExtras.set([]);
-    this.detailSnackName.set(null);
     this.detailVisible.set(true);
-
-    if (row.type === 'private') {
-      this.detailLoading.set(true);
-      const extras = await this.reservationService.getPrivateReservationExtras(row.id);
-      this.detailExtras.set(extras);
-      if (row.snack_option_id) {
-        const name = await this.reservationService.getSnackOptionName(row.snack_option_id);
-        this.detailSnackName.set(name);
-      }
-      this.detailLoading.set(false);
-    }
   }
 
-  openPayment(row: AdminReservationRow): void {
+  // ── Payment ────────────────────────────────────────────────────────────────
+  openPayment(row: PlayDayRow): void {
     this.paymentRow.set(row);
     const remaining = row.total_cents - row.paid_deposit_cents;
-    this.paymentInput.set(remaining > 0 ? remaining / 100 : 0); // Convert cents to whole currency for the input
+    this.paymentInput.set(remaining > 0 ? remaining / 100 : 0);
     this.paymentVisible.set(true);
   }
 
@@ -266,195 +253,207 @@ export class AdminReservations {
     if (!row) return;
 
     const addedCents = Math.round(this.paymentInput() * 100);
-    if (addedCents <= 0) {
-      this.paymentVisible.set(false);
-      return;
-    }
+    if (addedCents <= 0) { this.paymentVisible.set(false); return; }
 
     this.paymentSubmitting.set(true);
-    const newPaidTotal = row.paid_deposit_cents + addedCents;
+    const newPaid = row.paid_deposit_cents + addedCents;
+    const newStatus: ReservationStatus =
+      row.status === 'pending_payment' && newPaid >= row.total_cents
+        ? 'confirmed'
+        : row.status;
 
-    let newStatus = row.status;
-    if (row.status === 'pending_payment' && newPaidTotal >= row.deposit_cents) {
-      newStatus = 'confirmed';
-    }
+    const ok = await this.reservationService.updatePlaydateReservationPaidAmount(
+      row.id, newPaid, newStatus,
+    );
 
-    let success = false;
-    if (row.type === 'private') {
-      success = await this.reservationService.updatePrivateReservationPaidAmount(row.id, newPaidTotal, newStatus);
-    } else {
-      success = await this.reservationService.updatePlaydateReservationPaidAmount(row.id, newPaidTotal, newStatus);
-    }
-
-    if (success) {
-      this.messageService.add({ severity: 'success', summary: 'Abono registrado con éxito' });
-      await this.loadReservations();
+    if (ok) {
+      this.messageService.add({ severity: 'success', summary: 'Pago registrado' });
+      await this.loadData();
       this.paymentVisible.set(false);
+
+      // Ofrecer imprimir ticket si quedó confirmada
+      if (newStatus === 'confirmed') {
+        const updated = this.allRows().find(r => r.id === row.id);
+        if (updated) this.printTicket(updated);
+      }
     } else {
-      this.messageService.add({ severity: 'error', summary: 'Error al registrar abono' });
+      this.messageService.add({ severity: 'error', summary: 'Error al registrar pago' });
     }
     this.paymentSubmitting.set(false);
   }
 
+  // ── Print ──────────────────────────────────────────────────────────────────
+  printTicket(row: PlayDayRow): void {
+    this.printService.printPlaydateTicket({
+      guestName:        row.guest_name,
+      reservationDate:  row.reservation_date,
+      slotLabel:        row.time_slot_label,
+      kidsCount:        row.kids_count,
+      adultsCount:      row.adults_count,
+      extraAdultsCount: row.extra_adults_count,
+      totalCents:       row.total_cents,
+      accessToken:      row.access_token,
+    });
+  }
+
+  // ── New reservation modal ──────────────────────────────────────────────────
+  openNewReservation(): void {
+    this.newResStep.set(1);
+    this.newResDate.set(null);
+    this.newResSlots.set([]);
+    this.newResSlot.set(null);
+    this.newResKids.set(1);
+    this.newResAdults.set(1);
+    this.newResExtraAdults.set(0);
+    this.newResName.set('');
+    this.newResEmail.set('');
+    this.newResPhone.set('');
+    this.newResVisible.set(true);
+  }
+
+  async onNewResDateChange(date: Date | null): Promise<void> {
+    this.newResDate.set(date);
+    this.newResSlot.set(null);
+    this.newResSlots.set([]);
+    if (!date) return;
+
+    this.newResSlotsLoading.set(true);
+    const maxCapacity = 50; // fallback; venue config loaded on init
+    const slots = await this.reservationService.getPlaydateSlotsForDate(
+      date, this.allActiveSlots, maxCapacity,
+    );
+    this.newResSlots.set(slots);
+    this.newResSlotsLoading.set(false);
+  }
+
+  selectNewResSlot(slot: AvailablePlaydateSlot): void {
+    this.newResSlot.set(slot);
+    this.newResKids.set(1);
+    this.newResAdults.set(1);
+    this.newResExtraAdults.set(0);
+  }
+
+  updateNewResKids(n: number): void {
+    const max = this.newResSlot()?.remaining ?? 1;
+    const kids = Math.max(1, Math.min(n, max));
+    this.newResKids.set(kids);
+    this.newResAdults.set(kids);
+    const maxExtra = Math.max(0, (this.newResSlot()?.remaining ?? 0) - kids - kids);
+    if (this.newResExtraAdults() > maxExtra) this.newResExtraAdults.set(maxExtra);
+  }
+
+  updateNewResExtraAdults(n: number): void {
+    this.newResExtraAdults.set(Math.max(0, Math.min(n, this.newResMaxExtra())));
+  }
+
+  goToStep(step: 1 | 2 | 3): void {
+    this.newResStep.set(step);
+  }
+
+  async submitNewReservation(): Promise<void> {
+    const slot = this.newResSlot();
+    const date = this.newResDate();
+    if (!slot || !date) return;
+
+    const name  = this.newResName().trim();
+    const phone = this.newResPhone().trim();
+    if (!name || !phone) {
+      this.messageService.add({ severity: 'warn', summary: 'Nombre y teléfono son requeridos' });
+      return;
+    }
+
+    this.newResSubmitting.set(true);
+    const venueId = this.venueService.currentVenueId() ?? '00000000-0000-0000-0000-000000000001';
+
+    const res = await this.reservationService.createPlaydateReservation({
+      venue_id:           venueId,
+      profile_id:         null,
+      guest_name:         name,
+      guest_email:        this.newResEmail().trim(),
+      guest_phone:        phone,
+      reservation_date:   slot.date,
+      time_slot_id:       slot.slot.id,
+      kids_count:         this.newResKids(),
+      adults_count:       this.newResAdults(),
+      extra_adults_count: this.newResExtraAdults(),
+      total_cents:        this.newResTotal(),
+    });
+
+    if (res) {
+      this.messageService.add({ severity: 'success', summary: 'Reserva creada — pendiente de pago' });
+      this.newResVisible.set(false);
+      await this.loadData();
+      // Auto-abrir dialogo de pago para la nueva reserva
+      const newRow = this.allRows().find(r => r.id === res.id);
+      if (newRow) this.openPayment(newRow);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error al crear la reserva' });
+    }
+    this.newResSubmitting.set(false);
+  }
+
+  // ── Filters ────────────────────────────────────────────────────────────────
   clearFilters(): void {
     this.filterSearch.set('');
-    this.filterType.set(null);
     this.filterStatus.set(null);
     this.filterDate.set(null);
-    this.filterLiquidation.set(null);
   }
 
-  printDetail(): void {
-    const row = this.detailRow();
-    if (!row) return;
-    this.printService.print({
-      type: row.type,
-      statusLabel: this.getStatusConfig(row.status).label,
-      guest_name: row.guest_name,
-      guest_email: row.guest_email,
-      guest_phone: row.guest_phone,
-      reservation_date: this.formatDate(row.reservation_date),
-      time_slot_label: row.time_slot_label,
-      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
-      snack_name: this.detailSnackName(),
-      notes: row.notes || null,
-      extras: this.detailExtras(),
-      subtotal_cents: row.subtotal_cents,
-      total_cents: row.total_cents,
-      paid_deposit_cents: row.paid_deposit_cents,
-      liquidation_date: row.liquidation_date,
-      access_token: row.access_token,
-    });
-  }
-
-  shareWhatsApp(): void {
-    const row = this.detailRow();
-    if (!row) return;
-    const url = this.printService.getWhatsAppUrl({
-      type: row.type,
-      statusLabel: this.getStatusConfig(row.status).label,
-      guest_name: row.guest_name,
-      guest_email: row.guest_email,
-      guest_phone: row.guest_phone,
-      reservation_date: this.formatDate(row.reservation_date),
-      time_slot_label: row.time_slot_label,
-      guest_count_label: row.type === 'private' ? `${row.guest_count} invitados` : row.detail,
-      snack_name: this.detailSnackName(),
-      notes: row.notes || null,
-      extras: this.detailExtras(),
-      subtotal_cents: row.subtotal_cents,
-      total_cents: row.total_cents,
-      paid_deposit_cents: row.paid_deposit_cents,
-      liquidation_date: row.liquidation_date,
-      access_token: row.access_token,
-    });
-    window.open(url, '_blank');
-  }
-
+  // ── Helpers ────────────────────────────────────────────────────────────────
   getStatusConfig(status: ReservationStatus): { label: string; severity: string } {
     switch (status) {
-      case 'pending_payment':
-        return { label: 'Pendiente', severity: 'warn' };
-      case 'confirmed':
-        return { label: 'Confirmada', severity: 'success' };
-      case 'completed':
-        return { label: 'Completada', severity: 'info' };
-      case 'cancelled':
-        return { label: 'Cancelada', severity: 'danger' };
-      case 'expired':
-        return { label: 'Expirada', severity: 'secondary' };
-      default:
-        return { label: status, severity: 'info' };
+      case 'pending_payment': return { label: 'Pendiente',   severity: 'warn' };
+      case 'confirmed':       return { label: 'Confirmada',  severity: 'success' };
+      case 'completed':       return { label: 'Completada',  severity: 'info' };
+      case 'cancelled':       return { label: 'Cancelada',   severity: 'danger' };
+      default:                return { label: status,        severity: 'info' };
     }
   }
 
   formatDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  private formatDateISO(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-
-  private formatTime(time: string): string {
+  formatTime(time: string): string {
     const [h, m] = time.split(':');
     const hour = parseInt(h, 10);
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${m} ${ampm}`;
+    return `${hour % 12 || 12}:${m} ${ampm}`;
   }
 
-  private getSlotLabel(timeSlotId: string): string {
-    const slot = this.slotsMap.get(timeSlotId);
-    if (!slot) return '—';
-    return `${this.formatTime(slot.start_time)} – ${this.formatTime(slot.end_time)}`;
+  private formatDateISO(date: Date): string {
+    const y  = date.getFullYear();
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    const d  = String(date.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
   }
 
-  private calculateRawLiquidationDate(reservationDate: string, daysToLiquidate: number): string | null {
-    if (!daysToLiquidate) return null;
-    const d = new Date(reservationDate + 'T12:00:00');
-    d.setDate(d.getDate() - daysToLiquidate);
-    return this.formatDateISO(d);
+  private getSlotLabel(id: string): string {
+    const s = this.slotsMap.get(id);
+    if (!s) return '—';
+    return `${this.formatTime(s.start_time)} – ${this.formatTime(s.end_time)}`;
   }
 
-  private mapPrivate(r: PrivateReservation): AdminReservationRow {
-    return {
-      id: r.id,
-      type: 'private',
-      guest_name: r.guest_name,
-      guest_email: r.guest_email,
-      guest_phone: r.guest_phone,
-      reservation_date: r.reservation_date,
-      time_slot_label: this.getSlotLabel(r.time_slot_id),
-      status: r.status,
-      total_cents: r.total_cents,
-      subtotal_cents: r.subtotal_cents,
-      deposit_cents: r.deposit_cents,
-      guest_count: r.guest_count,
-      notes: r.notes ?? '',
-      access_token: r.access_token,
-      detail: `${r.guest_count} invitados`,
-      created_at: r.created_at,
-      snack_option_id: r.snack_option_id,
-      paid_deposit_cents: r.paid_deposit_cents ?? 0,
-      liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0) ? this.formatDate(this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0)!) : null,
-      raw_liquidation_date: this.calculateRawLiquidationDate(r.reservation_date, r.packages?.days_to_liquidate ?? 0),
-      contract_id: r.contract_id,
-      quote_id: r.quote_id,
-    };
-  }
-
-  private mapPlaydate(r: PlaydateReservation): AdminReservationRow {
+  private mapPlaydate(r: PlaydateReservation): PlayDayRow {
     const totalAdults = r.adults_count + r.extra_adults_count;
     return {
-      id: r.id,
-      type: 'playdate',
-      guest_name: r.guest_name,
-      guest_email: r.guest_email,
-      guest_phone: r.guest_phone,
+      id:               r.id,
+      guest_name:       r.guest_name,
+      guest_email:      r.guest_email,
+      guest_phone:      r.guest_phone,
       reservation_date: r.reservation_date,
-      time_slot_label: this.getSlotLabel(r.time_slot_id),
-      status: r.status,
-      total_cents: r.total_cents,
-      subtotal_cents: r.total_cents,
-      deposit_cents: r.total_cents,
-      guest_count: r.kids_count + r.adults_count + r.extra_adults_count,
-      notes: '',
-      access_token: r.access_token,
-      detail: `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
-      created_at: r.created_at,
-      snack_option_id: null,
+      time_slot_id:     r.time_slot_id,
+      time_slot_label:  this.getSlotLabel(r.time_slot_id),
+      status:           r.status,
+      total_cents:      r.total_cents,
       paid_deposit_cents: r.paid_deposit_cents ?? 0,
-      liquidation_date: null,
-      raw_liquidation_date: null,
+      kids_count:       r.kids_count,
+      adults_count:     r.adults_count,
+      extra_adults_count: r.extra_adults_count,
+      access_token:     r.access_token,
+      created_at:       r.created_at,
+      detail:           `${r.kids_count} niño(s), ${totalAdults} adulto(s)`,
     };
   }
 }
