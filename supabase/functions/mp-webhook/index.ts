@@ -13,6 +13,25 @@ serve(async (req) => {
   }
 
   try {
+    // Leer credenciales desde DB (con fallback a env vars para compatibilidad)
+    const supabaseForCreds = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+    const { data: ps } = await supabaseForCreds
+      .from('payment_settings')
+      .select('mp_mode, mp_sandbox_access_token, mp_prod_access_token, mp_sandbox_webhook_secret, mp_prod_webhook_secret')
+      .limit(1)
+      .maybeSingle()
+
+    const isProduction = ps?.mp_mode === 'production'
+    const mpWebhookSecret: string | undefined =
+      (isProduction ? ps?.mp_prod_webhook_secret : ps?.mp_sandbox_webhook_secret)
+      ?? Deno.env.get('MP_WEBHOOK_SECRET')
+    const mpAccessToken: string | undefined =
+      (isProduction ? ps?.mp_prod_access_token : ps?.mp_sandbox_access_token)
+      ?? Deno.env.get('MP_ACCESS_TOKEN')
+
     const url = new URL(req.url)
     const dataIdFromQuery = url.searchParams.get('data.id') || url.searchParams.get('id')
     const typeFromQuery = url.searchParams.get('type') || url.searchParams.get('topic')
@@ -23,8 +42,6 @@ serve(async (req) => {
     } catch {
       // Body may be empty for IPN notifications
     }
-
-    const mpWebhookSecret = Deno.env.get('MP_WEBHOOK_SECRET')
 
     if (mpWebhookSecret) {
       const xSignature = req.headers.get('x-signature')
@@ -74,7 +91,6 @@ serve(async (req) => {
       })
     }
 
-    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')
     if (!mpAccessToken) {
       return new Response(JSON.stringify({ error: 'MP_ACCESS_TOKEN not set' }), {
         status: 500,

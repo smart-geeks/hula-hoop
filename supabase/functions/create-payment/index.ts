@@ -28,7 +28,18 @@ serve(async (req) => {
     )
 
     const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:4200'
-    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')
+
+    // Leer credenciales desde DB (con fallback a env vars para compatibilidad)
+    const { data: ps } = await supabaseAdmin
+      .from('payment_settings')
+      .select('mp_mode, mp_sandbox_access_token, mp_prod_access_token')
+      .limit(1)
+      .maybeSingle()
+
+    const isProduction = ps?.mp_mode === 'production'
+    const mpAccessToken: string | undefined =
+      (isProduction ? ps?.mp_prod_access_token : ps?.mp_sandbox_access_token)
+      ?? Deno.env.get('MP_ACCESS_TOKEN')
 
     if (!mpAccessToken) {
       return new Response(
