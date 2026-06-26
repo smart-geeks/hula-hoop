@@ -31,6 +31,10 @@ export class AuthService {
     const role = this.userProfile()?.role;
     return role === 'owner' || role === 'admin';
   });
+  readonly canAccessAdmin = computed(() => {
+    const role = this.userProfile()?.role;
+    return role === 'owner' || role === 'admin' || role === 'staff' || role === 'readonly';
+  });
   readonly isPasswordRecovery = signal(false);
   readonly isInitialized = signal(!isPlatformBrowser(this.platformId));
 

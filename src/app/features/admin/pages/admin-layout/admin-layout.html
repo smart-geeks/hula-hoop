@@ -28,7 +28,7 @@
   <div class="flex flex-col h-full">
     <!-- Nav -->
     <nav class="flex-1 overflow-y-auto px-3 py-2">
-      @for (section of navSections; track section.label) {
+      @for (section of filteredNavSections(); track section.label) {
         <div class="mb-4">
           <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
             {{ section.label }}
@@ -49,12 +49,12 @@
       }
 
       <!-- Owner-only: Administración (mobile) -->
-      @if (canManage()) {
+      @if (filteredOwnerNavSection(); as section) {
         <div class="mb-4">
           <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-            {{ ownerNavSection.label }}
+            {{ section.label }}
           </p>
-          @for (item of ownerNavSection.items; track item.route) {
+          @for (item of section.items; track item.route) {
             <a
               [routerLink]="item.route"
               routerLinkActive="bg-rojo-brillante text-white shadow-sm"
@@ -156,7 +156,7 @@
 
     <!-- Nav sections -->
     <nav class="flex-1 overflow-y-auto py-3 px-2">
-      @for (section of navSections; track section.label) {
+      @for (section of filteredNavSections(); track section.label) {
         <div class="mb-4">
           @if (!sidebarCollapsed()) {
             <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
@@ -186,16 +186,16 @@
       }
 
       <!-- Owner-only: Administración -->
-      @if (canManage()) {
+      @if (filteredOwnerNavSection(); as section) {
         <div class="mb-4">
           @if (!sidebarCollapsed()) {
             <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-              {{ ownerNavSection.label }}
+              {{ section.label }}
             </p>
           } @else {
             <div class="border-t border-slate-100 mb-3 mx-2"></div>
           }
-          @for (item of ownerNavSection.items; track item.route) {
+          @for (item of section.items; track item.route) {
             <a
               [routerLink]="item.route"
               routerLinkActive="!bg-rojo-brillante !text-white shadow-sm"
@@ -217,19 +217,21 @@
 
     <!-- Collapse toggle + config -->
     <div class="border-t border-slate-100 p-2">
-      <a
-        routerLink="configuracion"
-        routerLinkActive="!bg-rojo-brillante !text-white"
-        [pTooltip]="sidebarCollapsed() ? 'Configuración' : ''"
-        tooltipPosition="right"
-        [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-3'"
-        class="flex items-center py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all mb-1 w-full"
-      >
-        <i class="pi pi-cog text-base shrink-0"></i>
-        @if (!sidebarCollapsed()) {
-          <span class="text-sm font-medium">Configuración</span>
-        }
-      </a>
+      @if (hasConfigAccess()) {
+        <a
+          routerLink="configuracion"
+          routerLinkActive="!bg-rojo-brillante !text-white"
+          [pTooltip]="sidebarCollapsed() ? 'Configuración' : ''"
+          tooltipPosition="right"
+          [class]="sidebarCollapsed() ? 'justify-center px-0' : 'px-3 gap-3'"
+          class="flex items-center py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all mb-1 w-full"
+        >
+          <i class="pi pi-cog text-base shrink-0"></i>
+          @if (!sidebarCollapsed()) {
+            <span class="text-sm font-medium">Configuración</span>
+          }
+        </a>
+      }
       <button
         (click)="toggleSidebar()"
         [pTooltip]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
@@ -360,38 +362,46 @@
 <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
   @if (fabOpen()) {
     <div class="flex flex-col items-end gap-2 mb-1">
-      <a
-        routerLink="reservas"
-        (click)="fabOpen.set(false)"
-        class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
-      >
-        <i class="pi pi-calendar-plus text-blue-500"></i>
-        Nueva reserva
-      </a>
-      <a
-        routerLink="cotizaciones"
-        (click)="fabOpen.set(false)"
-        class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
-      >
-        <i class="pi pi-file-plus text-violet-500"></i>
-        Nueva cotización
-      </a>
-      <a
-        routerLink="contratos"
-        (click)="fabOpen.set(false)"
-        class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
-      >
-        <i class="pi pi-file-edit text-emerald-500"></i>
-        Nuevo contrato
-      </a>
+      @if (permissionService.hasMenuAccess('reservas')) {
+        <a
+          routerLink="reservas"
+          (click)="fabOpen.set(false)"
+          class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
+        >
+          <i class="pi pi-calendar-plus text-blue-500"></i>
+          Nueva reserva
+        </a>
+      }
+      @if (permissionService.hasMenuAccess('cotizaciones')) {
+        <a
+          routerLink="cotizaciones"
+          (click)="fabOpen.set(false)"
+          class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
+        >
+          <i class="pi pi-file-plus text-violet-500"></i>
+          Nueva cotización
+        </a>
+      }
+      @if (permissionService.hasMenuAccess('contratos')) {
+        <a
+          routerLink="contratos"
+          (click)="fabOpen.set(false)"
+          class="flex items-center gap-2.5 bg-white text-slate-700 px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap"
+        >
+          <i class="pi pi-file-edit text-emerald-500"></i>
+          Nuevo contrato
+        </a>
+      }
     </div>
   }
-  <button
-    (click)="toggleFab()"
-    [class]="fabOpen() ? 'bg-slate-700 rotate-45' : 'bg-rojo-brillante'"
-    class="w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-    aria-label="Acciones rápidas"
-  >
-    <i class="pi pi-plus text-xl"></i>
-  </button>
+  @if (permissionService.hasMenuAccess('reservas') || permissionService.hasMenuAccess('cotizaciones') || permissionService.hasMenuAccess('contratos')) {
+    <button
+      (click)="toggleFab()"
+      [class]="fabOpen() ? 'bg-slate-700 rotate-45' : 'bg-rojo-brillante'"
+      class="w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+      aria-label="Acciones rápidas"
+    >
+      <i class="pi pi-plus text-xl"></i>
+    </button>
+  }
 </div>

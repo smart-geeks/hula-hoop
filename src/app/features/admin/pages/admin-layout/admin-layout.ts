@@ -16,6 +16,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AvatarModule } from 'primeng/avatar';
 import { BadgeModule } from 'primeng/badge';
 import { AuthService } from '../../../../core/services/auth.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { GlobalSearch } from '../../components/global-search/global-search';
@@ -70,6 +71,8 @@ export class AdminLayout implements OnDestroy {
   readonly newReservationNotif = signal<{ name: string; type: string } | null>(null);
   readonly notifVisible = signal(false);
 
+  public readonly permissionService = inject(PermissionService);
+
   readonly userProfile = this.auth.userProfile;
   readonly isOwner = this.auth.isOwner;
   readonly canManage = this.auth.canManage;
@@ -82,6 +85,61 @@ export class AdminLayout implements OnDestroy {
       .map((n) => n[0])
       .join('')
       .toUpperCase();
+  });
+
+  readonly filteredNavSections = computed(() => {
+    // Re-evaluate when permissions load/change
+    const perms = this.permissionService.currentPermissions();
+    if (!perms) return [];
+
+    const filtered: NavSection[] = [];
+    for (const section of this.navSections) {
+      const filteredItems: NavItem[] = [];
+      for (const item of section.items) {
+        let moduleKey = item.route;
+        if (item.route === 'punto-de-venta') {
+          moduleKey = 'hoy';
+        }
+        if (this.permissionService.hasMenuAccess(moduleKey)) {
+          filteredItems.push(item);
+        }
+      }
+      if (filteredItems.length > 0) {
+        filtered.push({
+          label: section.label,
+          items: filteredItems,
+        });
+      }
+    }
+    return filtered;
+  });
+
+  readonly filteredOwnerNavSection = computed(() => {
+    const perms = this.permissionService.currentPermissions();
+    if (!perms) return null;
+
+    const filteredItems: NavItem[] = [];
+    for (const item of this.ownerNavSection.items) {
+      let moduleKey = item.route;
+      if (item.route === 'roles') {
+        moduleKey = 'configuracion';
+      }
+      if (this.permissionService.hasMenuAccess(moduleKey)) {
+        filteredItems.push(item);
+      }
+    }
+
+    if (filteredItems.length > 0) {
+      return {
+        label: this.ownerNavSection.label,
+        items: filteredItems,
+      };
+    }
+    return null;
+  });
+
+  readonly hasConfigAccess = computed(() => {
+    return this.permissionService.hasMenuAccess('configuracion');
   });
 
   // ── Navigation (task-oriented grouping) ───────────────────

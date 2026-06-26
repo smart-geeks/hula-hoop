@@ -28,6 +28,7 @@ export class Topbar {
 
   readonly isLoggedIn = this.auth.isLoggedIn;
   readonly isAdmin = this.auth.isAdmin;
+  readonly canAccessAdmin = this.auth.canAccessAdmin;
 
   constructor() {
     effect(() => {

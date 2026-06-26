@@ -8,8 +8,7 @@ export const adminGuard: CanActivateFn = async () => {
 
   await auth.awaitReady();
 
-  const role = auth.userProfile()?.role;
-  const hasAccess = role === 'owner' || role === 'admin' || role === 'staff';
+  const hasAccess = auth.canAccessAdmin();
 
   if (hasAccess) {
     return true;
