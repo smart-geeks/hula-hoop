@@ -176,7 +176,7 @@ export class AdminPos {
         nombre: r.name,
         sku: null,
         precio: r.price_cents / 100,
-        categoria: 'Restaurante - ' + r.category,
+        categoria: r.category,
         stock: 999,
         unidad: 'serv'
       }));
@@ -224,7 +224,7 @@ export class AdminPos {
   readonly categories = computed(() => {
     const dbNames = new Set(this.productCategories().map((c) => c.nombre));
     const invCats = this.inventory().map((i) => i.categoria).filter(Boolean) as string[];
-    const restCats = this.restaurantItems().map((r) => 'Restaurante - ' + r.category);
+    const restCats = this.restaurantItems().map((r) => r.category);
     const allCats = [...invCats, ...restCats, 'Extras'];
     const extra = allCats.filter((c) => !dbNames.has(c));
     return [...Array.from(dbNames), ...Array.from(new Set(extra))];
