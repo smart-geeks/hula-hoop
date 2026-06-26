@@ -22,6 +22,16 @@ export interface PosSession {
   closed_at: string | null;
   total_ventas: number;
   created_by: string | null;
+  opening_cash?: number;
+  expected_cash?: number;
+  declared_cash?: number;
+  expected_card?: number;
+  declared_card?: number;
+  expected_transfer?: number;
+  declared_transfer?: number;
+  cash_difference?: number;
+  notes?: string;
+  closed_by?: string | null;
   // Relations
   contract?: { folio: string; fecha_evento: string };
   cashier?: { nombre: string };

@@ -193,6 +193,18 @@
                 }
               </select>
             </div>
+            <div>
+              <label for="pos-opening-cash" class="block text-sm font-medium text-slate-700 mb-1.5 text-left">
+                Fondo inicial de apertura (Efectivo en caja)
+              </label>
+              <div class="relative">
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <input id="pos-opening-cash" type="number"
+                  [ngModel]="openingCashInput()"
+                  (ngModelChange)="openingCashInput.set($event)"
+                  class="w-full pl-8 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+              </div>
+            </div>
             <div class="flex gap-3">
               <button (click)="showNewSession.set(false)"
                 class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">
@@ -506,4 +518,444 @@
     </div>
   }
 
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL: Corte de Caja (Wizard Step-by-Step)
+  ════════════════════════════════════════════════════════ -->
+  @if (showCloseSessionModal()) {
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-shield text-rojo-brillante text-lg"></i>
+            <h3 class="font-bold text-slate-800 text-lg">Cierre de Caja (Corte de Caja)</h3>
+          </div>
+          <button (click)="showCloseSessionModal.set(false)" class="text-slate-400 hover:text-slate-600">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <!-- Scrollable content -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+          <!-- PASO 1: Ingreso de PIN del Cajero -->
+          @if (closeSessionStep() === 1) {
+            <div class="space-y-4 text-center max-w-xs mx-auto">
+              <div class="w-14 h-14 rounded-full bg-rojo-brillante/10 flex items-center justify-center mx-auto text-rojo-brillante">
+                <i class="pi pi-lock text-xl"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-800">Autorización del Cajero</h4>
+                <p class="text-xs text-slate-500 mt-1">Ingresa tu PIN de 4 dígitos para confirmar el cierre de sesión</p>
+              </div>
+
+              <!-- Indicadores de PIN -->
+              <div class="flex justify-center gap-3 my-4">
+                @for (filled of closePinDots(); track $index) {
+                  <div [class]="'w-4 h-4 rounded-full border-2 transition-all duration-150 '
+                    + (closePinError()
+                        ? 'border-red-400 ' + (filled ? 'bg-red-400' : 'bg-transparent')
+                        : filled
+                          ? 'border-rojo-brillante bg-rojo-brillante'
+                          : 'border-slate-300 bg-transparent')">
+                  </div>
+                }
+              </div>
+
+              @if (closePinError()) {
+                <p class="text-xs text-red-500 font-medium my-2">PIN incorrecto. Inténtalo de nuevo.</p>
+              }
+
+              <!-- Teclado Numérico -->
+              <div class="grid grid-cols-3 gap-2">
+                @for (key of ['1','2','3','4','5','6','7','8','9','⌫','0','✓']; track key) {
+                  @if (key === '⌫') {
+                    <button (click)="removeClosePin()" [disabled]="closePinValidating()"
+                      class="h-12 rounded-xl border border-slate-200 text-slate-600 text-lg hover:bg-slate-50 flex items-center justify-center">
+                      <i class="pi pi-delete-left"></i>
+                    </button>
+                  } @else if (key === '✓') {
+                    <button (click)="submitClosePin()" [disabled]="closePinInput().length === 0 || closePinValidating()"
+                      class="h-12 rounded-xl bg-rojo-brillante text-white text-sm font-bold flex items-center justify-center hover:bg-rojo-brillante/90 disabled:opacity-40">
+                      @if (closePinValidating()) {
+                        <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                      } @else {
+                        <i class="pi pi-check text-base"></i>
+                      }
+                    </button>
+                  } @else {
+                    <button (click)="addClosePin(key)" [disabled]="closePinInput().length >= 4 || closePinValidating()"
+                      class="h-12 rounded-xl border border-slate-200 text-slate-800 text-lg font-semibold hover:bg-slate-50">
+                      {{ key }}
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
+
+          <!-- PASO 2: Conteo y Declaraciones -->
+          @else if (closeSessionStep() === 2) {
+            <div class="space-y-5">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm mb-1">1. Conteo de Efectivo (Billetes / Monedas)</h4>
+                <p class="text-xs text-slate-500">Ingresa la cantidad física de cada denominación que hay en caja</p>
+              </div>
+
+              <!-- Grid de Denominaciones -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 border border-slate-200/60 rounded-2xl">
+                @for (denom of cashDenominations(); track denom.value; let idx = $index) {
+                  <div class="flex items-center justify-between bg-white border border-slate-100 px-3 py-2 rounded-xl shadow-xs">
+                    <span class="text-sm font-semibold text-slate-700 w-16">${{ denom.value }}</span>
+                    <div class="flex items-center gap-1.5">
+                      <button (click)="updateDenomination(idx, -1)" class="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm select-none">-</button>
+                      <input type="number" [(ngModel)]="denom.count" min="0" class="w-12 text-center text-sm font-bold border-b border-slate-200 focus:outline-none focus:border-rojo-brillante" />
+                      <button (click)="updateDenomination(idx, 1)" class="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm select-none">+</button>
+                    </div>
+                    <span class="text-xs font-mono text-slate-400 w-16 text-right font-semibold">${{ denom.value * denom.count }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Cambio Menor / Monedas</label>
+                  <input type="number" [(ngModel)]="otherCoinsInput" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Total Efectivo Físico</label>
+                  <div class="px-3 py-2 text-sm font-bold bg-slate-100 text-slate-800 rounded-xl border border-slate-200 flex justify-between">
+                    <span>$</span>
+                    <span>{{ declaredCashTotal() | number:'1.0-0' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="border-slate-100" />
+
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm mb-1">2. Tarjetas y Transferencias</h4>
+                <p class="text-xs text-slate-500">Declara los importes que reportan las terminales bancarias y las transferencias de hoy</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Tarjeta Declarada</label>
+                  <input type="number" [(ngModel)]="declaredCardInput" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Transferencia Decl.</label>
+                  <input type="number" [(ngModel)]="declaredTransferInput" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante" />
+                </div>
+              </div>
+
+              <div class="flex gap-3 pt-2">
+                <button (click)="closeSessionStep.set(1)" class="flex-1 py-3 border border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50 text-sm">Atrás</button>
+                <button (click)="closeSessionStep.set(3)" class="flex-1 py-3 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-700 text-sm">Ver Conciliación</button>
+              </div>
+            </div>
+          }
+
+          <!-- PASO 3: Resumen y Notas -->
+          @else if (closeSessionStep() === 3) {
+            <div class="space-y-5">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm mb-1">3. Conciliación y Diferencias</h4>
+                <p class="text-xs text-slate-500">Valores esperados contra los declarados</p>
+              </div>
+
+              <div class="border border-slate-200/80 rounded-2xl overflow-hidden text-sm">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-100">
+                      <th class="p-3">Método</th>
+                      <th class="p-3 text-right">Esperado</th>
+                      <th class="p-3 text-right">Declarado</th>
+                      <th class="p-3 text-right">Diferencia</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 font-medium">
+                    <tr>
+                      <td class="p-3 text-slate-700">Efectivo</td>
+                      <td class="p-3 text-right text-slate-600">${{ expectedCash() | number:'1.0-0' }}</td>
+                      <td class="p-3 text-right text-slate-800">${{ declaredCashTotal() | number:'1.0-0' }}</td>
+                      <td [class]="'p-3 text-right font-bold ' + (cashDifference() === 0 ? 'text-emerald-600' : cashDifference() > 0 ? 'text-amber-600' : 'text-red-600')">
+                        ${{ cashDifference() | number:'1.0-0' }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-700">Tarjeta</td>
+                      <td class="p-3 text-right text-slate-600">${{ expectedCard() | number:'1.0-0' }}</td>
+                      <td class="p-3 text-right text-slate-800">${{ declaredCardInput() | number:'1.0-0' }}</td>
+                      <td [class]="'p-3 text-right font-bold ' + (declaredCardInput() - expectedCard() === 0 ? 'text-emerald-600' : declaredCardInput() - expectedCard() > 0 ? 'text-amber-600' : 'text-red-600')">
+                        ${{ (declaredCardInput() - expectedCard()) | number:'1.0-0' }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-700">Transferencia</td>
+                      <td class="p-3 text-right text-slate-600">${{ expectedTransfer() | number:'1.0-0' }}</td>
+                      <td class="p-3 text-right text-slate-800">${{ declaredTransferInput() | number:'1.0-0' }}</td>
+                      <td [class]="'p-3 text-right font-bold ' + (declaredTransferInput() - expectedTransfer() === 0 ? 'text-emerald-600' : declaredTransferInput() - expectedTransfer() > 0 ? 'text-amber-600' : 'text-red-600')">
+                        ${{ (declaredTransferInput() - expectedTransfer()) | number:'1.0-0' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Alerta de Discrepancia -->
+              @if (cashDifference() !== 0) {
+                <div [class]="'p-4 rounded-2xl flex items-start gap-3 border ' + (cashDifference() < 0 ? 'bg-red-50/50 border-red-200 text-red-700' : 'bg-amber-50/50 border-amber-200 text-amber-700')">
+                  <i class="pi pi-exclamation-triangle text-base mt-0.5"></i>
+                  <div>
+                    <h5 class="font-bold text-sm">Discrepancia de caja detectada</h5>
+                    <p class="text-xs mt-0.5">
+                      @if (cashDifference() < 0) {
+                        Hay un faltante de <strong>${{ Math.abs(cashDifference()) | number:'1.0-0' }}</strong> en efectivo.
+                      } @else {
+                        Hay un sobrante de <strong>${{ cashDifference() | number:'1.0-0' }}</strong> en efectivo.
+                      }
+                      Por favor describe los detalles en las notas del corte de caja.
+                    </p>
+                  </div>
+                </div>
+              }
+
+              <!-- Notas / Observaciones -->
+              <div>
+                <label for="close-notes" class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Notas del Corte / Observaciones</label>
+                <textarea id="close-notes" [(ngModel)]="closeNotes" rows="3" placeholder="Ingresa detalles de faltantes, observaciones, aclaraciones, etc..."
+                  class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante focus:outline-none"></textarea>
+              </div>
+
+              <div class="flex gap-3">
+                <button (click)="closeSessionStep.set(2)" class="flex-1 py-3 border border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50 text-sm">Atrás</button>
+                <button (click)="closeSessionSubmit()" [disabled]="processing()"
+                  class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 text-sm flex items-center justify-center gap-2">
+                  @if (processing()) {
+                    <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                  } @else {
+                    <i class="pi pi-check-circle"></i>
+                  }
+                  Cerrar Turno & Guardar
+                </button>
+              </div>
+            </div>
+          }
+
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL: Reporte de Corte de Caja (Summary & Printable)
+  ════════════════════════════════════════════════════════ -->
+  @if (showSummaryModal()) {
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <!-- Modal Header no-print -->
+        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between no-print">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+              <i class="pi pi-check"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg">Corte de Caja Completado</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="window.print()" class="flex items-center gap-1.5 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-50">
+              <i class="pi pi-print"></i>
+              Imprimir
+            </button>
+            <button (click)="showSummaryModal.set(false)" class="text-slate-400 hover:text-slate-600 ml-1">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Printable Report Container -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 print-report text-slate-800">
+          
+          <!-- Brand Logo and Header for PDF/Print -->
+          <div class="text-center pb-4 border-b border-slate-100">
+            <h2 class="text-xl font-bold text-slate-900 tracking-tight">HULA HOOP</h2>
+            <p class="text-xs text-slate-500 font-medium">REPORTE DE CORTE DE CAJA (SESIÓN POS)</p>
+          </div>
+
+          <!-- Metadata Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-medium text-slate-500">
+            <div>
+              <p class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Sucursal</p>
+              <p class="text-slate-800 text-sm mt-0.5">Hula Hoop Mx</p>
+            </div>
+            <div>
+              <p class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Cajero</p>
+              <p class="text-slate-800 text-sm mt-0.5">{{ lastClosedSessionSummary()?.cashier?.nombre ?? lastClosedSessionSummary()?.closed_by ?? 'Cajero' }}</p>
+            </div>
+            <div>
+              <p class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Apertura</p>
+              <p class="text-slate-800 text-sm mt-0.5">{{ lastClosedSessionSummary()?.opened_at | date:'short' }}</p>
+            </div>
+            <div>
+              <p class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Cierre</p>
+              <p class="text-slate-800 text-sm mt-0.5">{{ lastClosedSessionSummary()?.closed_at | date:'short' }}</p>
+            </div>
+          </div>
+
+          <hr class="border-slate-100" />
+
+          <!-- Financial Balance Section -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-sm mb-3">Resumen de Ventas y Arqueo</h4>
+            <div class="border border-slate-100 rounded-2xl overflow-hidden">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-100">
+                    <th class="p-3">Concepto</th>
+                    <th class="p-3 text-right">Esperado</th>
+                    <th class="p-3 text-right">Declarado</th>
+                    <th class="p-3 text-right">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                  <tr>
+                    <td class="p-3 text-slate-700">Fondo Inicial (Efectivo)</td>
+                    <td class="p-3 text-right text-slate-600">${{ lastClosedSessionSummary()?.opening_cash | number:'1.0-0' }}</td>
+                    <td class="p-3 text-right text-slate-800">—</td>
+                    <td class="p-3 text-right text-slate-400">—</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-slate-700">Efectivo de Ventas</td>
+                    <td class="p-3 text-right text-slate-600">${{ ((lastClosedSessionSummary()?.expected_cash ?? 0) - (lastClosedSessionSummary()?.opening_cash ?? 0)) | number:'1.0-0' }}</td>
+                    <td class="p-3 text-right text-slate-800">—</td>
+                    <td class="p-3 text-right text-slate-400">—</td>
+                  </tr>
+                  <tr class="bg-slate-50/40">
+                    <td class="p-3 text-slate-900 font-bold">Total Efectivo en Caja</td>
+                    <td class="p-3 text-right text-slate-700 font-semibold">${{ lastClosedSessionSummary()?.expected_cash | number:'1.0-0' }}</td>
+                    <td class="p-3 text-right text-slate-900 font-bold">${{ lastClosedSessionSummary()?.declared_cash | number:'1.0-0' }}</td>
+                    <td [class]="'p-3 text-right font-bold ' + ((lastClosedSessionSummary()?.cash_difference ?? 0) === 0 ? 'text-emerald-600' : (lastClosedSessionSummary()?.cash_difference ?? 0) > 0 ? 'text-amber-600' : 'text-red-600')">
+                      ${{ lastClosedSessionSummary()?.cash_difference | number:'1.0-0' }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-slate-700">Tarjetas (POS)</td>
+                    <td class="p-3 text-right text-slate-600">${{ lastClosedSessionSummary()?.expected_card | number:'1.0-0' }}</td>
+                    <td class="p-3 text-right text-slate-800">${{ lastClosedSessionSummary()?.declared_card | number:'1.0-0' }}</td>
+                    <td [class]="'p-3 text-right font-bold ' + (((lastClosedSessionSummary()?.declared_card ?? 0) - (lastClosedSessionSummary()?.expected_card ?? 0)) === 0 ? 'text-emerald-600' : 'text-red-600')">
+                      ${{ ((lastClosedSessionSummary()?.declared_card ?? 0) - (lastClosedSessionSummary()?.expected_card ?? 0)) | number:'1.0-0' }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-slate-700">Transferencias Bancarias</td>
+                    <td class="p-3 text-right text-slate-600">${{ lastClosedSessionSummary()?.expected_transfer | number:'1.0-0' }}</td>
+                    <td class="p-3 text-right text-slate-800">${{ lastClosedSessionSummary()?.declared_transfer | number:'1.0-0' }}</td>
+                    <td [class]="'p-3 text-right font-bold ' + (((lastClosedSessionSummary()?.declared_transfer ?? 0) - (lastClosedSessionSummary()?.expected_transfer ?? 0)) === 0 ? 'text-emerald-600' : 'text-red-600')">
+                      ${{ ((lastClosedSessionSummary()?.declared_transfer ?? 0) - (lastClosedSessionSummary()?.expected_transfer ?? 0)) | number:'1.0-0' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Notes Section -->
+          @if (lastClosedSessionSummary()?.notes) {
+            <div class="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl">
+              <p class="font-bold text-xs text-slate-500 uppercase tracking-wide">Notas y Observaciones</p>
+              <p class="text-sm text-slate-700 mt-1 font-medium italic">"{{ lastClosedSessionSummary()?.notes }}"</p>
+            </div>
+          }
+
+          <hr class="border-slate-100" />
+
+          <!-- Outflows / Products Sold Section -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-bold text-slate-800 text-sm">Productos que salieron de almacén (Salidas)</h4>
+              <span class="text-xs font-semibold text-slate-400 uppercase">Total Items: {{ lastClosedSessionGroupedItems().length }}</span>
+            </div>
+            
+            <div class="border border-slate-100 rounded-2xl overflow-hidden">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-100">
+                    <th class="p-3">Artículo / Producto</th>
+                    <th class="p-3">SKU</th>
+                    <th class="p-3">Categoría</th>
+                    <th class="p-3 text-right">Cant. Salida</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                  @for (item of lastClosedSessionGroupedItems(); track item.nombre) {
+                    <tr>
+                      <td class="p-3 text-slate-800">{{ item.nombre }}</td>
+                      <td class="p-3 font-mono text-xs text-slate-400">{{ item.sku ?? '—' }}</td>
+                      <td class="p-3 text-slate-500"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold">{{ item.tipo }}</span></td>
+                      <td class="p-3 text-right font-bold text-slate-900">{{ item.cantidad }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="p-6 text-center text-slate-400">No se registraron salidas de inventario en este turno.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Bottom signature lines for print -->
+          <div class="grid grid-cols-2 gap-12 pt-16 text-center text-xs font-medium text-slate-500 signature-block">
+            <div>
+              <div class="border-t border-slate-300 w-44 mx-auto pt-2"></div>
+              <p class="font-bold text-slate-700">Firma del Cajero</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">{{ lastClosedSessionSummary()?.cashier?.nombre ?? lastClosedSessionSummary()?.closed_by ?? 'Cajero' }}</p>
+            </div>
+            <div>
+              <div class="border-t border-slate-300 w-44 mx-auto pt-2"></div>
+              <p class="font-bold text-slate-700">Firma de Auditoría</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">Socia / Director</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer buttons no-print -->
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end no-print">
+          <button (click)="showSummaryModal.set(false)" class="px-5 py-2.5 bg-slate-800 text-white font-semibold rounded-xl text-sm hover:bg-slate-700">
+            Aceptar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>
+
+<style>
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .print-report, .print-report * {
+      visibility: visible;
+    }
+    .print-report {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .signature-block {
+      margin-top: 4rem;
+    }
+  }
+</style>

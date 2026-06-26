@@ -19,6 +19,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
 import { VenueService } from '../../../../core/services/venue.service';
+import { PosService } from '../../../../core/services/pos.service';
 import { GlobalSearch } from '../../components/global-search/global-search';
 import { VenueSwitcher } from '../../components/venue-switcher/venue-switcher';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -58,6 +59,7 @@ export class AdminLayout implements OnDestroy {
   readonly venueService = inject(VenueService);
   private readonly router = inject(Router);
   private readonly supabase = inject(SupabaseService);
+  private readonly posService = inject(PosService);
   private readonly doc = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private realtimeChannel: RealtimeChannel | null = null;
@@ -272,6 +274,11 @@ export class AdminLayout implements OnDestroy {
   }
 
   async logout(): Promise<void> {
+    const active = await this.posService.getActiveSessions();
+    if (active.length > 0) {
+      alert('No puedes cerrar sesión porque tienes un turno de caja activo. Realiza el Corte de Caja antes de salir.');
+      return;
+    }
     await this.auth.logout();
     this.router.navigate(['/']);
   }

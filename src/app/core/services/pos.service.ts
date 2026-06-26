@@ -8,7 +8,7 @@ export class PosService {
   private readonly supabase = inject(SupabaseService);
   private readonly venue    = inject(VenueService);
 
-  async openSession(contractId?: string, cashierId?: string): Promise<PosSession | null> {
+  async openSession(contractId?: string, cashierId?: string, openingCash?: number): Promise<PosSession | null> {
     const client  = this.supabase.client;
     const venueId = this.venue.currentVenueId();
     if (!client || !venueId) return null;
@@ -19,6 +19,7 @@ export class PosService {
         contract_id: contractId ?? null,
         cashier_id: cashierId ?? null,
         venue_id: venueId,
+        opening_cash: openingCash ?? 0,
       })
       .select('*, contract:contracts(folio, fecha_evento), cashier:cashier_profiles(nombre)')
       .single();
@@ -30,14 +31,40 @@ export class PosService {
     return data;
   }
 
-  async closeSession(sessionId: string, totalVentas: number): Promise<boolean> {
+  async closeSession(params: {
+    sessionId: string;
+    totalVentas: number;
+    openingCash: number;
+    expectedCash: number;
+    declaredCash: number;
+    expectedCard: number;
+    declaredCard: number;
+    expectedTransfer: number;
+    declaredTransfer: number;
+    cashDifference: number;
+    notes?: string;
+    closedBy?: string;
+  }): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;
 
     const { error } = await client
       .from('pos_sessions')
-      .update({ closed_at: new Date().toISOString(), total_ventas: totalVentas })
-      .eq('id', sessionId);
+      .update({
+        closed_at: new Date().toISOString(),
+        total_ventas: params.totalVentas,
+        opening_cash: params.openingCash,
+        expected_cash: params.expectedCash,
+        declared_cash: params.declaredCash,
+        expected_card: params.expectedCard,
+        declared_card: params.declaredCard,
+        expected_transfer: params.expectedTransfer,
+        declared_transfer: params.declaredTransfer,
+        cash_difference: params.cashDifference,
+        notes: params.notes ?? null,
+        closed_by: params.closedBy ?? null,
+      })
+      .eq('id', params.sessionId);
 
     if (error) {
       console.error('Error closing POS session:', error.message);

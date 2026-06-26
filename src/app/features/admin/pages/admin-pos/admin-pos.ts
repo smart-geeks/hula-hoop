@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
 import { PosService } from '../../../../core/services/pos.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { ContractService } from '../../../../core/services/contract.service';
@@ -28,7 +28,7 @@ import type { Category } from '../../../../core/interfaces/category';
 @Component({
   selector: 'app-admin-pos',
   templateUrl: './admin-pos.html',
-  imports: [FormsModule, CurrencyPipe],
+  imports: [FormsModule, CurrencyPipe, DecimalPipe, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPos {
@@ -43,6 +43,7 @@ export class AdminPos {
   private readonly venueService          = inject(VenueService);
   private readonly reservationService    = inject(ReservationService);
   private readonly supabase              = inject(SupabaseService);
+  protected readonly Math = Math;
 
   // ── Core data ─────────────────────────────────────────────
   readonly loading        = signal(true);
@@ -61,6 +62,71 @@ export class AdminPos {
   readonly selectedContractId  = signal('');
   readonly showNewSession      = signal(false);
   readonly productCategories   = signal<Category[]>([]);
+
+  // ── Corte de Caja (Closure Flow) ──────────────────────────
+  readonly openingCashInput = signal<number>(1000);
+  readonly showCloseSessionModal = signal(false);
+  readonly closeSessionStep = signal<number>(1);
+  readonly closePinInput = signal<string>('');
+  readonly closePinError = signal<boolean>(false);
+  readonly closePinValidating = signal<boolean>(false);
+  readonly closeNotes = signal<string>('');
+  
+  readonly cashDenominations = signal<{ value: number; count: number }[]>([
+    { value: 500, count: 0 },
+    { value: 200, count: 0 },
+    { value: 100, count: 0 },
+    { value: 50, count: 0 },
+    { value: 20, count: 0 },
+    { value: 10, count: 0 },
+    { value: 5, count: 0 },
+    { value: 2, count: 0 },
+    { value: 1, count: 0 },
+  ]);
+  readonly otherCoinsInput = signal<number>(0);
+  readonly declaredCardInput = signal<number>(0);
+  readonly declaredTransferInput = signal<number>(0);
+
+  readonly showSummaryModal = signal<boolean>(false);
+  readonly lastClosedSessionSummary = signal<PosSession | null>(null);
+  readonly lastClosedSessionGroupedItems = signal<{ nombre: string; sku: string | null; cantidad: number; tipo: string }[]>([]);
+
+  // ── Computed for closure expectations ──────────────────────
+  readonly expectedCash = computed(() => {
+    const session = this.activeSession();
+    if (!session) return 0;
+    const initial = session.opening_cash ?? 0;
+    const cashSales = this.salesHistory()
+      .filter((s) => s.pagado_con === 'efectivo')
+      .reduce((sum, s) => sum + s.total, 0);
+    return initial + cashSales;
+  });
+
+  readonly expectedCard = computed(() => {
+    return this.salesHistory()
+      .filter((s) => s.pagado_con === 'tarjeta')
+      .reduce((sum, s) => sum + s.total, 0);
+  });
+
+  readonly expectedTransfer = computed(() => {
+    return this.salesHistory()
+      .filter((s) => s.pagado_con === 'transferencia')
+      .reduce((sum, s) => sum + s.total, 0);
+  });
+
+  readonly declaredCashTotal = computed(() => {
+    const denoms = this.cashDenominations().reduce((sum, d) => sum + (d.value * d.count), 0);
+    return denoms + this.otherCoinsInput();
+  });
+
+  readonly cashDifference = computed(() => {
+    return this.declaredCashTotal() - this.expectedCash();
+  });
+
+  readonly closePinDots = computed(() => {
+    const len = this.closePinInput().length;
+    return [0, 1, 2, 3].map((i) => i < len);
+  });
 
   // ── Cajero auth ────────────────────────────────────────────
   readonly cashiers        = signal<CashierProfile[]>([]);
@@ -300,7 +366,7 @@ export class AdminPos {
     this.processing.set(true);
     const contractId = this.selectedContractId() || undefined;
     const cashierId  = this.activeCashier()?.id;
-    const session    = await this.posService.openSession(contractId, cashierId);
+    const session    = await this.posService.openSession(contractId, cashierId, this.openingCashInput());
     if (session) {
       this.activeSession.set(session);
       this.salesHistory.set([]);
@@ -312,17 +378,136 @@ export class AdminPos {
     this.processing.set(false);
   }
 
-  async closeSession(): Promise<void> {
+  closeSession(): void {
     const session = this.activeSession();
     if (!session) return;
+
+    this.closeSessionStep.set(1);
+    this.closePinInput.set('');
+    this.closePinError.set(false);
+    this.closeNotes.set('');
+    this.otherCoinsInput.set(0);
+    this.declaredCardInput.set(this.expectedCard());
+    this.declaredTransferInput.set(this.expectedTransfer());
+
+    // Reset denominations
+    const denoms = this.cashDenominations().map((d) => ({ ...d, count: 0 }));
+    this.cashDenominations.set(denoms);
+
+    this.showCloseSessionModal.set(true);
+  }
+
+  addClosePin(digit: string): void {
+    if (this.closePinInput().length < 4) {
+      this.closePinInput.update((p) => p + digit);
+    }
+  }
+
+  removeClosePin(): void {
+    if (this.closePinInput().length > 0) {
+      this.closePinInput.update((p) => p.slice(0, -1));
+    }
+  }
+
+  async submitClosePin(): Promise<void> {
+    const cashier = this.activeCashier();
+    if (!cashier || this.closePinInput().length === 0 || this.closePinValidating()) return;
+
+    this.closePinValidating.set(true);
+    const validated = await this.cashierService.validatePin(cashier.id, this.closePinInput());
+    this.closePinValidating.set(false);
+
+    if (validated) {
+      this.closeSessionStep.set(2);
+      this.closePinError.set(false);
+      this.closePinInput.set('');
+    } else {
+      this.closePinError.set(true);
+      this.closePinInput.set('');
+    }
+  }
+
+  updateDenomination(index: number, change: number): void {
+    const denoms = [...this.cashDenominations()];
+    const newVal = Math.max(0, denoms[index].count + change);
+    denoms[index].count = newVal;
+    this.cashDenominations.set(denoms);
+  }
+
+  async closeSessionSubmit(): Promise<void> {
+    const session = this.activeSession();
+    if (!session) return;
+
     this.processing.set(true);
     const total = this.salesHistory().reduce((s, sale) => s + sale.total, 0);
-    const ok    = await this.posService.closeSession(session.id, total);
+
+    const params = {
+      sessionId: session.id,
+      totalVentas: total,
+      openingCash: session.opening_cash ?? 0,
+      expectedCash: this.expectedCash(),
+      declaredCash: this.declaredCashTotal(),
+      expectedCard: this.expectedCard(),
+      declaredCard: this.declaredCardInput(),
+      expectedTransfer: this.expectedTransfer(),
+      declaredTransfer: this.declaredTransferInput(),
+      cashDifference: this.cashDifference(),
+      notes: this.closeNotes(),
+      closedBy: this.activeCashier()?.nombre
+    };
+
+    const ok = await this.posService.closeSession(params);
     if (ok) {
+      // Calculate grouped warehouse/restaurant outflows before clearing
+      const groupedMap = new Map<string, { nombre: string; sku: string | null; cantidad: number; tipo: string }>();
+      for (const sale of this.salesHistory()) {
+        if (sale.items) {
+          for (const item of sale.items) {
+            const key = `${item.item_id || item.restaurant_item_id || item.extra_id}-${item.item_id ? 'inv' : item.restaurant_item_id ? 'rest' : 'extra'}`;
+            const name = item.item?.nombre ?? item.restaurant_item?.name ?? item.extra?.name ?? 'Artículo';
+            const sku = item.item?.sku ?? null;
+            const tipo = item.item ? 'Inventario' : item.restaurant_item ? 'Restaurante' : 'Extra';
+            const qty = Number(item.cantidad);
+
+            if (groupedMap.has(key)) {
+              groupedMap.get(key)!.cantidad += qty;
+            } else {
+              groupedMap.set(key, { nombre: name, sku, cantidad: qty, tipo });
+            }
+          }
+        }
+      }
+
+      const groupedItems = Array.from(groupedMap.values()).sort((a, b) => b.cantidad - a.cantidad);
+
+      const closedSessionData: PosSession = {
+        ...session,
+        closed_at: new Date().toISOString(),
+        total_ventas: total,
+        opening_cash: params.openingCash,
+        expected_cash: params.expectedCash,
+        declared_cash: params.declaredCash,
+        expected_card: params.expectedCard,
+        declared_card: params.declaredCard,
+        expected_transfer: params.expectedTransfer,
+        declared_transfer: params.declaredTransfer,
+        cash_difference: params.cashDifference,
+        notes: params.notes,
+        closed_by: params.closedBy
+      };
+
+      this.lastClosedSessionSummary.set(closedSessionData);
+      this.lastClosedSessionGroupedItems.set(groupedItems);
+
       this.activeSession.set(null);
       this.salesHistory.set([]);
       this.cart.set([]);
-      this.showToast('success', `Sesión cerrada — Total: ${this.fmt(total)}`);
+      this.showCloseSessionModal.set(false);
+      this.showSummaryModal.set(true);
+
+      this.showToast('success', `Corte de Caja completado — Total: ${this.fmt(total)}`);
+    } else {
+      this.showToast('error', 'Error al procesar el Corte de Caja');
     }
     this.processing.set(false);
   }

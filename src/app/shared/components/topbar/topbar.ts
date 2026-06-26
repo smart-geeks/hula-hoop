@@ -4,6 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { AuthService } from '../../../core/services/auth.service';
 import { PublicVenueService } from '../../../core/services/public-venue.service';
+import { PosService } from '../../../core/services/pos.service';
 import { AuthDialog } from '../auth-dialog/auth-dialog';
 import { PwaInstallButton } from '../pwa-install-button/pwa-install-button';
 
@@ -20,6 +21,7 @@ export class Topbar {
   private readonly auth        = inject(AuthService);
   private readonly router      = inject(Router);
   private readonly publicVenue = inject(PublicVenueService);
+  private readonly posService  = inject(PosService);
   private readonly authDialog  = viewChild<AuthDialog>('authDialogRef');
 
   readonly drawerVisible = signal(false);
@@ -59,6 +61,11 @@ export class Topbar {
   }
 
   async onLogout(): Promise<void> {
+    const active = await this.posService.getActiveSessions();
+    if (active.length > 0) {
+      alert('No puedes cerrar sesión porque tienes un turno de caja activo. Realiza el Corte de Caja antes de salir.');
+      return;
+    }
     await this.auth.logout();
     const slug = this.publicVenue.activeVenue()?.slug;
     this.router.navigate(slug ? ['/', slug] : ['/']);
