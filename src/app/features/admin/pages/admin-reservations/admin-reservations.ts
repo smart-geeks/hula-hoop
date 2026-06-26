@@ -355,7 +355,8 @@ export class AdminReservations {
     const date = this.newResDate();
     if (!slot || !date) return;
 
-    const name = this.newResName().trim();
+    const name  = this.newResName().trim();
+    const phone = this.newResPhone().trim();
     if (!name) {
       this.messageService.add({ severity: 'warn', summary: 'El nombre es requerido' });
       return;
