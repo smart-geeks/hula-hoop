@@ -28,6 +28,12 @@ export const routes: Routes = [
         .then(m => m.MyReservationsPage),
   },
   {
+    path: 'reserva/:token',
+    loadComponent: () =>
+      import('./features/reservations/pages/playdate-confirmation-page/playdate-confirmation-page')
+        .then(m => m.PlaydateConfirmationPage),
+  },
+  {
     path: 'cotizacion/:token',
     loadComponent: () =>
       import('./features/quotes/pages/quote-public-page/quote-public-page')

@@ -1,0 +1,107 @@
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+
+  @if (loading()) {
+    <div class="text-center text-gray-500">
+      <i class="pi pi-spin pi-spinner text-3xl mb-3 block"></i>
+      <p>Cargando reserva…</p>
+    </div>
+  }
+
+  @if (!loading() && notFound()) {
+    <div class="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full text-center">
+      <div class="text-5xl mb-4">🔍</div>
+      <h1 class="text-xl font-semibold text-gray-800 mb-2">Reserva no encontrada</h1>
+      <p class="text-gray-500 text-sm mb-6">El enlace puede haber expirado o ser incorrecto.</p>
+      <a routerLink="/" class="inline-block bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+        Ir al inicio
+      </a>
+    </div>
+  }
+
+  @if (!loading() && !notFound() && reservation(); as res) {
+    <div class="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full">
+
+      <!-- Status header -->
+      @if (isConfirmed) {
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-3">🎉</div>
+          <h1 class="text-2xl font-bold text-green-700">¡Pago confirmado!</h1>
+          <p class="text-gray-500 text-sm mt-1">Tu lugar en el Play Day está reservado.</p>
+        </div>
+      }
+      @if (isPending) {
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-3">⏳</div>
+          <h1 class="text-2xl font-bold text-amber-600">Pago en proceso</h1>
+          <p class="text-gray-500 text-sm mt-1">Cuando se confirme recibirás una notificación.</p>
+        </div>
+      }
+      @if (isCancelled) {
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-3">❌</div>
+          <h1 class="text-2xl font-bold text-red-600">Pago no completado</h1>
+          <p class="text-gray-500 text-sm mt-1">No se realizó ningún cargo. Puedes intentarlo de nuevo.</p>
+        </div>
+      }
+
+      <!-- Reservation details -->
+      <div class="border border-gray-100 rounded-xl divide-y divide-gray-100 mb-6">
+
+        <div class="flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-gray-500">Nombre</span>
+          <span class="text-sm font-medium text-gray-800">{{ res.guest_name }}</span>
+        </div>
+
+        <div class="flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-gray-500">Fecha</span>
+          <span class="text-sm font-medium text-gray-800">
+            {{ res.reservation_date | date:'EEEE d \'de\' MMMM, yyyy':'':'es' }}
+          </span>
+        </div>
+
+        @if (timeSlot(); as slot) {
+          <div class="flex justify-between items-center px-4 py-3">
+            <span class="text-sm text-gray-500">Horario</span>
+            <span class="text-sm font-medium text-gray-800">
+              {{ formatTime(slot.start_time) }} – {{ formatTime(slot.end_time) }}
+            </span>
+          </div>
+        }
+
+        <div class="flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-gray-500">Niños</span>
+          <span class="text-sm font-medium text-gray-800">{{ res.kids_count }}</span>
+        </div>
+
+        @if (res.extra_adults_count > 0) {
+          <div class="flex justify-between items-center px-4 py-3">
+            <span class="text-sm text-gray-500">Adultos adicionales</span>
+            <span class="text-sm font-medium text-gray-800">{{ res.extra_adults_count }}</span>
+          </div>
+        }
+
+        <div class="flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-gray-500">Total</span>
+          <span class="text-sm font-bold text-gray-900">
+            {{ res.total_cents / 100 | currency:'MXN':'symbol-narrow':'1.0-0' }}
+          </span>
+        </div>
+
+      </div>
+
+      @if (res.guest_email) {
+        <p class="text-xs text-gray-400 text-center mb-6">
+          Se enviará confirmación a <strong>{{ res.guest_email }}</strong>
+        </p>
+      }
+
+      <div class="text-center">
+        <a routerLink="/" class="inline-block text-sm text-pink-500 hover:text-pink-700 font-medium transition-colors">
+          ← Volver al inicio
+        </a>
+      </div>
+
+    </div>
+  }
+
+</div>

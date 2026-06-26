@@ -135,4 +135,22 @@ export class TimeSlotService {
 
     return data as TimeSlot[];
   }
+
+  async getSlotById(id: string): Promise<TimeSlot | null> {
+    const client = this.supabase.client;
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('time_slots')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching time slot by id:', error.message);
+      return null;
+    }
+
+    return data as TimeSlot;
+  }
 }
