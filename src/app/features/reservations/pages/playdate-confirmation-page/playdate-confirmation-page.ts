@@ -237,17 +237,19 @@ export class PlaydateConfirmationPage {
     this.pdfLoading.set(true);
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const { jsPDF } = await import('jspdf');
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas') as Promise<{ default: typeof import('html2canvas')['default'] }>,
+        import('jspdf') as Promise<{ default: typeof import('jspdf')['default'] }>,
+      ]);
 
-      const canvas = await html2canvas(element, {
+      const canvas = await (html2canvas as any)(element, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
       });
 
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new (jsPDF as any)({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       
       const imgWidth = 110;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
