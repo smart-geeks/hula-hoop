@@ -297,7 +297,8 @@
 
 <!-- ══ Nueva reserva modal ════════════════════════════════════════════════════ -->
 <p-dialog header="Nueva reserva Play Day" [(visible)]="newResVisible" [modal]="true"
-          [style]="{ width: '34rem' }" [closable]="true" [draggable]="false">
+          [style]="{ width: '38rem' }" [contentStyle]="{ overflow: 'visible' }"
+          [closable]="true" [draggable]="false">
   <div class="pt-2">
 
     <!-- Step indicator -->
@@ -328,8 +329,8 @@
           <label for="new-res-date" class="block text-sm font-medium text-slate-700 mb-1">Fecha del Play Day</label>
           <p-datepicker inputId="new-res-date" [ngModel]="newResDate()"
                         (ngModelChange)="onNewResDateChange($event)"
-                        dateFormat="dd/mm/yy" [showIcon]="true" [minDate]="$any(null)"
-                        placeholder="Selecciona una fecha" class="w-full" />
+                        [inline]="true" dateFormat="dd/mm/yy"
+                        class="w-full" />
         </div>
 
         @if (newResDate()) {
