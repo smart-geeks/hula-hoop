@@ -9,7 +9,8 @@
     {id: 'cajeros',    icon: 'pi-users',     label: 'Cajeros'},
     {id: 'categorias', icon: 'pi-tag',       label: 'Categorías'},
     {id: 'impresora',  icon: 'pi-print',     label: 'Impresora'},
-    {id: 'pagos',      icon: 'pi-credit-card', label: 'Pagos'}
+    {id: 'pagos',      icon: 'pi-credit-card', label: 'Pagos'},
+    {id: 'usuarios',   icon: 'pi-user-edit',   label: 'Usuarios'}
   ]; track tab.id) {
     <button
       (click)="setTab($any(tab.id))"
@@ -600,7 +601,74 @@
           </div>
         </div>
       }
+    </div>
+  }
 
+  <!-- ── TAB CONTENT: USUARIOS ─────────────────────────── -->
+  @if (activeTab() === 'usuarios') {
+    <div class="max-w-xl animate-fade-in">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-800">Usuarios del Local</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Administra los usuarios autorizados, sus roles y permisos</p>
+        </div>
+        <button (click)="openCreateUserDialog()"
+          class="flex items-center gap-2 bg-rojo-brillante text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+          <i class="pi pi-user-plus"></i>
+          Nuevo usuario
+        </button>
+      </div>
+
+      @if (venueUsersLoading()) {
+        <div class="flex justify-center py-8">
+          <div class="w-6 h-6 border-2 border-rojo-brillante border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      } @else if (venueUsers().length === 0) {
+        <div class="border border-dashed border-slate-300 rounded-2xl p-8 text-center">
+          <i class="pi pi-user text-2xl text-slate-300 block mb-2"></i>
+          <p class="text-sm text-slate-500">Aún no hay usuarios en este local</p>
+          <p class="text-xs text-slate-400 mt-1">Agrega el primero con el botón de arriba</p>
+        </div>
+      } @else {
+        <div class="space-y-2">
+          @for (vu of venueUsers(); track vu.user_id) {
+            <div class="flex items-center gap-4 px-4 py-3.5 bg-white border border-slate-200 rounded-xl">
+              <!-- Avatar inicial -->
+              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 bg-rojo-brillante/10 text-rojo-brillante">
+                {{ (vu.profiles?.full_name || 'U').charAt(0).toUpperCase() }}
+              </div>
+
+              <!-- Detalles usuario -->
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-800 text-sm leading-tight">
+                  {{ vu.profiles?.full_name || 'Usuario sin nombre' }}
+                </p>
+                <p class="text-xs text-slate-500 truncate mt-0.5">{{ vu.profiles?.email }}</p>
+                @if (vu.profiles?.phone) {
+                  <p class="text-[11px] text-slate-400 mt-0.5">
+                    <i class="pi pi-phone text-[9px] mr-1"></i>{{ vu.profiles.phone }}
+                  </p>
+                }
+                <!-- Badge de Rol -->
+                <div class="mt-1">
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                    {{ vu.roles?.nombre || vu.role || 'Sin Rol' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="flex items-center shrink-0">
+                <button (click)="removeVenueUser(vu)" title="Remover usuario"
+                  class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors text-sm">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
   }
 }
@@ -786,6 +854,91 @@
             <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
           }
           {{ editingCategory() ? 'Guardar' : 'Crear' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal: Registrar nuevo usuario -->
+@if (showCreateUserDialog()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">Registrar Nuevo Usuario</h3>
+        <button (click)="closeCreateUserDialog()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <i class="pi pi-times text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre Completo *</label>
+          <input type="text" placeholder="Ej: Juan Pérez"
+            [value]="newUserFullName()"
+            (input)="newUserFullName.set($any($event.target).value)"
+            class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Correo Electrónico *</label>
+          <input type="email" placeholder="correo@ejemplo.com"
+            [value]="newUserEmail()"
+            (input)="newUserEmail.set($any($event.target).value)"
+            class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Contraseña (Mín. 6 caracteres) *</label>
+          <input type="password" placeholder="••••••••"
+            [value]="newUserPassword()"
+            (input)="newUserPassword.set($any($event.target).value)"
+            class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono (Opcional)</label>
+          <input type="tel" placeholder="Ej: 5512345678"
+            [value]="newUserPhone()"
+            (input)="newUserPhone.set($any($event.target).value)"
+            class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Rol de Permisos *</label>
+          <select 
+            [value]="newUserRoleId()"
+            (change)="newUserRoleId.set($any($event.target).value)"
+            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 focus:border-rojo-brillante transition-all">
+            <option value="">-- Selecciona un rol --</option>
+            @for (role of roles(); track role.id) {
+              <option [value]="role.id">{{ role.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        @if (createUserError()) {
+          <p class="text-xs text-red-600 font-medium flex items-center gap-1.5">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ createUserError() }}
+          </p>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="flex gap-3 px-6 pb-5">
+        <button (click)="closeCreateUserDialog()"
+          class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+          Cancelar
+        </button>
+        <button (click)="createUser()" [disabled]="venueUsersSaving()"
+          class="flex-1 py-2.5 bg-rojo-brillante text-white rounded-xl text-sm font-bold hover:bg-rojo-brillante/90 flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+          @if (venueUsersSaving()) {
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          }
+          Registrar
         </button>
       </div>
     </div>

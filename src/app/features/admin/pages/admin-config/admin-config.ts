@@ -13,6 +13,8 @@ import { CashierService } from '../../../../core/services/cashier.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { PrinterConfigService } from '../../../../core/services/printer-config.service';
 import { PaymentSettingsService } from '../../../../core/services/payment-settings.service';
+import { SupabaseService } from '../../../../core/services/supabase.service';
+import { environment } from '../../../../../environments/environment';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
 import type { CashierProfile } from '../../../../core/interfaces/pos';
 import type { Category, CategoryTipo } from '../../../../core/interfaces/category';
@@ -42,16 +44,32 @@ export class AdminConfig {
   private readonly printerCfgService  = inject(PrinterConfigService);
   private readonly fb                  = inject(FormBuilder);
   private readonly messageService      = inject(MessageService);
+  private readonly supabaseService     = inject(SupabaseService);
 
   readonly config  = signal<VenueConfig | null>(null);
   readonly loading = signal(true);
   readonly saving  = signal(false);
 
-  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos'>('general');
+  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios'>('general');
 
-  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos'): void {
+  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios'): void {
     this.activeTab.set(tab);
   }
+
+  // ── Usuarios ───────────────────────────────────────────────
+  readonly venueUsers        = signal<any[]>([]);
+  readonly venueUsersLoading = signal(false);
+  readonly venueUsersSaving  = signal(false);
+  readonly roles             = signal<any[]>([]);
+
+  // Diálogo: nuevo usuario
+  readonly showCreateUserDialog = signal(false);
+  readonly newUserEmail         = signal('');
+  readonly newUserPassword      = signal('');
+  readonly newUserFullName      = signal('');
+  readonly newUserPhone         = signal('');
+  readonly newUserRoleId        = signal('');
+  readonly createUserError      = signal('');
 
   // ── Cajeros ────────────────────────────────────────────────
   readonly cashiers        = signal<CashierProfile[]>([]);
@@ -145,6 +163,7 @@ export class AdminConfig {
         this.loadConfig();
         this.loadCashiers();
         this.loadPaymentSettings();
+        this.loadVenueUsers();
       } else {
         // Venues not yet loaded — keep UI unblocked
         this.loading.set(false);
@@ -512,5 +531,206 @@ export class AdminConfig {
       .catch(() => {
         this.messageService.add({ severity: 'warn', summary: 'No se pudo copiar al portapapeles' });
       });
+  }
+
+  // ── Usuarios ───────────────────────────────────────────────
+
+  async loadVenueUsers(): Promise<void> {
+    const venueId = this.venueService.currentVenueId();
+    if (!venueId) return;
+
+    this.venueUsersLoading.set(true);
+    try {
+      const client = this.supabaseService.client;
+      if (!client) return;
+
+      // Fetch users assigned to this venue
+      const { data: usersData, error: usersErr } = await client
+        .from('venue_users')
+        .select(`
+          venue_id,
+          user_id,
+          role,
+          role_id,
+          created_at,
+          profiles (
+            full_name,
+            email,
+            phone
+          ),
+          roles (
+            id,
+            nombre,
+            slug
+          )
+        `)
+        .eq('venue_id', venueId);
+
+      if (usersErr) {
+        console.error('Error fetching venue users:', usersErr.message);
+      } else {
+        this.venueUsers.set(usersData || []);
+      }
+
+      // Fetch roles if not loaded yet
+      if (this.roles().length === 0) {
+        const { data: rolesData, error: rolesErr } = await client
+          .from('roles')
+          .select('id, nombre, slug, descripcion')
+          .order('nombre');
+
+        if (rolesErr) {
+          console.error('Error fetching roles:', rolesErr.message);
+        } else {
+          this.roles.set(rolesData || []);
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error loading venue users:', err);
+    } finally {
+      this.venueUsersLoading.set(false);
+    }
+  }
+
+  openCreateUserDialog(): void {
+    this.newUserEmail.set('');
+    this.newUserPassword.set('');
+    this.newUserFullName.set('');
+    this.newUserPhone.set('');
+    this.newUserRoleId.set('');
+    this.createUserError.set('');
+    this.showCreateUserDialog.set(true);
+  }
+
+  closeCreateUserDialog(): void {
+    this.showCreateUserDialog.set(false);
+  }
+
+  async createUser(): Promise<void> {
+    const email = this.newUserEmail().trim();
+    const password = this.newUserPassword().trim();
+    const fullName = this.newUserFullName().trim();
+    const phone = this.newUserPhone().trim();
+    const roleId = this.newUserRoleId();
+    const venueId = this.venueService.currentVenueId();
+
+    if (!email) { this.createUserError.set('El correo es requerido'); return; }
+    if (!password || password.length < 6) { this.createUserError.set('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (!fullName) { this.createUserError.set('El nombre completo es requerido'); return; }
+    if (!roleId) { this.createUserError.set('El rol es requerido'); return; }
+    if (!venueId) { this.createUserError.set('No hay un local activo seleccionado'); return; }
+
+    this.venueUsersSaving.set(true);
+    this.createUserError.set('');
+
+    try {
+      const client = this.supabaseService.client;
+      if (!client) {
+        this.createUserError.set('Sin conexión a Supabase');
+        this.venueUsersSaving.set(false);
+        return;
+      }
+
+      // Find the role slug to set in venue_users.role
+      const selectedRole = this.roles().find(r => r.id === roleId);
+      if (!selectedRole) {
+        this.createUserError.set('Rol no válido');
+        this.venueUsersSaving.set(false);
+        return;
+      }
+
+      // We sign up using a temporary, non-persisted client to avoid signing the admin out
+      const { createClient } = await import('@supabase/supabase-js');
+      const tempClient = createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+
+      const { data: signUpData, error: signUpErr } = await tempClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone
+          }
+        }
+      });
+
+      if (signUpErr) {
+        this.createUserError.set(signUpErr.message);
+        this.venueUsersSaving.set(false);
+        return;
+      }
+
+      const newUserId = signUpData.user?.id;
+      if (!newUserId) {
+        this.createUserError.set('No se pudo obtener el ID del nuevo usuario');
+        this.venueUsersSaving.set(false);
+        return;
+      }
+
+      // Map the role slug to one of: 'owner', 'admin', 'staff', 'readonly'
+      let mappedRole: 'owner' | 'admin' | 'staff' | 'readonly' = 'staff';
+      if (selectedRole.slug === 'owner') mappedRole = 'owner';
+      else if (selectedRole.slug === 'manager') mappedRole = 'admin';
+      else if (selectedRole.slug === 'socio') mappedRole = 'readonly';
+      
+      // Update profiles role as well to sync roles
+      const profileRole = selectedRole.slug === 'owner' ? 'owner' : (selectedRole.slug === 'manager' ? 'admin' : 'staff');
+      const { error: profileUpdateErr } = await client
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          phone: phone,
+          role: profileRole
+        })
+        .eq('id', newUserId);
+
+      if (profileUpdateErr) {
+        console.warn('Warning updating profile details:', profileUpdateErr.message);
+      }
+
+      // Link user to venue_users
+      const { error: linkErr } = await client
+        .from('venue_users')
+        .insert({
+          venue_id: venueId,
+          user_id: newUserId,
+          role: mappedRole,
+          role_id: roleId
+        });
+
+      if (linkErr) {
+        this.createUserError.set(`Se creó el usuario pero no se pudo asociar al local: ${linkErr.message}`);
+        this.venueUsersSaving.set(false);
+        return;
+      }
+
+      this.messageService.add({ severity: 'success', summary: `Usuario "${fullName}" creado y asignado` });
+      this.closeCreateUserDialog();
+      await this.loadVenueUsers();
+
+    } catch (err: any) {
+      this.createUserError.set(err.message || 'Error inesperado al crear usuario');
+    } finally {
+      this.venueUsersSaving.set(false);
+    }
+  }
+
+  async removeVenueUser(venueUser: any): Promise<void> {
+    const venueId = venueUser.venue_id;
+    const userId = venueUser.user_id;
+
+    const ok = await this.venueService.removeUser(venueId, userId);
+    if (ok) {
+      this.venueUsers.update(list => list.filter(u => u.user_id !== userId));
+      this.messageService.add({ severity: 'info', summary: 'Usuario removido del local' });
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'No se pudo remover al usuario' });
+    }
   }
 }
