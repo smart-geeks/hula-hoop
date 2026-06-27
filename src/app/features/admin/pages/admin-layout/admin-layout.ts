@@ -223,14 +223,6 @@ export class AdminLayout implements OnDestroy {
       .channel('admin-new-reservations')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'private_reservations' },
-        (payload) => {
-          const data = payload.new as { guest_name: string };
-          this.showNotification(data.guest_name, 'Fiesta Privada');
-        },
-      )
-      .on(
-        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'playdate_reservations' },
         (payload) => {
           const data = payload.new as { guest_name: string };

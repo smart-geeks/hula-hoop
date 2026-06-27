@@ -42,13 +42,7 @@ export class GlobalSearchService {
 
     const q = `%${query.trim()}%`;
 
-    const [res, contracts, clients] = await Promise.all([
-      client
-        .from('private_reservations')
-        .select('id, guest_name, guest_phone, reservation_date, status')
-        .or(`guest_name.ilike.${q},guest_phone.ilike.${q}`)
-        .order('reservation_date', { ascending: false })
-        .limit(5),
+    const [contracts, clients] = await Promise.all([
       client
         .from('contracts')
         .select('id, folio, fecha_evento, estado, client:clients(nombre)')
@@ -77,7 +71,7 @@ export class GlobalSearchService {
     }));
 
     return {
-      reservations: (res.data ?? []) as ReservationResult[],
+      reservations: [],
       contracts: contractRows,
       clients: (clients.data ?? []) as ClientResult[],
     };
