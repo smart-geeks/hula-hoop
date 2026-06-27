@@ -571,6 +571,7 @@ export class PrivateReservationPage {
       );
 
       const quote = await this.quoteService.create({
+        venue_id:        this.publicVenue.activeVenue()?.id,
         fecha:           new Date().toISOString().split('T')[0],
         fecha_evento:    this.formatDateISO(date),
         hora_inicio:     slot.start_time,
@@ -635,6 +636,7 @@ export class PrivateReservationPage {
       );
 
       const quote = await this.quoteService.create({
+        venue_id:        this.publicVenue.activeVenue()?.id,
         fecha:           new Date().toISOString().split('T')[0],
         fecha_evento:    this.formatDateISO(date),
         hora_inicio:     slot.start_time,

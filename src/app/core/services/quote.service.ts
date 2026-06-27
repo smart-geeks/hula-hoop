@@ -45,7 +45,7 @@ export class QuoteService {
 
   async create(data: CreateQuoteData): Promise<Quote | null> {
     const client  = this.supabase.client;
-    const venueId = this.venue.currentVenueId();
+    const venueId = data.venue_id ?? this.venue.currentVenueId();
     if (!client || !venueId) return null;
 
     const folio = await this.generateFolio(venueId);
