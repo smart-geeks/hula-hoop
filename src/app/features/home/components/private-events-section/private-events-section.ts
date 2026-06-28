@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PackageService } from '../../../../core/services/package.service';
 import { PublicVenueService } from '../../../../core/services/public-venue.service';
+import { PackageCategoryConfigService } from '../../../../core/services/package-category-config.service';
 import { PACKAGE_COLORS } from '../../../../core/interfaces/package';
 import type { PartyPackage } from '../../../../core/interfaces/package';
+import type { PackageCategoryConfig } from '../../../../core/interfaces/package-category-config';
 
 @Component({
   selector: 'app-private-events-section',
@@ -14,25 +16,36 @@ import type { PartyPackage } from '../../../../core/interfaces/package';
 })
 export class PrivateEventsSection {
   private readonly packageService = inject(PackageService);
+  private readonly categoryConfigService = inject(PackageCategoryConfigService);
   readonly publicVenue            = inject(PublicVenueService);
 
   readonly packages = signal<PartyPackage[]>([]);
+  readonly categoryConfigs = signal<PackageCategoryConfig[]>([]);
+  readonly selectedCategory = signal<'hula_hula' | 'hooping'>('hula_hula');
 
-  readonly inclusions = [
-    'Merienda', 'Bebida Refill', 'Host',
-    'Actividades', 'Vajilla', 'Asistentes Playground',
-    'Piñata', 'Evento de 3 Horas',
-  ];
+  readonly filteredPackages = computed(() =>
+    this.packages().filter((pkg) => pkg.category === this.selectedCategory())
+  );
+
+  readonly activeCategoryConfig = computed(() =>
+    this.categoryConfigs().find((cfg) => cfg.category === this.selectedCategory())
+  );
 
   constructor() {
-    this.loadPackages();
+    this.loadData();
   }
 
-  private async loadPackages(): Promise<void> {
+  private async loadData(): Promise<void> {
     const venue = this.publicVenue.activeVenue();
     if (!venue) return;
-    const data = await this.packageService.getActivePackagesByVenue(venue.id);
-    this.packages.set(data);
+
+    const [pkgs, configs] = await Promise.all([
+      this.packageService.getActivePackagesByVenue(venue.id),
+      this.categoryConfigService.getConfigsByVenue(venue.id),
+    ]);
+
+    this.packages.set(pkgs);
+    this.categoryConfigs.set(configs);
   }
 
   getColorHex(pkg: PartyPackage): string {
