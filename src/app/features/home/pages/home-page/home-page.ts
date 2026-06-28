@@ -12,6 +12,7 @@ import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { HeroSection } from '../../components/hero-section/hero-section';
 import { PolaroidSection } from '../../components/polaroid-section/polaroid-section';
 import { PrivateEventsSection } from '../../components/private-events-section/private-events-section';
+import { DecorationPackagesSection } from '../../components/decoration-packages-section/decoration-packages-section';
 import { PlayDaySection } from '../../components/play-day-section/play-day-section';
 import { ContactSection } from '../../components/contact-section/contact-section';
 import { GallerySection } from '../../components/gallery-section/gallery-section';
@@ -30,6 +31,7 @@ gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
     HeroSection,
     PolaroidSection,
     PrivateEventsSection,
+    DecorationPackagesSection,
     PlayDaySection,
     GallerySection,
     ContactSection,
