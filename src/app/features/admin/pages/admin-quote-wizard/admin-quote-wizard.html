@@ -71,47 +71,47 @@
           <div class="space-y-1.5 text-sm">
             <div class="flex justify-between text-slate-600">
               <span class="truncate pr-2">Paquete</span>
-              <span class="font-medium shrink-0">{{ subtotalCents() / 100 | currencyMxn }}</span>
+              <span class="font-medium shrink-0">{{ subtotalCents() | currencyMxn }}</span>
             </div>
             @if (decorationUpgradeCents() > 0) {
               <div class="flex justify-between text-slate-600">
                 <span>Decoración</span>
-                <span class="font-medium">{{ decorationUpgradeCents() / 100 | currencyMxn }}</span>
+                <span class="font-medium">{{ decorationUpgradeCents() | currencyMxn }}</span>
               </div>
             }
             @if (activityUpgradeCents() > 0) {
               <div class="flex justify-between text-slate-600">
                 <span>Actividad</span>
-                <span class="font-medium">{{ activityUpgradeCents() / 100 | currencyMxn }}</span>
+                <span class="font-medium">{{ activityUpgradeCents() | currencyMxn }}</span>
               </div>
             }
             @if (glamGirlsCents() > 0) {
               <div class="flex justify-between text-slate-600">
                 <span>Glam Girls</span>
-                <span class="font-medium">{{ glamGirlsCents() / 100 | currencyMxn }}</span>
+                <span class="font-medium">{{ glamGirlsCents() | currencyMxn }}</span>
               </div>
             }
             @if (extrasTotalCents() > 0) {
               <div class="flex justify-between text-slate-600">
                 <span>Extras</span>
-                <span class="font-medium">{{ extrasTotalCents() / 100 | currencyMxn }}</span>
+                <span class="font-medium">{{ extrasTotalCents() | currencyMxn }}</span>
               </div>
             }
             <div class="border-t border-slate-100 pt-2 mt-2 space-y-1">
               @if (discount() > 0) {
                 <div class="flex justify-between text-sm text-emerald-600">
                   <span>Descuento</span>
-                  <span class="font-medium">-{{ discount() | currencyMxn }}</span>
+                  <span class="font-medium">-{{ discount() * 100 | currencyMxn }}</span>
                 </div>
               }
               <div class="flex justify-between items-baseline">
                 <span class="font-bold text-slate-800 text-sm">Total</span>
-                <span class="font-black text-lg text-rojo-brillante">{{ totalAmount() | currencyMxn }}</span>
+                <span class="font-black text-lg text-rojo-brillante">{{ totalAmount() * 100 | currencyMxn }}</span>
               </div>
               @if (depositAmount() > 0) {
                 <div class="flex justify-between text-xs text-slate-500">
                   <span>Anticipo</span>
-                  <span>{{ depositAmount() | currencyMxn }}</span>
+                  <span>{{ depositAmount() * 100 | currencyMxn }}</span>
                 </div>
               }
             </div>
