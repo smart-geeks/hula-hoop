@@ -92,9 +92,9 @@
               </span>
             </td>
             <td class="px-6 py-4 text-right">
-              <p class="font-bold text-slate-800">{{ quote.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+              <p class="font-bold text-slate-800">{{ quote.total | currencyMxn }}</p>
               @if ((quote.deposit_amount ?? 0) > 0) {
-              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+              <p class="text-xs text-rojo-brillante font-medium">Anticipo: {{ (quote.deposit_amount ?? 0) | currencyMxn }}</p>
               }
             </td>
             <td class="px-6 py-4">
@@ -967,12 +967,12 @@
         <div class="mt-4 bg-white rounded-xl p-4">
           <div class="flex justify-between text-sm mb-1">
             <span class="text-slate-500">Total cotización</span>
-            <span class="font-bold text-slate-800">{{ anticoDialog()!.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            <span class="font-bold text-slate-800">{{ anticoDialog()!.total | currencyMxn }}</span>
           </div>
           @if ((anticoDialog()!.deposit_amount ?? 0) > 0) {
           <div class="flex justify-between text-xs">
             <span class="text-slate-400">Anticipo sugerido</span>
-            <span class="font-medium text-rojo-brillante">{{ (anticoDialog()!.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+            <span class="font-medium text-rojo-brillante">{{ (anticoDialog()!.deposit_amount ?? 0) | currencyMxn }}</span>
           </div>
           }
         </div>
