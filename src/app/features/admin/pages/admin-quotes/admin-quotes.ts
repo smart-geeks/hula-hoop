@@ -15,7 +15,9 @@ import { VenueService } from '../../../../core/services/venue.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
+import type { PaymentSplit } from '../../../../core/interfaces/contract';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
+import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
 
 export interface AvailableDate {
   date:    string;
@@ -23,8 +25,6 @@ export interface AvailableDate {
   dayType: 'weekday' | 'weekend';
   slot:    { start_time: string; end_time: string };
 }
-
-type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 
 const STATUS_CONFIG: Record<QuoteStatus, { label: string; classes: string }> = {
   borrador:  { label: 'Borrador',  classes: 'bg-slate-100 text-slate-600' },
@@ -40,6 +40,7 @@ const STATUS_CONFIG: Record<QuoteStatus, { label: string; classes: string }> = {
   imports: [
     FormsModule,
     CurrencyMxnPipe,
+    PaymentSplitsInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -71,7 +72,7 @@ export class AdminQuotes {
   readonly anticoDialog  = signal<Quote | null>(null);
   readonly anticoMonto   = signal(0);
   readonly anticoFecha   = signal('');
-  readonly anticoMetodo  = signal<PayMethod>('efectivo');
+  readonly anticoSplits  = signal<PaymentSplit[]>([]);
   readonly anticoSaving  = signal(false);
 
   // ── Slot conflict detection (list view) ───────────────────
@@ -87,6 +88,14 @@ export class AdminQuotes {
   readonly todayStr = computed(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+
+  readonly anticoSplitsValid = computed(() => {
+    const splits = this.anticoSplits();
+    const total  = this.anticoMonto();
+    return splits.length > 0 &&
+      splits.every((s) => s.monto > 0) &&
+      Math.abs(splits.reduce((acc, s) => acc + s.monto, 0) - total) < 0.01;
   });
 
   readonly filteredQuotes = computed(() => {
@@ -159,7 +168,7 @@ export class AdminQuotes {
     this.anticoDialog.set(quote);
     this.anticoMonto.set(quote.deposit_amount ?? quote.total);
     this.anticoFecha.set(this.todayStr());
-    this.anticoMetodo.set('efectivo');
+    this.anticoSplits.set([{ metodo: 'efectivo', monto: quote.deposit_amount ?? this.anticoMonto() }]);
   }
 
   closeAnticoDialog(): void {
@@ -327,12 +336,15 @@ export class AdminQuotes {
     }
 
     // Register the payment record
+    const splits = this.anticoSplits();
+    const metodo = splits.length === 1 ? splits[0].metodo : 'combinado';
     await this.contractService.addPayment(contract.id, {
       monto,
-      fecha:  this.anticoFecha(),
-      metodo: this.anticoMetodo(),
-      tipo:   'anticipo',
-      notas:  `Anticipo — cotización ${quote.folio}`,
+      fecha:          this.anticoFecha(),
+      metodo,
+      tipo:           'anticipo',
+      notas:          `Anticipo — cotización ${quote.folio}`,
+      payment_splits: splits,
     });
 
     // Mark quote as approved
