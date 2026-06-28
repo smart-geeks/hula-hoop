@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TableModule } from 'primeng/table';
@@ -30,7 +29,6 @@ type ActiveTab = 'hula_hula' | 'hooping' | 'decoracion';
     ButtonModule,
     InputNumberModule,
     InputTextModule,
-    SelectModule,
     TextareaModule,
     ToggleSwitchModule,
     TableModule,
