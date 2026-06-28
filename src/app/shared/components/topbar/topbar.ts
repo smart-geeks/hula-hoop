@@ -61,14 +61,18 @@ export class Topbar {
   }
 
   async onLogout(): Promise<void> {
-    const active = await this.posService.getActiveSessions();
-    if (active.length > 0) {
-      alert('No puedes cerrar sesión porque tienes un turno de caja activo. Realiza el Corte de Caja antes de salir.');
-      return;
+    try {
+      await this.auth.logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
     }
-    await this.auth.logout();
-    const slug = this.publicVenue.activeVenue()?.slug;
-    this.router.navigate(slug ? ['/', slug] : ['/']);
+
+    try {
+      const slug = this.publicVenue.activeVenue()?.slug;
+      this.router.navigate(slug ? ['/', slug] : ['/']);
+    } catch (error) {
+      console.error('Error navigating after logout:', error);
+    }
   }
 
   async scrollToSection(id: string): Promise<void> {
