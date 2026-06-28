@@ -10,7 +10,8 @@
   <ng-template #header>
     <tr>
       <th>Nombre</th>
-      <th>Precio</th>
+      <th>Categoría</th>
+      <th>Precio / Variantes</th>
       <th>Estado</th>
       <th>Orden</th>
       <th style="width: 8rem">Acciones</th>
@@ -19,16 +20,38 @@
   <ng-template #body let-extra>
     <tr>
       <td>
-        <span class="font-semibold">{{ extra.name }}</span>
+        <span class="font-semibold text-slate-800">{{ extra.name }}</span>
         @if (extra.description) {
           <br><span class="text-sm text-neutro-500">{{ extra.description }}</span>
         }
       </td>
       <td>
-        @if (extra.pay_at_venue) {
+        @if (extra.category === 'hula_munch_bar') {
+          <span class="text-xs font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">Hula Munch Bar</span>
+        } @else if (extra.category === 'servicios_adicionales') {
+          <span class="text-xs font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">Servicios Adicionales</span>
+        } @else {
+          <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Extras</span>
+        }
+      </td>
+      <td>
+        @if (extra.variants && extra.variants.length > 0) {
+          <div class="flex flex-col gap-1.5 py-1">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-full w-max">
+              {{ extra.variants.length }} variantes
+            </span>
+            <div class="flex flex-col gap-1">
+              @for (v of extra.variants; track v.id) {
+                <span class="text-xs text-slate-600 font-medium">
+                  • {{ v.name }}: <span class="font-bold text-slate-800">{{ v.price_cents | currencyMxn }}</span>
+                </span>
+              }
+            </div>
+          </div>
+        } @else if (extra.pay_at_venue) {
           <span class="text-morado font-medium text-sm">Cobro en local</span>
         } @else {
-          {{ extra.price_cents | currencyMxn }}
+          <span class="font-semibold text-slate-800">{{ extra.price_cents | currencyMxn }}</span>
         }
       </td>
       <td>
@@ -48,14 +71,14 @@
   </ng-template>
   <ng-template #emptymessage>
     <tr>
-      <td colspan="5" class="text-center py-8 text-neutro-500">No hay extras registrados.</td>
+      <td colspan="6" class="text-center py-8 text-neutro-500">No hay extras registrados.</td>
     </tr>
   </ng-template>
 </p-table>
 
 <!-- Dialog crear/editar -->
 <p-dialog [header]="editingExtra() ? 'Editar extra' : 'Nuevo extra'"
-          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '28rem' }"
+          [(visible)]="dialogVisible" [modal]="true" [style]="{ width: hasVariants() ? '38rem' : '28rem' }"
           [closable]="true" [draggable]="false">
   <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-5 pt-2">
     <p-floatlabel variant="on">
@@ -74,12 +97,55 @@
     </div>
 
     @if (!form.controls.pay_at_venue.value) {
-      <p-floatlabel variant="on">
-        <p-inputNumber id="extra-price" formControlName="price_cents" [min]="0" [showButtons]="true"
-                       mode="currency" currency="MXN" locale="es-MX" class="w-full" />
-        <label for="extra-price">Precio (MXN) *</label>
-      </p-floatlabel>
+      <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+        <p-toggleSwitch [ngModel]="hasVariants()" (ngModelChange)="onToggleVariants($event)" [ngModelOptions]="{standalone: true}" inputId="extra-has-variants" />
+        <label for="extra-has-variants" class="text-sm font-semibold text-slate-700 cursor-pointer">Tiene variantes de precio</label>
+      </div>
+
+      @if (!hasVariants()) {
+        <p-floatlabel variant="on">
+          <p-inputNumber id="extra-price" formControlName="price_cents" [min]="0" [showButtons]="true"
+                         mode="currency" currency="MXN" locale="es-MX" class="w-full" />
+          <label for="extra-price">Precio (MXN) *</label>
+        </p-floatlabel>
+      } @else {
+        <!-- Dynamic variants section -->
+        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-slate-800">Variantes de precio</span>
+            <p-button label="Agregar variante" icon="pi pi-plus" size="small" [outlined]="true" severity="primary" (onClick)="addVariant()" type="button" />
+          </div>
+          
+          <div class="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+            @for (variantCtrl of variantsFormArray.controls; track $index; let idx = $index) {
+              <div [formGroup]="$any(variantCtrl)" class="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <div class="flex-1">
+                  <input pInputText formControlName="name" placeholder="Nombre (ej. 12 piezas, 50 personas)" class="w-full text-sm" />
+                </div>
+                <div class="w-32">
+                  <p-inputNumber formControlName="price_cents" [min]="0" mode="currency" currency="MXN" locale="es-MX" class="w-full text-sm [&_input]:w-full" placeholder="Precio (MXN)" />
+                </div>
+                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" (onClick)="removeVariant(idx)" type="button" />
+              </div>
+            }
+            @if (variantsFormArray.length === 0) {
+              <p class="text-xs text-center text-slate-400 py-4 italic">No hay variantes configuradas. Agrega al menos una.</p>
+            }
+          </div>
+        </div>
+      }
     }
+
+    <!-- Category selector -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="extra-category">Categoría</label>
+      <select id="extra-category" formControlName="category"
+        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30 appearance-none cursor-pointer">
+        <option value="extras">Extras</option>
+        <option value="hula_munch_bar">Hula Munch Bar</option>
+        <option value="servicios_adicionales">Servicios Adicionales</option>
+      </select>
+    </div>
 
     <div class="grid grid-cols-2 gap-4">
       <p-floatlabel variant="on">

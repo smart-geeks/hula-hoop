@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -15,12 +15,13 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { ExtraService } from '../../../../core/services/extra.service';
-import type { Extra } from '../../../../core/interfaces/extra';
+import type { Extra, ExtraCategory } from '../../../../core/interfaces/extra';
 
 @Component({
   selector: 'app-admin-extras',
   templateUrl: './admin-extras.html',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     TableModule,
     DialogModule,
@@ -50,6 +51,7 @@ export class AdminExtras {
   readonly dialogVisible = signal(false);
   readonly editingExtra = signal<Extra | null>(null);
   readonly saving = signal(false);
+  readonly hasVariants = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -58,10 +60,16 @@ export class AdminExtras {
     pay_at_venue: [false],
     is_active: [true],
     sort_order: [0],
+    category: ['extras' as ExtraCategory, Validators.required],
+    variants: this.fb.array([]),
   });
 
   constructor() {
     this.loadExtras();
+  }
+
+  get variantsFormArray(): FormArray {
+    return this.form.controls.variants as FormArray;
   }
 
   async loadExtras(): Promise<void> {
@@ -71,21 +79,61 @@ export class AdminExtras {
     this.loading.set(false);
   }
 
+  onToggleVariants(val: boolean): void {
+    this.hasVariants.set(val);
+    if (val && this.variantsFormArray.length === 0) {
+      this.addVariant();
+    }
+  }
+
+  addVariant(): void {
+    this.variantsFormArray.push(
+      this.fb.group({
+        id: [''],
+        name: ['', Validators.required],
+        price_cents: [0, [Validators.required, Validators.min(0)]],
+      })
+    );
+  }
+
+  removeVariant(index: number): void {
+    this.variantsFormArray.removeAt(index);
+  }
+
   openNew(): void {
     this.editingExtra.set(null);
-    this.form.reset({ name: '', description: '', price_cents: 0, pay_at_venue: false, is_active: true, sort_order: 0 });
+    this.hasVariants.set(false);
+    this.form.reset({ name: '', description: '', price_cents: 0, pay_at_venue: false, is_active: true, sort_order: 0, category: 'extras' });
+    this.variantsFormArray.clear();
     this.dialogVisible.set(true);
   }
 
   openEdit(extra: Extra): void {
     this.editingExtra.set(extra);
+    this.variantsFormArray.clear();
+    const hasVars = !!(extra.variants && extra.variants.length > 0);
+    this.hasVariants.set(hasVars);
+
+    if (hasVars && extra.variants) {
+      for (const v of extra.variants) {
+        this.variantsFormArray.push(
+          this.fb.group({
+            id: [v.id],
+            name: [v.name, Validators.required],
+            price_cents: [v.price_cents / 100, [Validators.required, Validators.min(0)]], // Convert cents → pesos for display
+          })
+        );
+      }
+    }
+
     this.form.patchValue({
       name: extra.name,
       description: extra.description ?? '',
-      price_cents: extra.price_cents / 100, // Convert centavos → pesos for display
+      price_cents: hasVars ? 0 : extra.price_cents / 100, // Convert centavos → pesos for display
       pay_at_venue: extra.pay_at_venue,
       is_active: extra.is_active,
       sort_order: extra.sort_order,
+      category: extra.category ?? 'extras',
     });
     this.dialogVisible.set(true);
   }
@@ -96,10 +144,42 @@ export class AdminExtras {
       return;
     }
 
+    if (this.hasVariants() && this.variantsFormArray.length === 0) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Variantes requeridas',
+        detail: 'Debes agregar al menos una variante si la opción está activa.',
+      });
+      return;
+    }
+
     this.saving.set(true);
     const raw = this.form.getRawValue();
-    // Convert pesos → centavos before saving
-    const values = { ...raw, price_cents: Math.round(raw.price_cents * 100) };
+
+    let priceCents = Math.round(raw.price_cents * 100);
+    let variantsList: any[] | null = null;
+
+    if (this.hasVariants()) {
+      variantsList = raw.variants.map((v: any) => ({
+        id: v.id || 'var_' + Math.random().toString(36).substring(2, 9),
+        name: v.name,
+        price_cents: Math.round(v.price_cents * 100),
+      }));
+      // Set the default price to the first variant's price
+      priceCents = variantsList.length > 0 ? variantsList[0].price_cents : 0;
+    }
+
+    const values = {
+      name: raw.name,
+      description: raw.description || null,
+      price_cents: priceCents,
+      pay_at_venue: raw.pay_at_venue,
+      is_active: raw.is_active,
+      sort_order: raw.sort_order,
+      category: raw.category as ExtraCategory,
+      variants: variantsList,
+    };
+
     const editing = this.editingExtra();
 
     if (editing) {
