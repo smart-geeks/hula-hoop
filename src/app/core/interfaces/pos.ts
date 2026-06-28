@@ -1,4 +1,6 @@
-export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia';
+import type { PaymentSplit } from './contract';
+
+export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'combinado';
 
 // ── Cajeros ───────────────────────────────────────────────────────────────────
 // pin_hash no se incluye intencionalmente: el cliente nunca debe leerlo.
@@ -64,6 +66,7 @@ export interface PosSale {
   created_at: string;
   items?: PosSaleItem[];
   cashier?: { nombre: string };
+  payment_splits?: PaymentSplit[];
 }
 
 // ── Carrito (estado local, no persiste en BD) ─────────────────────────────────
@@ -88,4 +91,5 @@ export interface CreateSaleData {
   contract_id?: string | null;
   playdate_date?: string | null;
   playdate_time_slot_id?: string | null;
+  payment_splits?: PaymentSplit[];
 }

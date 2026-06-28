@@ -1,14 +1,20 @@
 export type ContractStatus = 'borrador' | 'firmado' | 'liquidado' | 'cancelado' | 'concluido';
 
+export interface PaymentSplit {
+  metodo: 'efectivo' | 'tarjeta' | 'transferencia';
+  monto: number; // in pesos
+}
+
 export interface ContractPayment {
   id: string;
   contract_id: string;
   monto: number;
   fecha: string;
-  metodo: 'efectivo' | 'tarjeta' | 'transferencia';
+  metodo: 'efectivo' | 'tarjeta' | 'transferencia' | 'combinado';
   tipo: 'anticipo' | 'abono' | 'liquidacion' | 'extra' | 'modificacion';
   notas: string | null;
   created_at: string;
+  payment_splits?: PaymentSplit[];
 }
 
 export interface Contract {
