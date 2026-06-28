@@ -339,23 +339,36 @@ export class PosTicketPrintService {
     builder.bold(false).alignLeft();
     
     builder.dashedLine();
-    
+
     // Payment Method
-    const label = PAYMENT_LABELS[sale.pagado_con] ?? sale.pagado_con.toUpperCase();
-    builder.row('Forma de pago:', label);
-    
+    const saleSplits = sale.payment_splits?.length
+      ? sale.payment_splits
+      : [{ metodo: sale.pagado_con as string, monto: sale.total }];
+
+    if (saleSplits.length === 1) {
+      const label = PAYMENT_LABELS[saleSplits[0].metodo] ?? saleSplits[0].metodo.toUpperCase();
+      builder.row('Forma de pago:', label);
+    } else {
+      builder.textLine('Forma de pago:');
+      for (const sp of saleSplits) {
+        const lbl = PAYMENT_LABELS[sp.metodo] ?? sp.metodo.toUpperCase();
+        builder.row(`  ${lbl}`, this.fmt(sp.monto));
+      }
+    }
+
     builder.solidLine();
-    
+
     // Footer
     const footer = config.footerLine?.trim() || '¡Gracias por tu compra!';
     builder.alignCenter().bold(true).textLine(footer).bold(false);
-    
+
     // Copyright
     builder.feed(1);
     builder.textLine(`${venue?.nombre ?? 'Hula Hoop'} • ${new Date().getFullYear()}`);
-    
+
     // Drawer Kick: Only if cash payment is used
-    if (sale.pagado_con === 'efectivo') {
+    const hasEfectivo = saleSplits.some((sp) => sp.metodo === 'efectivo');
+    if (hasEfectivo) {
       builder.kickDrawer();
     }
     
@@ -471,49 +484,62 @@ export class PosTicketPrintService {
     builder.textLine(`ESTE PAGO: ${this.fmt(payment.monto)}`);
     builder.bold(false).alignLeft();
     
-    const label = PAYMENT_LABELS[payment.metodo] ?? payment.metodo.toUpperCase();
-    builder.row('Forma de pago:', label);
-    
+    const paymentSplits = payment.payment_splits?.length
+      ? payment.payment_splits
+      : [{ metodo: payment.metodo as string, monto: payment.monto }];
+
+    if (paymentSplits.length === 1) {
+      const label = PAYMENT_LABELS[paymentSplits[0].metodo] ?? paymentSplits[0].metodo.toUpperCase();
+      builder.row('Forma de pago:', label);
+    } else {
+      builder.textLine('Forma de pago:');
+      for (const sp of paymentSplits) {
+        const lbl = PAYMENT_LABELS[sp.metodo] ?? sp.metodo.toUpperCase();
+        builder.row(`  ${lbl}`, this.fmt(sp.monto));
+      }
+    }
+
     builder.dashedLine();
-    
+
     const totalPagado = contract.deposito_pagado;
     const saldo       = Math.max(0, contract.saldo_pendiente);
-    
+
     builder.row('Total contrato:', this.fmt(contract.total_contrato));
     if (quote?.deposit_amount) {
       builder.row('Anticipo Req.:', this.fmt(quote.deposit_amount));
     }
     builder.row('Total pagado:', this.fmt(totalPagado));
-    
+
     const saldoLabel = saldo > 0 ? 'Saldo pendiente:' : '✓ LIQUIDADO';
     const saldoValue = saldo > 0 ? this.fmt(saldo) : '';
     builder.bold(true).row(saldoLabel, saldoValue).bold(false);
-    
+
     if (saldo > 0) {
       builder.row('Fecha Lím. Pago:', this.getPaymentDeadline(contract.fecha_evento));
     }
-    
+
     if (payment.notas) {
       builder.dashedLine();
       builder.textLine(`Notas Pago: ${payment.notas}`);
     }
-    
+
     if (contract.notas) {
       builder.dashedLine();
       builder.textLine(`Notas Contrato: ${contract.notas}`);
     }
-    
+
     builder.solidLine();
-    
+
     // Footer
     builder.alignCenter().bold(true).textLine('¡Gracias por su confianza!').bold(false);
-    
+
     // Copyright
     builder.feed(1);
     builder.textLine(`${venue?.nombre ?? 'Hula Hoop'} • ${new Date().getFullYear()}`);
-    
+
     // Drawer Kick: Only if cash payment is used
-    if (payment.metodo === 'efectivo') {
+    const payHasEfectivo = paymentSplits.some((sp) => sp.metodo === 'efectivo');
+    if (payHasEfectivo) {
       builder.kickDrawer();
     }
     
@@ -754,6 +780,22 @@ export class PosTicketPrintService {
 
     const footer = config.footerLine?.trim() || '¡Gracias por tu compra!';
 
+    const saleSplitsHtml = sale.payment_splits?.length
+      ? sale.payment_splits
+      : [{ metodo: sale.pagado_con as string, monto: sale.total }];
+
+    const salePaymentRows = saleSplitsHtml.length === 1
+      ? `<tr>
+          <td class="xs">Forma de pago</td>
+          <td class="r bold">${PAYMENT_LABELS[saleSplitsHtml[0].metodo] ?? saleSplitsHtml[0].metodo.toUpperCase()}</td>
+        </tr>`
+      : saleSplitsHtml.map((sp) =>
+          `<tr>
+            <td class="xs">${PAYMENT_LABELS[sp.metodo] ?? sp.metodo.toUpperCase()}</td>
+            <td class="r bold">${this.fmt(sp.monto)}</td>
+          </tr>`
+        ).join('');
+
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -812,10 +854,7 @@ export class PosTicketPrintService {
   <hr class="sep-dashed" />
 
   <table>
-    <tr>
-      <td class="xs">Forma de pago</td>
-      <td class="r bold">${PAYMENT_LABELS[sale.pagado_con] ?? sale.pagado_con.toUpperCase()}</td>
-    </tr>
+    ${salePaymentRows}
   </table>
 
   <hr class="sep-solid" />
@@ -870,6 +909,22 @@ export class PosTicketPrintService {
         `).join('')}
       </table>
     ` : '';
+
+    const paymentSplitsHtml = payment.payment_splits?.length
+      ? payment.payment_splits
+      : [{ metodo: payment.metodo as string, monto: payment.monto }];
+
+    const paymentRows = paymentSplitsHtml.length === 1
+      ? `<tr>
+          <td class="xs" style="text-align:left">Forma de pago</td>
+          <td class="r bold" style="text-align:right">${PAYMENT_LABELS[paymentSplitsHtml[0].metodo] ?? paymentSplitsHtml[0].metodo.toUpperCase()}</td>
+        </tr>`
+      : paymentSplitsHtml.map((sp) =>
+          `<tr>
+            <td class="xs" style="text-align:left">${PAYMENT_LABELS[sp.metodo] ?? sp.metodo.toUpperCase()}</td>
+            <td class="r bold" style="text-align:right">${this.fmt(sp.monto)}</td>
+          </tr>`
+        ).join('');
 
     return `<!DOCTYPE html>
 <html lang="es">
@@ -971,10 +1026,7 @@ export class PosTicketPrintService {
   </table>
 
   <table style="margin-top:1mm; width:100%">
-    <tr>
-      <td class="xs" style="text-align:left">Forma de pago</td>
-      <td class="r bold" style="text-align:right">${PAYMENT_LABELS[payment.metodo] ?? payment.metodo.toUpperCase()}</td>
-    </tr>
+    ${paymentRows}
   </table>
 
   <hr class="sep-dashed" />
