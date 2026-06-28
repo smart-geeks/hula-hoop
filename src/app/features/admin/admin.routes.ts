@@ -149,6 +149,13 @@ export const adminRoutes: Routes = [
         data: { permission: 'paquetes:r' }
       },
       {
+        path: 'experiencias',
+        loadComponent: () =>
+          import('./pages/admin-experiences/admin-experiences').then((m) => m.AdminExperiences),
+        canActivate: [permissionGuard],
+        data: { permission: 'paquetes:r' }
+      },
+      {
         path: 'extras',
         loadComponent: () =>
           import('./pages/admin-extras/admin-extras').then((m) => m.AdminExtras),

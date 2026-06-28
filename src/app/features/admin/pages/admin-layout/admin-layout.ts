@@ -191,6 +191,7 @@ export class AdminLayout implements OnDestroy {
       label: 'Catálogos',
       items: [
         { label: 'Paquetes', route: 'paquetes', icon: 'pi-gift' },
+        { label: 'Experiencias', route: 'experiencias', icon: 'pi-sparkles' },
         { label: 'Extras', route: 'extras', icon: 'pi-plus-circle' },
         { label: 'Meriendas', route: 'meriendas', icon: 'pi-apple' },
         { label: 'Horarios', route: 'horarios', icon: 'pi-clock' },
@@ -266,14 +267,19 @@ export class AdminLayout implements OnDestroy {
   }
 
   async logout(): Promise<void> {
-    const active = await this.posService.getActiveSessions();
-    if (active.length > 0) {
-      alert('No puedes cerrar sesión porque tienes un turno de caja activo. Realiza el Corte de Caja antes de salir.');
-      return;
+    try {
+      await this.auth.logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
     }
-    await this.auth.logout();
-    this.router.navigate(['/']);
+
+    try {
+      this.router.navigate(['/']);
+    } catch (error) {
+      console.error('Error navigating to home:', error);
+    }
   }
+
 
   ngOnDestroy(): void {
     if (this.realtimeChannel) {

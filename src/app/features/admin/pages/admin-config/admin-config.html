@@ -5,12 +5,12 @@
 <!-- ── TAB BAR ────────────────────────────────────────── -->
 <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto mb-6">
   @for (tab of [
-    {id: 'general',    icon: 'pi-sliders-h', label: 'General'},
-    {id: 'cajeros',    icon: 'pi-users',     label: 'Cajeros'},
-    {id: 'categorias', icon: 'pi-tag',       label: 'Categorías'},
-    {id: 'impresora',  icon: 'pi-print',     label: 'Impresora'},
-    {id: 'pagos',      icon: 'pi-credit-card', label: 'Pagos'},
-    {id: 'usuarios',   icon: 'pi-user-edit',   label: 'Usuarios'}
+    {id: 'general',      icon: 'pi-sliders-h',   label: 'General'},
+    {id: 'cajeros',      icon: 'pi-users',       label: 'Cajeros'},
+    {id: 'categorias',   icon: 'pi-tag',         label: 'Categorías'},
+    {id: 'impresora',    icon: 'pi-print',       label: 'Impresora'},
+    {id: 'pagos',        icon: 'pi-credit-card', label: 'Pagos'},
+    {id: 'usuarios',     icon: 'pi-user-edit',   label: 'Usuarios'}
   ]; track tab.id) {
     <button
       (click)="setTab($any(tab.id))"
@@ -671,6 +671,8 @@
       }
     </div>
   }
+
+
 }
 
 <!-- ── MODALS (Outside of tabs for stacking context) ── -->
@@ -944,3 +946,5 @@
     </div>
   </div>
 }
+
+

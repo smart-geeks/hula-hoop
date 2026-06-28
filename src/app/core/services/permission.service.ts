@@ -174,7 +174,10 @@ export class PermissionService {
     }
 
     // 2. Normalize menu naming if needed
-    const normalizedMenu = menu.toLowerCase().trim();
+    let normalizedMenu = menu.toLowerCase().trim();
+    if (normalizedMenu === 'experiencias') {
+      normalizedMenu = 'paquetes';
+    }
 
     // 3. Extract matrix
     const menuPerms = perms[normalizedMenu];
@@ -247,7 +250,7 @@ export class PermissionService {
       'hoy', 'calendario', 'reservas', 'eventos', 'clientes', 
       'cotizaciones', 'contratos', 'gastos', 'compras', 
       'inventario', 'proveedores', 'configuracion', 'reportes',
-      'paquetes', 'extras', 'meriendas', 'horarios', 'restaurante', 'galeria', 'salones'
+      'paquetes', 'experiencias', 'extras', 'meriendas', 'horarios', 'restaurante', 'galeria', 'salones'
     ];
   }
 }

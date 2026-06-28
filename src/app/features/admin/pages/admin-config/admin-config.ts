@@ -1,11 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -25,12 +32,20 @@ import type { MaskedPaymentSettings, MpMode, PaymentSettingsUpdate } from '../..
   selector: 'app-admin-config',
   templateUrl: './admin-config.html',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     ButtonModule,
     InputNumberModule,
     FloatLabelModule,
     DatePickerModule,
     ToastModule,
+    InputTextModule,
+    SelectModule,
+    ToggleSwitchModule,
+    TableModule,
+    TagModule,
+    DialogModule,
+    TooltipModule,
   ],
   providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,9 +65,9 @@ export class AdminConfig {
   readonly loading = signal(true);
   readonly saving  = signal(false);
 
-  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios'>('general');
+  readonly activeTab = signal<'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios' | 'experiencias'>('general');
 
-  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios'): void {
+  setTab(tab: 'general' | 'cajeros' | 'categorias' | 'impresora' | 'pagos' | 'usuarios' | 'experiencias'): void {
     this.activeTab.set(tab);
   }
 
@@ -733,4 +748,5 @@ export class AdminConfig {
       this.messageService.add({ severity: 'error', summary: 'No se pudo remover al usuario' });
     }
   }
+
 }
