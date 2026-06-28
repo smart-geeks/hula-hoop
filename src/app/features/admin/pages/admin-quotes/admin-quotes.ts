@@ -7,7 +7,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { CommonModule, CurrencyPipe, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -69,7 +69,6 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
   selector: 'app-admin-quotes',
   templateUrl: './admin-quotes.html',
   imports: [
-    CommonModule,
     FormsModule,
     StepperModule,
     DatePickerModule,
