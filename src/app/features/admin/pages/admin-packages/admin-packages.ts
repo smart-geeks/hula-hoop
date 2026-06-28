@@ -58,6 +58,10 @@ export class AdminPackages {
   readonly saving         = signal(false);
   readonly inclusionInput = signal('');
   readonly colorOptions   = PACKAGE_COLORS;
+  readonly categoryOptions = [
+    { label: 'Hula Hula (Básico)', value: 'hula_hula' },
+    { label: 'Hooping (Premium)', value: 'hooping' },
+  ];
 
   readonly depositTypeOptions: { label: string; value: DepositType }[] = [
     { label: 'Pago completo (100%)', value: 'full' },
@@ -74,6 +78,7 @@ export class AdminPackages {
     price_cents:       [0, [Validators.required, Validators.min(0)]],
     inclusions:        [[] as string[]],
     color:             [null as string | null],
+    category:          ['hula_hula' as 'hula_hula' | 'hooping', Validators.required],
     deposit_type:      ['full' as DepositType],
     deposit_value:     [0],
     days_to_liquidate: [0, [Validators.min(0)]],
@@ -112,6 +117,7 @@ export class AdminPackages {
       price_cents:       0,
       inclusions:        [],
       color:             null,
+      category:          'hula_hula',
       deposit_type:      'full' as DepositType,
       deposit_value:     0,
       days_to_liquidate: 0,
@@ -133,6 +139,7 @@ export class AdminPackages {
       price_cents:       pkg.price_cents / 100,
       inclusions:        [...pkg.inclusions],
       color:             pkg.color,
+      category:          pkg.category,
       deposit_type:      pkg.deposit_type,
       deposit_value:     pkg.deposit_type === 'fixed' ? pkg.deposit_value / 100 : pkg.deposit_value,
       days_to_liquidate: pkg.days_to_liquidate ?? 0,

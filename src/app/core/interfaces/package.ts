@@ -33,6 +33,7 @@ export interface PartyPackage {
   is_active: boolean;
   sort_order: number;
   color: PackageColor | null;
+  category: 'hula_hula' | 'hooping';
   deposit_type: DepositType;
   deposit_value: number;
   days_to_liquidate: number;

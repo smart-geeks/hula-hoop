@@ -11,6 +11,7 @@
   <ng-template #header>
     <tr>
       <th>Nombre</th>
+      <th>Categoría</th>
       <th>Invitados</th>
       <th>Precio</th>
       <th>Inclusiones</th>
@@ -28,6 +29,10 @@
         @if (pkg.description) {
           <br><span class="text-sm text-neutro-500">{{ pkg.description }}</span>
         }
+      </td>
+      <td>
+        <p-tag [value]="pkg.category === 'hooping' ? 'Hooping (Premium)' : 'Hula Hula (Básico)'"
+               [severity]="pkg.category === 'hooping' ? 'success' : 'info'" />
       </td>
       <td>{{ pkg.min_guests }} – {{ pkg.max_guests }}</td>
       <td>{{ pkg.price_cents | currencyMxn }}</td>
@@ -87,6 +92,20 @@
         styleClass="w-full" />
       @if (form.controls.venue_id.invalid && form.controls.venue_id.touched) {
         <small class="text-red-500">Selecciona una sucursal.</small>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-neutro-700 mb-2">Categoría *</label>
+      <p-select
+        formControlName="category"
+        [options]="categoryOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar categoría"
+        styleClass="w-full" />
+      @if (form.controls.category.invalid && form.controls.category.touched) {
+        <small class="text-red-500">Selecciona una categoría.</small>
       }
     </div>
 
