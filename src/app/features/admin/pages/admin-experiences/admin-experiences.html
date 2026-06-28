@@ -1,0 +1,399 @@
+<p-toast />
+<p-confirmDialog />
+
+<h1 class="text-2xl font-bold font-display mb-6">Parámetros de Experiencias</h1>
+
+<!-- Tab buttons -->
+<div class="flex gap-2 mb-6 flex-wrap">
+  @for (tab of tabOptions; track tab.value) {
+    <button
+      (click)="activeTab.set(tab.value)"
+      class="px-5 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 border-2"
+      [class.bg-morado]="activeTab() === tab.value"
+      [class.text-white]="activeTab() === tab.value"
+      [class.border-morado]="activeTab() === tab.value"
+      [class.bg-white]="activeTab() !== tab.value"
+      [class.text-slate-600]="activeTab() !== tab.value"
+      [class.border-slate-200]="activeTab() !== tab.value">
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+<!-- ══════════════════════════════════════ HULA HULA / HOOPING TAB ══════════ -->
+@if (activeTab() === 'hula_hula' || activeTab() === 'hooping') {
+  @if (categoryConfigsLoading()) {
+    <p class="text-neutro-500 animate-pulse">Cargando parámetros de experiencias...</p>
+  } @else if (activeCategoryConfig(); as config) {
+    <div class="flex flex-col gap-6 animate-fade-in pb-12">
+
+      <div class="flex justify-end">
+        <p-button label="Guardar Cambios" icon="pi pi-check" (onClick)="saveCategoryConfig(config)" [loading]="categoryConfigsSaving()" />
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Glam Girls -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="pi pi-sparkles text-pink-500"></i>
+            Glam Girls
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Precio animadora extra</label>
+              <p-inputNumber [ngModel]="config.glam_girls_price_cents / 100"
+                             (ngModelChange)="updateGlamGirlsPrice(config, $event || 0)"
+                             [min]="0" mode="currency" currency="MXN" locale="es-MX" styleClass="w-full" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Mínimo de animadoras</label>
+              <p-inputNumber [ngModel]="config.glam_girls_min_count"
+                             (ngModelChange)="updateGlamGirlsMinCount(config, $event || 0)"
+                             [min]="0" [showButtons]="true" styleClass="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Inclusiones -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="pi pi-list text-blue-500"></i>
+            Inclusiones por defecto
+          </h3>
+          <div class="flex gap-2">
+            <input pInputText [value]="newInclusion()" (input)="newInclusion.set($any($event.target).value)"
+                   (keydown.enter)="$event.preventDefault(); addCategoryInclusion(config)"
+                   placeholder="Ej: Pintacaritas" class="flex-1" />
+            <p-button icon="pi pi-plus" (onClick)="addCategoryInclusion(config)" [outlined]="true"
+                      aria-label="Agregar inclusión" pTooltip="Agregar" />
+          </div>
+          <div class="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+            @for (inc of config.inclusions; track inc; let i = $index) {
+              <p-tag [value]="inc" severity="info" [rounded]="true">
+                <button type="button" class="ml-1.5 cursor-pointer text-xs" (click)="removeCategoryInclusion(config, i)"
+                        [attr.aria-label]="'Quitar ' + inc">✕</button>
+              </p-tag>
+            } @empty {
+              <span class="text-sm text-slate-400 italic">No hay inclusiones configuradas.</span>
+            }
+          </div>
+        </div>
+
+        <!-- Upgrades de decoración (per-category pricing) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4 lg:col-span-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="pi pi-palette text-purple-500"></i>
+                Upgrades de Decoración
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">Precios de upgrade desde el nivel incluido en este paquete.</p>
+            </div>
+            <p-button label="Agregar nivel" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="openAddDecoration()" />
+          </div>
+          <p-table [value]="config.decorations" styleClass="p-datatable-sm">
+            <ng-template #header>
+              <tr>
+                <th>Nivel</th>
+                <th>Precio extra (MXN)</th>
+                <th>Por defecto</th>
+                <th style="width: 6rem">Acciones</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-dec>
+              <tr>
+                <td><span class="font-semibold text-slate-700">{{ dec.name }}</span></td>
+                <td>{{ dec.price_cents | currencyMxn }}</td>
+                <td>
+                  @if (dec.is_default) {
+                    <p-tag value="Incluido" severity="success" [rounded]="true" />
+                  } @else {
+                    <span class="text-slate-400 text-xs">No</span>
+                  }
+                </td>
+                <td>
+                  <div class="flex gap-1">
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                              (onClick)="openEditDecoration(dec)" pTooltip="Editar" aria-label="Editar nivel" />
+                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                              (onClick)="removeDecoration(config, dec.id)" pTooltip="Eliminar" aria-label="Eliminar nivel" />
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="4" class="text-center py-4 text-slate-400 italic">No hay niveles configurados.</td></tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+        <!-- Actividades -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4 lg:col-span-2">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+              <i class="pi pi-check-square text-green-500"></i>
+              Catálogo de Actividades
+            </h3>
+            <p-button label="Agregar actividad" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="openAddActivity()" />
+          </div>
+          <p-table [value]="config.activities" styleClass="p-datatable-sm">
+            <ng-template #header>
+              <tr>
+                <th>Grupo</th>
+                <th>Actividad</th>
+                <th>Precio extra por niño (MXN)</th>
+                <th style="width: 6rem">Acciones</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-act>
+              <tr>
+                <td><p-tag [value]="'Grupo ' + act.group" [severity]="act.group === 'A' ? 'success' : (act.group === 'B' ? 'info' : 'warn')" /></td>
+                <td><span class="font-semibold text-slate-700">{{ act.name }}</span></td>
+                <td>{{ act.price_per_person | currencyMxn }}</td>
+                <td>
+                  <div class="flex gap-1">
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                              (onClick)="openEditActivity(act)" pTooltip="Editar" aria-label="Editar actividad" />
+                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                              (onClick)="removeActivity(config, act.id)" pTooltip="Eliminar" aria-label="Eliminar actividad" />
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="4" class="text-center py-4 text-slate-400 italic">No hay actividades configuradas.</td></tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+      </div>
+    </div>
+  } @else {
+    <div class="flex flex-col items-center justify-center py-12 bg-white rounded-2xl border border-slate-200">
+      <i class="pi pi-exclamation-triangle text-3xl text-amber-500 mb-3"></i>
+      <p class="text-slate-600 font-semibold">No se encontró configuración para esta categoría en este local.</p>
+    </div>
+  }
+}
+
+<!-- ═══════════════════════════════════════════════ DECORACIÓN TAB ══════════ -->
+@if (activeTab() === 'decoracion') {
+  <div class="flex items-center justify-between mb-4 animate-fade-in">
+    <div>
+      <h2 class="font-bold text-slate-800 text-lg">Niveles de Decoración</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Catálogo visual de niveles disponibles para esta sede (Petite, Grand, Plus).</p>
+    </div>
+    <p-button label="Nuevo nivel" icon="pi pi-plus" (onClick)="openNewDecorationLevel()" />
+  </div>
+
+  <p-table [value]="decorationLevels()" [loading]="decorationLevelsLoading()" [rowHover]="true" breakpoint="768px">
+    <ng-template #header>
+      <tr>
+        <th style="width:4.5rem">Imagen</th>
+        <th>Nombre</th>
+        <th>Precio base</th>
+        <th>Ítems</th>
+        <th>Orden</th>
+        <th>Estado</th>
+        <th style="width:7rem">Acciones</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-level>
+      <tr>
+        <td>
+          @if (level.image_url) {
+            <img [src]="level.image_url" [alt]="level.name"
+                 class="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+          } @else {
+            <div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+              <i class="pi pi-image text-slate-400" aria-hidden="true"></i>
+            </div>
+          }
+        </td>
+        <td><span class="font-semibold text-slate-800">{{ level.name }}</span></td>
+        <td><span class="font-semibold">{{ level.base_price_cents | currencyMxn }}</span></td>
+        <td><span class="text-sm text-slate-600">{{ level.inclusions.length }}</span></td>
+        <td>{{ level.sort_order }}</td>
+        <td>
+          <p-tag [value]="level.is_active ? 'Activo' : 'Inactivo'"
+                 [severity]="level.is_active ? 'success' : 'warn'" />
+        </td>
+        <td>
+          <div class="flex gap-1">
+            <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                      (onClick)="openEditDecorationLevel(level)" pTooltip="Editar" aria-label="Editar nivel de decoración" />
+            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                      (onClick)="confirmDeleteDecorationLevel(level)" pTooltip="Eliminar" aria-label="Eliminar nivel de decoración" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="7" class="text-center py-10 text-slate-400 italic">
+          No hay niveles de decoración configurados. Haz clic en "Nuevo nivel" para agregar el primero.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+}
+
+<!-- ══════════════════════ DIALOG: upgrade decoración (per-category) ═════════ -->
+<p-dialog [header]="editingDecoration() ? 'Editar decoración' : 'Nueva decoración'"
+          [visible]="showDecorationDialog()" (visibleChange)="showDecorationDialog.set($event)"
+          [modal]="true" [style]="{ width: '25rem' }" [closable]="true" [draggable]="false"
+          aria-label="Editar opción de decoración">
+  <div class="flex flex-col gap-4 pt-2">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre *</label>
+      <input pInputText [value]="decName()" (input)="decName.set($any($event.target).value)"
+             class="w-full font-sans text-sm" placeholder="Ej. Básica Petite" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1.5">Precio de upgrade (MXN)</label>
+      <p-inputNumber [ngModel]="decPrice()" (ngModelChange)="decPrice.set($event || 0)"
+                     [min]="0" mode="currency" currency="MXN" locale="es-MX" styleClass="w-full text-sm" />
+    </div>
+    <div class="flex items-center gap-2">
+      <p-toggleSwitch [ngModel]="decIsDefault()" (ngModelChange)="decIsDefault.set(!!$event)" />
+      <label class="text-sm">Diseño por defecto</label>
+    </div>
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="showDecorationDialog.set(false)" />
+      @if (activeCategoryConfig(); as config) {
+        <p-button label="Aceptar" (onClick)="saveDecoration(config)" />
+      }
+    </div>
+  </div>
+</p-dialog>
+
+<!-- ══════════════════════════════════ DIALOG: actividad ═════════════════════ -->
+<p-dialog [header]="editingActivity() ? 'Editar actividad' : 'Nueva actividad'"
+          [visible]="showActivityDialog()" (visibleChange)="showActivityDialog.set($event)"
+          [modal]="true" [style]="{ width: '25rem' }" [closable]="true" [draggable]="false"
+          aria-label="Editar actividad">
+  <div class="flex flex-col gap-4 pt-2">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre *</label>
+      <input pInputText [value]="actName()" (input)="actName.set($any($event.target).value)"
+             class="w-full font-sans text-sm" placeholder="Ej. Taller de Slime" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1.5">Grupo *</label>
+      <div class="flex gap-4">
+        @for (g of ['A', 'B', 'C']; track g) {
+          <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+            <input type="radio" name="actGroup" [value]="g" [checked]="actGroup() === g"
+                   (change)="actGroup.set($any(g))" />
+            <span>Grupo {{ g }}</span>
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1.5">Precio extra por niño (MXN)</label>
+      <p-inputNumber [ngModel]="actPrice()" (ngModelChange)="actPrice.set($event || 0)"
+                     [min]="0" mode="currency" currency="MXN" locale="es-MX" styleClass="w-full text-sm" />
+    </div>
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="showActivityDialog.set(false)" />
+      @if (activeCategoryConfig(); as config) {
+        <p-button label="Aceptar" (onClick)="saveActivity(config)" />
+      }
+    </div>
+  </div>
+</p-dialog>
+
+<!-- ════════════════════ DIALOG: nivel de decoración (catálogo) ══════════════ -->
+<p-dialog [header]="editingDecorationLevel() ? 'Editar nivel de decoración' : 'Nuevo nivel de decoración'"
+          [visible]="showDecorationLevelDialog()" (visibleChange)="showDecorationLevelDialog.set($event)"
+          [modal]="true" [style]="{ width: '36rem' }" [closable]="true" [draggable]="false"
+          aria-label="Editar nivel de decoración">
+  <div class="flex flex-col gap-5 pt-2">
+
+    <!-- Nombre -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="dl-name">Nombre *</label>
+      <input pInputText id="dl-name"
+             [value]="decLevelName()" (input)="decLevelName.set($any($event.target).value)"
+             class="w-full" placeholder="Ej. Petite, Grand, Plus" />
+    </div>
+
+    <!-- Imagen de referencia -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-2" for="dl-image">Imagen de referencia</label>
+      @if (decLevelPreviewUrl()) {
+        <img [src]="decLevelPreviewUrl()!" alt="Vista previa del nivel"
+             class="w-full max-h-48 object-cover rounded-xl border border-slate-200 mb-2" />
+      }
+      <input id="dl-image" type="file" accept="image/jpeg,image/png,image/webp"
+             (change)="onDecorationLevelFileChange($event)"
+             class="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
+    </div>
+
+    <!-- Precio base -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="dl-price">Precio base (MXN) *</label>
+      <p-inputNumber id="dl-price"
+                     [ngModel]="decLevelPrice()" (ngModelChange)="decLevelPrice.set($event || 0)"
+                     [min]="0" mode="currency" currency="MXN" locale="es-MX" styleClass="w-full" />
+    </div>
+
+    <!-- Incluye -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-2">Incluye</label>
+      <div class="flex flex-col gap-1.5 mb-2 max-h-36 overflow-y-auto">
+        @for (item of decLevelInclusions(); track item; let i = $index) {
+          <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
+            <span class="flex-1 text-sm text-slate-700">{{ item }}</span>
+            <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" size="small"
+                      (onClick)="removeDecorationLevelInclusion(i)" type="button"
+                      [attr.aria-label]="'Quitar ' + item" pTooltip="Quitar" />
+          </div>
+        }
+        @if (decLevelInclusions().length === 0) {
+          <p class="text-xs text-slate-400 italic py-2 text-center">Sin ítems. Agrega al menos uno.</p>
+        }
+      </div>
+      <div class="flex gap-2">
+        <input pInputText
+               [value]="decLevelNewInclusion()" (input)="decLevelNewInclusion.set($any($event.target).value)"
+               (keydown.enter)="$event.preventDefault(); addDecorationLevelInclusion()"
+               placeholder="Ej. 1 mampara grupo A" class="flex-1 text-sm" />
+        <p-button label="Agregar" icon="pi pi-plus" size="small" [outlined]="true"
+                  (onClick)="addDecorationLevelInclusion()" type="button" />
+      </div>
+    </div>
+
+    <!-- Notas de medidas -->
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="dl-notes">Notas de medidas</label>
+      <textarea pTextarea id="dl-notes" [rows]="2"
+                [value]="decLevelNotes()" (input)="decLevelNotes.set($any($event.target).value)"
+                class="w-full text-sm" placeholder="Ej. Ancho: 2.50 m · Altura: 2.00 m"></textarea>
+    </div>
+
+    <!-- Orden y activo -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="dl-order">Orden</label>
+        <p-inputNumber id="dl-order"
+                       [ngModel]="decLevelSortOrder()" (ngModelChange)="decLevelSortOrder.set($event || 0)"
+                       [showButtons]="true" [min]="0" styleClass="w-full" />
+      </div>
+      <div class="flex items-center gap-3 pt-6">
+        <p-toggleSwitch [ngModel]="decLevelIsActive()" (ngModelChange)="decLevelIsActive.set(!!$event)"
+                        inputId="dl-active" />
+        <label for="dl-active" class="text-sm">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true"
+                (onClick)="showDecorationLevelDialog.set(false)" type="button" />
+      <p-button [label]="editingDecorationLevel() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+                (onClick)="saveDecorationLevel()" [loading]="decLevelSaving()" />
+    </div>
+  </div>
+</p-dialog>
