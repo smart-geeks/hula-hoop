@@ -12,6 +12,7 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { InputMaskModule } from 'primeng/inputmask';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { PackageService } from '../../../../core/services/package.service';
@@ -24,16 +25,19 @@ import { QuoteService } from '../../../../core/services/quote.service';
 import { ContractService } from '../../../../core/services/contract.service';
 import { ClientService } from '../../../../core/services/client.service';
 import { PublicVenueService } from '../../../../core/services/public-venue.service';
+import { PackageCategoryConfigService } from '../../../../core/services/package-category-config.service';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
 import type { PartyPackage } from '../../../../core/interfaces/package';
-import type { Extra } from '../../../../core/interfaces/extra';
+import type { Extra, ExtraCategory } from '../../../../core/interfaces/extra';
 import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { VenueConfig } from '../../../../core/interfaces/venue-config';
 import type { Quote, CreateQuoteData } from '../../../../core/interfaces/quote';
+import type { PackageCategoryConfig } from '../../../../core/interfaces/package-category-config';
 
 interface SelectedExtra {
   extra: Extra;
   quantity: number;
+  variant?: any;
 }
 
 @Component({
@@ -52,6 +56,7 @@ interface SelectedExtra {
     TagModule,
     ToastModule,
     InputMaskModule,
+    ToggleSwitchModule,
     CurrencyMxnPipe,
   ],
   providers: [MessageService],
@@ -63,6 +68,7 @@ export class PrivateReservationPage {
   private readonly extraService = inject(ExtraService);
   private readonly snackOptionService = inject(SnackOptionService);
   private readonly configService = inject(VenueConfigService);
+  private readonly categoryConfigService = inject(PackageCategoryConfigService);
   private readonly authService = inject(AuthService);
   private readonly paymentService = inject(PaymentService);
   private readonly quoteService = inject(QuoteService);
@@ -85,8 +91,33 @@ export class PrivateReservationPage {
   readonly timeSlots = signal<TimeSlot[]>([]);
   readonly packages = signal<PartyPackage[]>([]);
   readonly extras = signal<Extra[]>([]);
+
+  private static readonly EXTRA_CATEGORY_ORDER: ExtraCategory[] = [
+    'extras',
+    'hula_munch_bar',
+    'servicios_adicionales',
+  ];
+
+  private static readonly EXTRA_CATEGORY_LABELS: Record<ExtraCategory, string> = {
+    extras: 'Extras',
+    hula_munch_bar: 'Hula Munch Bar',
+    servicios_adicionales: 'Servicios Adicionales',
+  };
+
+  readonly extrasByCategory = computed(() => {
+    const allExtras = this.extras();
+    return PrivateReservationPage.EXTRA_CATEGORY_ORDER
+      .map(cat => ({
+        category: cat,
+        label: PrivateReservationPage.EXTRA_CATEGORY_LABELS[cat],
+        items: allExtras.filter(e => e.category === cat),
+      }))
+      .filter(group => group.items.length > 0);
+  });
+
   readonly snackOptions = signal<SnackOption[]>([]);
   readonly venueConfig = signal<VenueConfig | null>(null);
+  readonly categoryConfigs = signal<PackageCategoryConfig[]>([]);
 
   // ── Step 1: Date + Slot ──
   readonly selectedDate = signal<Date | null>(null);
@@ -104,7 +135,23 @@ export class PrivateReservationPage {
   // ── Step 4: Merienda ──
   readonly selectedSnackOption = signal<SnackOption | null>(null);
 
+  // ── Premium Redesign additions ──
+  readonly selectedCategory = signal<'hula_hula' | 'hooping'>('hula_hula');
+  readonly selectedDecoration = signal<string>('petite');
+  readonly glamGirlsEnabled = signal<boolean>(false);
+  readonly glamGirlsCount = signal<number>(5);
+  readonly selectedActivity = signal<any | null>(null);
+  readonly activeActivityTab = signal<'A' | 'B' | 'C'>('A');
+
   // ── Computed ──
+  readonly activeCategoryConfig = computed(() =>
+    this.categoryConfigs().find((cfg) => cfg.category === this.selectedCategory())
+  );
+
+  readonly activitiesList = computed(() => {
+    return this.activeCategoryConfig()?.activities ?? [];
+  });
+
   readonly minDate = computed(() => {
     const cfg = this.venueConfig();
     const now = new Date();
@@ -133,20 +180,87 @@ export class PrivateReservationPage {
     return this.timeSlots().filter((s) => s.day_type === dayType && s.is_active);
   });
 
+  readonly filteredPackages = computed(() => {
+    const cat = this.selectedCategory();
+    return this.packages().filter(p => {
+      const isHoopingPkg = p.name.toLowerCase().includes('hooping');
+      return cat === 'hooping' ? isHoopingPkg : !isHoopingPkg;
+    });
+  });
+
+  readonly isMorningSlot = computed(() => {
+    const slot = this.selectedSlot();
+    if (!slot) return false;
+    const hour = parseInt(slot.start_time.split(':')[0], 10);
+    return hour < 12; // Menor a las 12:00 PM es considerado horario AM
+  });
+
+  readonly filteredSnackOptions = computed(() => {
+    const isAM = this.isMorningSlot();
+    const amKeywords = ['chilaquiles', 'molletes', 'croissant', 'crossaint'];
+    return this.snackOptions().filter(option => {
+      const nameLower = option.name.toLowerCase();
+      const isAMOption = amKeywords.some(keyword => nameLower.includes(keyword));
+      return isAM ? isAMOption : !isAMOption;
+    });
+  });
+
   readonly subtotalCents = computed(() => {
     const pkg = this.selectedPackage();
     return pkg?.price_cents ?? 0;
   });
 
+  readonly decorationUpgradeCents = computed(() => {
+    const cfg = this.activeCategoryConfig();
+    if (!cfg) return 0;
+    const decId = this.selectedDecoration();
+    const dec = cfg.decorations?.find((d) => d.id === decId);
+    return dec?.price_cents ?? 0;
+  });
+
+  readonly selectedDecorationName = computed(() => {
+    const cfg = this.activeCategoryConfig();
+    const decId = this.selectedDecoration();
+    return cfg?.decorations?.find((d) => d.id === decId)?.name ?? decId;
+  });
+
+  readonly glamGirlsMinCount = computed(() => {
+    return this.activeCategoryConfig()?.glam_girls_min_count ?? 5;
+  });
+
+  readonly glamGirlsPriceCents = computed(() => {
+    return this.activeCategoryConfig()?.glam_girls_price_cents ?? 30000;
+  });
+
+  readonly activityUpgradeCents = computed(() => {
+    const cat = this.selectedCategory();
+    const act = this.selectedActivity();
+    const guests = this.guestCount();
+    if (cat === 'hooping' && act && act.price_per_person) {
+      return act.price_per_person * guests * 100; // Convertido a centavos
+    }
+    return 0;
+  });
+
+  readonly glamGirlsCents = computed(() => {
+    if (!this.glamGirlsEnabled()) return 0;
+    return this.glamGirlsCount() * this.glamGirlsPriceCents();
+  });
+
   readonly extrasTotalCents = computed(() => {
-    return this.selectedExtras().reduce(
-      (sum, se) => sum + (se.extra.pay_at_venue ? 0 : se.extra.price_cents * se.quantity),
-      0,
-    );
+    return this.selectedExtras().reduce((sum, se) => {
+      if (se.extra.pay_at_venue) return sum;
+      const unitPrice = se.variant ? se.variant.price_cents : se.extra.price_cents;
+      return sum + (unitPrice * se.quantity);
+    }, 0);
   });
 
   readonly totalCents = computed(() => {
-    return this.subtotalCents() + this.extrasTotalCents();
+    return this.subtotalCents() + 
+           this.extrasTotalCents() + 
+           this.decorationUpgradeCents() + 
+           this.activityUpgradeCents() + 
+           this.glamGirlsCents();
   });
 
   readonly depositCents = computed(() => {
@@ -193,8 +307,26 @@ export class PrivateReservationPage {
       this.guestCount();
       this.selectedExtras();
       this.selectedSnackOption();
+      this.selectedCategory();
+      this.selectedDecoration();
+      this.glamGirlsEnabled();
+      this.glamGirlsCount();
+      this.selectedActivity();
       this.lastGeneratedReservation.set(null);
       this.generatedQuoteToken.set(null);
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const am = this.isMorningSlot();
+      const snack = this.selectedSnackOption();
+      if (snack) {
+        const nameLower = snack.name.toLowerCase();
+        const amKeywords = ['chilaquiles', 'molletes', 'croissant', 'crossaint'];
+        const isAMOption = amKeywords.some(keyword => nameLower.includes(keyword));
+        if (am !== isAMOption) {
+          this.selectedSnackOption.set(null);
+        }
+      }
     }, { allowSignalWrites: true });
   }
 
@@ -206,29 +338,35 @@ export class PrivateReservationPage {
     let pkgs: PartyPackage[] = [];
     let extras: Extra[] = [];
     let config: VenueConfig | null = null;
+    let catConfigs: PackageCategoryConfig[] = [];
 
     if (venue) {
-      const [s, p, e, c] = await Promise.all([
+      const [s, p, e, c, cc] = await Promise.all([
         this.timeSlotService.getActiveSlotsByVenue(venue.id),
         this.packageService.getActivePackagesByVenue(venue.id),
         this.extraService.getActiveExtrasByVenue(venue.id),
         this.configService.getConfigByVenue(venue.id),
+        this.categoryConfigService.getConfigsByVenue(venue.id),
       ]);
       slots = s;
       pkgs = p;
       extras = e;
       config = c;
+      catConfigs = cc;
     } else {
-      const [s, p, e, c] = await Promise.all([
+      const defaultVenueId = '00000000-0000-0000-0000-000000000001';
+      const [s, p, e, c, cc] = await Promise.all([
         this.timeSlotService.getActiveSlots(),
         this.packageService.getActivePackages(),
         this.extraService.getActiveExtras(),
         this.configService.getConfig(),
+        this.categoryConfigService.getConfigsByVenue(defaultVenueId),
       ]);
       slots = s;
       pkgs = p;
       extras = e;
       config = c;
+      catConfigs = cc;
     }
 
     const snacks = await this.snackOptionService.getActiveSnackOptions();
@@ -238,6 +376,15 @@ export class PrivateReservationPage {
     this.extras.set(extras);
     this.snackOptions.set(snacks);
     this.venueConfig.set(config);
+    this.categoryConfigs.set(catConfigs);
+
+    // Set initial default decoration
+    const initialCat = this.selectedCategory();
+    const cfg = catConfigs.find(c => c.category === initialCat);
+    if (cfg && cfg.decorations && cfg.decorations.length > 0) {
+      const defaultDec = cfg.decorations.find(d => d.is_default) || cfg.decorations[0];
+      this.selectedDecoration.set(defaultDec.id);
+    }
 
     // Pre-fill contact form if logged in
     const profile = this.authService.userProfile();
@@ -318,7 +465,8 @@ export class PrivateReservationPage {
     if (exists) {
       this.selectedExtras.set(current.filter((se) => se.extra.id !== extra.id));
     } else {
-      this.selectedExtras.set([...current, { extra, quantity: 1 }]);
+      const defaultVariant = extra.variants && extra.variants.length > 0 ? extra.variants[0] : undefined;
+      this.selectedExtras.set([...current, { extra, quantity: 1, variant: defaultVariant }]);
     }
   }
 
@@ -333,8 +481,30 @@ export class PrivateReservationPage {
           current.map((se) => (se.extra.id === extra.id ? { ...se, quantity } : se)),
         );
       } else {
-        this.selectedExtras.set([...current, { extra, quantity }]);
+        const defaultVariant = extra.variants && extra.variants.length > 0 ? extra.variants[0] : undefined;
+        this.selectedExtras.set([...current, { extra, quantity, variant: defaultVariant }]);
       }
+    }
+  }
+
+  getExtraVariantId(extra: Extra): string {
+    const found = this.selectedExtras().find((se) => se.extra.id === extra.id);
+    if (found?.variant) return found.variant.id;
+    if (extra.variants && extra.variants.length > 0) return extra.variants[0].id;
+    return '';
+  }
+
+  updateExtraVariant(extra: Extra, variantId: string): void {
+    const variant = extra.variants?.find((v) => v.id === variantId) || null;
+    const current = this.selectedExtras();
+    const existing = current.find((se) => se.extra.id === extra.id);
+
+    if (existing) {
+      this.selectedExtras.set(
+        current.map((se) => (se.extra.id === extra.id ? { ...se, variant } : se))
+      );
+    } else {
+      this.selectedExtras.set([...current, { extra, quantity: 1, variant }]);
     }
   }
 
@@ -343,18 +513,55 @@ export class PrivateReservationPage {
     this.selectedSnackOption.set(option);
   }
 
-  // ── Step navigation ──
+  setCategory(cat: 'hula_hula' | 'hooping'): void {
+    this.selectedCategory.set(cat);
+    this.selectedPackage.set(null);
+    this.selectedActivity.set(null);
+    const cfg = this.categoryConfigs().find(c => c.category === cat);
+    if (cfg && cfg.decorations && cfg.decorations.length > 0) {
+      const defaultDec = cfg.decorations.find(d => d.is_default) || cfg.decorations[0];
+      this.selectedDecoration.set(defaultDec.id);
+    } else {
+      this.selectedDecoration.set(cat === 'hooping' ? 'grand' : 'petite');
+    }
+  }
+
+  toggleGlamGirls(enabled: boolean): void {
+    this.glamGirlsEnabled.set(enabled);
+    const minCount = this.glamGirlsMinCount();
+    if (enabled && this.glamGirlsCount() < minCount) {
+      this.glamGirlsCount.set(minCount);
+    }
+  }
+
+  updateGlamGirlsCount(count: number): void {
+    const minCount = this.glamGirlsMinCount();
+    const val = Math.max(minCount, count);
+    this.glamGirlsCount.set(val);
+  }
+
+  selectActivity(activity: any): void {
+    this.selectedActivity.set(activity);
+  }
+
   // ── Step navigation ──
   canGoToStep2(): boolean {
     return this.selectedDate() !== null && this.selectedSlot() !== null;
   }
 
   canGoToStep3(): boolean {
-    return this.selectedPackage() !== null && (this.snackOptions().length === 0 || this.selectedSnackOption() !== null);
+    return this.selectedPackage() !== null && (this.filteredSnackOptions().length === 0 || this.selectedSnackOption() !== null);
   }
 
   canGoToStep4(): boolean {
-    return true; // extras are optional
+    if (this.selectedCategory() === 'hooping') {
+      return this.selectedActivity() !== null;
+    }
+    return true;
+  }
+
+  canGoToStep5(): boolean {
+    return true; // Glam Girls and extras are optional
   }
 
   onStepChange(step: number | undefined): void {
@@ -373,7 +580,7 @@ export class PrivateReservationPage {
         if (!this.canGoToStep2()) {
           this.navigateToStepWithWarning(
             1,
-            'Debes seleccionar una fecha y un horario disponible primero. Estos campos son necesarios para generar tu cotización.',
+            'Debes seleccionar una fecha y un horario disponible primero.',
             '#date-selection-header'
           );
           return;
@@ -385,20 +592,36 @@ export class PrivateReservationPage {
         );
         return;
       }
-      if (step >= 4) {
+      if (step >= 4 && !this.canGoToStep4()) {
         if (!this.canGoToStep2()) {
-          this.navigateToStepWithWarning(
-            1,
-            'Debes seleccionar una fecha y un horario disponible primero. Estos campos son necesarios para generar tu cotización.',
-            '#date-selection-header'
-          );
+          this.navigateToStepWithWarning(1, 'Debes seleccionar fecha/horario.', '#date-selection-header');
           return;
         }
         if (!this.canGoToStep3()) {
+          this.navigateToStepWithWarning(2, 'Debes seleccionar paquete/merienda.', '#package-selection-header');
+          return;
+        }
+        this.navigateToStepWithWarning(
+          3,
+          'Debes seleccionar una actividad para el paquete Hooping.',
+          '#activities-selection-header'
+        );
+        return;
+      }
+      if (step >= 5) {
+        if (!this.canGoToStep2()) {
+          this.navigateToStepWithWarning(1, 'Debes seleccionar fecha/horario.', '#date-selection-header');
+          return;
+        }
+        if (!this.canGoToStep3()) {
+          this.navigateToStepWithWarning(2, 'Debes seleccionar paquete/merienda.', '#package-selection-header');
+          return;
+        }
+        if (!this.canGoToStep4()) {
           this.navigateToStepWithWarning(
-            2,
-            'Debes seleccionar un paquete y su merienda primero. Estos campos son necesarios para generar tu cotización.',
-            '#package-selection-header'
+            3,
+            'Debes seleccionar una actividad para el paquete Hooping.',
+            '#activities-selection-header'
           );
           return;
         }
@@ -431,7 +654,7 @@ export class PrivateReservationPage {
     }
   }
 
-  handleSummaryClick(field: 'fecha' | 'paquete' | 'extras' | 'total'): void {
+  handleSummaryClick(field: 'fecha' | 'paquete' | 'decoracion' | 'actividad' | 'extras' | 'total'): void {
     if (field === 'fecha') {
       this.activeStep.set(1);
       setTimeout(() => {
@@ -440,11 +663,7 @@ export class PrivateReservationPage {
       }, 300);
     } else if (field === 'paquete') {
       if (!this.canGoToStep2()) {
-        this.navigateToStepWithWarning(
-          1,
-          'Primero debes elegir una fecha y horario para ver los paquetes disponibles. Estos campos son necesarios para generar tu cotización.',
-          '#date-selection-header'
-        );
+        this.navigateToStepWithWarning(1, 'Elige fecha/horario primero.', '#date-selection-header');
       } else {
         this.activeStep.set(2);
         setTimeout(() => {
@@ -452,41 +671,41 @@ export class PrivateReservationPage {
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);
       }
-    } else if (field === 'extras') {
+    } else if (field === 'decoracion' || field === 'actividad') {
       if (!this.canGoToStep2()) {
-        this.navigateToStepWithWarning(
-          1,
-          'Primero debes elegir una fecha y horario. Estos campos son necesarios para generar tu cotización.',
-          '#date-selection-header'
-        );
+        this.navigateToStepWithWarning(1, 'Elige fecha/horario primero.', '#date-selection-header');
       } else if (!this.canGoToStep3()) {
-        this.navigateToStepWithWarning(
-          2,
-          'Primero debes seleccionar un paquete. Estos campos son necesarios para generar tu cotización.',
-          '#package-selection-header'
-        );
+        this.navigateToStepWithWarning(2, 'Elige paquete/merienda primero.', '#package-selection-header');
       } else {
         this.activeStep.set(3);
         setTimeout(() => {
-          const el = document.querySelector('#extras-selection-header');
+          const el = document.querySelector(field === 'decoracion' ? '#decor-selection-header' : '#activities-selection-header');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    } else if (field === 'extras') {
+      if (!this.canGoToStep2()) {
+        this.navigateToStepWithWarning(1, 'Elige fecha/horario primero.', '#date-selection-header');
+      } else if (!this.canGoToStep3()) {
+        this.navigateToStepWithWarning(2, 'Elige paquete/merienda primero.', '#package-selection-header');
+      } else if (!this.canGoToStep4()) {
+        this.navigateToStepWithWarning(3, 'Configura decoración/actividad primero.', '#decor-selection-header');
+      } else {
+        this.activeStep.set(4);
+        setTimeout(() => {
+          const el = document.querySelector('#glam-selection-header');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);
       }
     } else if (field === 'total') {
       if (!this.canGoToStep2()) {
-        this.navigateToStepWithWarning(
-          1,
-          'Primero debes elegir una fecha y horario. Estos campos son necesarios para generar tu cotización.',
-          '#date-selection-header'
-        );
+        this.navigateToStepWithWarning(1, 'Elige fecha/horario primero.', '#date-selection-header');
       } else if (!this.canGoToStep3()) {
-        this.navigateToStepWithWarning(
-          2,
-          'Primero debes seleccionar un paquete. Estos campos son necesarios para generar tu cotización.',
-          '#package-selection-header'
-        );
+        this.navigateToStepWithWarning(2, 'Elige paquete/merienda primero.', '#package-selection-header');
+      } else if (!this.canGoToStep4()) {
+        this.navigateToStepWithWarning(3, 'Configura decoración/actividad primero.', '#decor-selection-header');
       } else {
-        this.activeStep.set(4);
+        this.activeStep.set(5);
         setTimeout(() => {
           const el = document.querySelector('#contact-form-header');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -789,7 +1008,6 @@ export class PrivateReservationPage {
 
     const snack = this.selectedSnackOption();
     if (snack) {
-      // Snack options don't carry a separate price — included in package
       items.push({
         descripcion:     `Merienda: ${snack.name}`,
         cantidad:        1,
@@ -797,13 +1015,54 @@ export class PrivateReservationPage {
       });
     }
 
+    // Decoration upgrade
+    const decUpgradeCents = this.decorationUpgradeCents();
+    if (decUpgradeCents > 0) {
+      const decName = this.selectedDecorationName();
+      items.push({
+        descripcion:     `Upgrade de Decoración: ${decName}`,
+        cantidad:        1,
+        precio_unitario: decUpgradeCents / 100,
+      });
+    }
+
+    // Activity upgrade
+    const cat = this.selectedCategory();
+    const act = this.selectedActivity();
+    if (cat === 'hooping' && act) {
+      if (act.price_per_person > 0) {
+        items.push({
+          descripcion:     `Actividad Premium: ${act.name}`,
+          cantidad:        this.guestCount(),
+          precio_unitario: act.price_per_person,
+        });
+      } else {
+        items.push({
+          descripcion:     `Actividad Incluida: ${act.name}`,
+          cantidad:        1,
+          precio_unitario: 0,
+        });
+      }
+    }
+
+    // Glam Girls
+    if (this.glamGirlsEnabled()) {
+      items.push({
+        descripcion:     `Área Glam Girls (Glitter mani, make up, peinados)`,
+        cantidad:        this.glamGirlsCount(),
+        precio_unitario: this.glamGirlsPriceCents() / 100,
+      });
+    }
+
     for (const se of this.selectedExtras()) {
+      const name = se.variant ? `${se.extra.name} (${se.variant.name})` : se.extra.name;
+      const price = se.variant ? se.variant.price_cents : se.extra.price_cents;
       items.push({
         descripcion:     se.extra.pay_at_venue
-          ? `${se.extra.name} (cobro en local)`
-          : se.extra.name,
+          ? `${name} (cobro en local)`
+          : name,
         cantidad:        se.quantity,
-        precio_unitario: se.extra.pay_at_venue ? 0 : se.extra.price_cents / 100,
+        precio_unitario: se.extra.pay_at_venue ? 0 : price / 100,
       });
     }
 
@@ -816,6 +1075,12 @@ export class PrivateReservationPage {
   }
 
   // ── Helpers ──
+  isSlotMorning(slot: TimeSlot): boolean {
+    if (!slot?.start_time) return false;
+    const hour = parseInt(slot.start_time.split(':')[0], 10);
+    return hour < 12;
+  }
+
   formatDateISO(date: Date): string {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');

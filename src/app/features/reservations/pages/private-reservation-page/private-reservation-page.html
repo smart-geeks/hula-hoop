@@ -12,491 +12,871 @@
     </div>
   } @else {
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-6 items-start">
-  <!-- ── Stepper column ── -->
-  <div>
-    <p-stepper [value]="activeStep()" (valueChange)="onStepChange($event)" [linear]="false">
-      <p-step-list>
-        <p-step [value]="1">Fecha y horario</p-step>
-        <p-step [value]="2">Paquete y Merienda</p-step>
-        <p-step [value]="3">Extras</p-step>
-        <p-step [value]="4">Datos y resumen</p-step>
-      </p-step-list>
+    <!-- ── Stepper column ── -->
+    <div>
+      <p-stepper [value]="activeStep()" (valueChange)="onStepChange($event)" [linear]="false">
+        <p-step-list>
+          <p-step [value]="1">Fecha y horario</p-step>
+          <p-step [value]="2">Paquete y Merienda</p-step>
+          <p-step [value]="3">Decoración y Actividades</p-step>
+          <p-step [value]="4">Glam Girls y Extras</p-step>
+          <p-step [value]="5">Datos y resumen</p-step>
+        </p-step-list>
 
-      <p-step-panels>
-        <!-- STEP 1: Fecha y horario -->
-        <p-step-panel [value]="1">
-          <ng-template #content let-activateCallback="activateCallback">
-            <div class="flex flex-col gap-6 py-4">
-              <div>
-                <h2 id="date-selection-header" class="text-lg font-semibold mb-3">Selecciona una fecha</h2>
-                <p-datepicker
-                  [inline]="true"
-                  [minDate]="minDate()"
-                  [maxDate]="maxDate()"
-                  [showIcon]="false"
-                  (onSelect)="onDateSelect($event)"
-                  styleClass="w-full" />
+        <p-step-panels>
+          <!-- STEP 1: Fecha y horario -->
+          <p-step-panel [value]="1">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="flex flex-col gap-6 py-4">
+                <div>
+                  <h2 id="date-selection-header" class="text-lg font-semibold mb-3 text-slate-800">Selecciona una fecha</h2>
+                  <p-datepicker
+                    [inline]="true"
+                    [minDate]="minDate()"
+                    [maxDate]="maxDate()"
+                    [showIcon]="false"
+                    (onSelect)="onDateSelect($event)"
+                    styleClass="w-full border-none shadow-sm rounded-2xl" />
+                </div>
+
+                @if (selectedDate()) {
+                  <div>
+                    <h2 class="text-lg font-semibold mb-3 text-slate-800">
+                      Horarios disponibles para {{ formatDateDisplay(selectedDate()!) }}
+                    </h2>
+
+                    @if (checkingAvailability()) {
+                      <div class="flex items-center gap-2 text-slate-400">
+                        <i class="pi pi-spin pi-spinner"></i>
+                        <span>Verificando disponibilidad...</span>
+                      </div>
+                    } @else if (availableSlots().length === 0) {
+                      <p class="text-slate-500 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                        No hay horarios disponibles para esta fecha. Todos los horarios ya tienen reserva.
+                      </p>
+                    } @else {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @for (slot of availableSlots(); track slot.id) {
+                          <button
+                            type="button"
+                            class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white"
+                            [class]="selectedSlot()?.id === slot.id
+                              ? 'border-primary bg-primary/5 shadow-sm font-semibold'
+                              : 'border-slate-200 hover:border-slate-300'"
+                            (click)="selectSlot(slot)">
+                            <div class="flex items-center gap-3">
+                              <i class="pi pi-clock text-lg"
+                                 [class]="selectedSlot()?.id === slot.id ? 'text-primary' : 'text-slate-400'"></i>
+                              <div>
+                                <p class="text-slate-800">{{ formatTime(slot.start_time) }} – {{ formatTime(slot.end_time) }}</p>
+                                <p class="text-xs text-slate-500 mt-1">
+                                  {{ slot.day_type === 'weekday' ? 'Entre semana' : 'Fin de semana' }}
+                                  •
+                                  <span class="font-medium" [class]="isSlotMorning(slot) ? 'text-amber-600' : 'text-indigo-600'">
+                                    {{ isSlotMorning(slot) ? '☀️ Turno Mañana (A.M.)' : '🌙 Turno Tarde (P.M.)' }}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
               </div>
 
-              @if (selectedDate()) {
+              <div class="flex justify-end pt-4">
+                <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                          [disabled]="!canGoToStep2()" (onClick)="activateCallback(2)" />
+              </div>
+            </ng-template>
+          </p-step-panel>
+
+          <!-- STEP 2: Paquete y Merienda -->
+          <p-step-panel [value]="2">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="py-4 flex flex-col gap-6">
+                <!-- Category Selector -->
                 <div>
-                  <h2 class="text-lg font-semibold mb-3">
-                    Horarios disponibles para {{ formatDateDisplay(selectedDate()!) }}
-                  </h2>
-
-                  @if (checkingAvailability()) {
-                    <div class="flex items-center gap-2 text-neutro-500">
-                      <i class="pi pi-spin pi-spinner"></i>
-                      <span>Verificando disponibilidad...</span>
-                    </div>
-                  } @else if (availableSlots().length === 0) {
-                    <p class="text-neutro-500 bg-neutro-50 rounded-lg p-4">
-                      No hay horarios disponibles para esta fecha. Todos los horarios ya tienen reserva.
-                    </p>
-                  } @else {
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      @for (slot of availableSlots(); track slot.id) {
-                        <button
-                          type="button"
-                          class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer"
-                          [class]="selectedSlot()?.id === slot.id
-                            ? 'border-rojo-brillante bg-rojo-brillante/5'
-                            : 'border-neutro-200 hover:border-neutro-400'"
-                          (click)="selectSlot(slot)">
-                          <div class="flex items-center gap-3">
-                            <i class="pi pi-clock text-lg"
-                               [class]="selectedSlot()?.id === slot.id ? 'text-rojo-brillante' : 'text-neutro-400'"></i>
-                            <div>
-                              <p class="font-semibold">{{ formatTime(slot.start_time) }} – {{ formatTime(slot.end_time) }}</p>
-                              <p class="text-sm text-neutro-500">
-                                {{ slot.day_type === 'weekday' ? 'Entre semana' : 'Fin de semana' }}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
+                  <h2 class="text-lg font-semibold mb-3 text-slate-800">1. Selecciona la Categoría de tu Fiesta</h2>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Hula Hula -->
+                    <button type="button"
+                      class="p-5 rounded-2xl border-2 text-left transition-all cursor-pointer hover:shadow-md relative overflow-hidden bg-white"
+                      [class]="selectedCategory() === 'hula_hula' ? 'border-[#F2A7D8] bg-[#F2A7D8]/5 shadow-sm' : 'border-slate-200'"
+                      (click)="setCategory('hula_hula')">
+                      @if (selectedCategory() === 'hula_hula') {
+                        <div class="absolute top-0 right-0 bg-[#F2A7D8] text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl">Seleccionado</div>
                       }
-                    </div>
-                  }
+                      <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">🌸</span>
+                        <h3 class="text-lg font-bold text-slate-800">Categoría Hula Hula</h3>
+                      </div>
+                      <p class="text-xs text-slate-500 mb-2 leading-relaxed">Una fiesta mágica llena de diversión libre y merienda deliciosa.</p>
+                      <span class="text-xs text-[#F2A7D8] font-bold">Decoración Petite Incluida</span>
+                    </button>
+
+                    <!-- Hooping -->
+                    <button type="button"
+                      class="p-5 rounded-2xl border-2 text-left transition-all cursor-pointer hover:shadow-md relative overflow-hidden bg-white"
+                      [class]="selectedCategory() === 'hooping' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200'"
+                      (click)="setCategory('hooping')">
+                      @if (selectedCategory() === 'hooping') {
+                        <div class="absolute top-0 right-0 bg-primary text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl">Seleccionado</div>
+                      }
+                      <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">✨</span>
+                        <h3 class="text-lg font-bold text-slate-800">Categoría Hooping</h3>
+                      </div>
+                      <p class="text-xs text-slate-500 mb-2 leading-relaxed">La experiencia premium definitiva. Incluye actividades creativas y decoración mejorada.</p>
+                      <span class="text-xs text-primary font-bold">Decoración Grand + 1 Actividad Incluida</span>
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-2 italic text-center">"Nanas y bebés menores de 1 año, entran gratis"</p>
                 </div>
-              }
-            </div>
 
-            <div class="flex justify-end pt-4">
-              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
-                        [disabled]="!canGoToStep2()" (onClick)="activateCallback(2)" />
-            </div>
-          </ng-template>
-        </p-step-panel>
-
-        <!-- STEP 2: Paquete -->
-        <p-step-panel [value]="2">
-          <ng-template #content let-activateCallback="activateCallback">
-            <div class="py-4">
-              <h2 id="package-selection-header" class="text-lg font-semibold mb-4">Selecciona un paquete</h2>
-
-              <div class="flex flex-col gap-4">
-                @for (pkg of packages(); track pkg.id) {
-                  <button
-                    type="button"
-                    class="p-5 rounded-xl border-2 text-left transition-all cursor-pointer overflow-hidden"
-                    [class]="selectedPackage()?.id === pkg.id
-                      ? 'border-rojo-brillante bg-rojo-brillante/5 shadow-md'
-                      : 'border-neutro-200 hover:border-neutro-400'"
-                    [style.border-left-width]="pkg.color ? '5px' : ''"
-                    [style.border-left-color]="pkg.color ? 'var(--color-' + pkg.color + ')' : ''"
-                    (click)="selectPackage(pkg)">
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div class="flex-1">
-                        <h3 class="text-lg font-bold">{{ pkg.name }}</h3>
-                        @if (pkg.description) {
-                          <p class="text-sm text-neutro-500 mt-1">{{ pkg.description }}</p>
-                        }
-                        <p class="text-sm text-neutro-600 mt-2">
-                          {{ pkg.min_guests }} – {{ pkg.max_guests }} invitados
-                        </p>
-                        @if (pkg.inclusions.length > 0) {
-                          <div class="flex flex-wrap gap-1.5 mt-3">
-                            @for (inc of pkg.inclusions; track inc) {
-                              <p-tag [value]="inc" severity="info" [rounded]="true" />
+                <!-- Package Selector -->
+                <div>
+                  <h2 id="package-selection-header" class="text-lg font-semibold mb-4 text-slate-800">2. Selecciona un Paquete</h2>
+                  <div class="flex flex-col gap-4">
+                    @for (pkg of filteredPackages(); track pkg.id) {
+                      <button
+                        type="button"
+                        class="p-5 rounded-2xl border-2 text-left transition-all cursor-pointer overflow-hidden bg-white"
+                        [class]="selectedPackage()?.id === pkg.id
+                          ? 'border-primary bg-primary/5 shadow-md'
+                          : 'border-slate-200 hover:border-slate-300'"
+                        [style.border-left-width]="pkg.color ? '5px' : ''"
+                        [style.border-left-color]="pkg.color ? 'var(--color-' + pkg.color + ')' : ''"
+                        (click)="selectPackage(pkg)">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div class="flex-1">
+                            <h3 class="text-lg font-bold text-slate-800">{{ pkg.name }}</h3>
+                            @if (pkg.description) {
+                              <p class="text-sm text-slate-500 mt-1 leading-relaxed">{{ pkg.description }}</p>
+                            }
+                            <div class="flex items-center gap-2 mt-2">
+                              <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 rounded text-slate-600">
+                                {{ pkg.min_guests }} – {{ pkg.max_guests }} invitados
+                              </span>
+                            </div>
+                            @if (pkg.inclusions.length > 0) {
+                              <div class="flex flex-wrap gap-1.5 mt-3">
+                                @for (inc of pkg.inclusions; track inc) {
+                                  <span class="text-xs font-medium bg-slate-50 text-slate-600 px-2 py-1 rounded-full border border-slate-200/80">{{ inc }}</span>
+                                }
+                              </div>
                             }
                           </div>
+                          <div class="text-right shrink-0">
+                            <p class="text-2xl font-bold text-primary">
+                              {{ pkg.price_cents | currencyMxn }}
+                            </p>
+                            <p class="text-xs text-slate-400 font-medium">MXN</p>
+                          </div>
+                        </div>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <!-- Capacity guest count adjuster -->
+                @if (selectedPackage()) {
+                  <div class="p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h4 class="font-semibold text-slate-800">Ajusta el número de invitados</h4>
+                      <p class="text-xs text-slate-500 mt-0.5">Este paquete permite entre {{ selectedPackage()!.min_guests }} y {{ selectedPackage()!.max_guests }} invitados.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <button type="button" 
+                        class="w-10 h-10 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        [disabled]="guestCount() <= selectedPackage()!.min_guests"
+                        (click)="updateGuestCount(guestCount() - 1)">
+                        <i class="pi pi-minus"></i>
+                      </button>
+                      <span class="text-xl font-bold text-slate-800 w-8 text-center">{{ guestCount() }}</span>
+                      <button type="button" 
+                        class="w-10 h-10 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        [disabled]="guestCount() >= selectedPackage()!.max_guests"
+                        (click)="updateGuestCount(guestCount() + 1)">
+                        <i class="pi pi-plus"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Snack Selection -->
+                @if (selectedPackage()) {
+                  <div id="merienda-section" class="p-6 bg-[#fdf5e6] border border-[#F6F090] rounded-2xl shadow-sm">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span class="text-2xl">🍱</span>
+                      <h2 class="text-lg font-bold text-slate-800">3. Selecciona la Merienda para tu Fiesta</h2>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4 pl-11">
+                      Tus opciones para el
+                      <span class="font-bold" [class]="isMorningSlot() ? 'text-amber-600' : 'text-indigo-600'">
+                        {{ isMorningSlot() ? 'Turno Mañana (A.M.)' : 'Turno Tarde (P.M.)' }}
+                      </span>
+                    </p>
+
+                    @if (filteredSnackOptions().length === 0) {
+                      <p class="text-slate-500 bg-white rounded-xl p-4 pl-11 border border-slate-100">No hay opciones de merienda disponibles para este turno.</p>
+                    } @else {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-11">
+                        @for (option of filteredSnackOptions(); track option.id) {
+                          <button
+                            type="button"
+                            class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white"
+                            [class]="selectedSnackOption()?.id === option.id
+                              ? 'border-primary bg-primary/5 shadow-sm font-semibold'
+                              : 'border-slate-200 hover:border-slate-300'"
+                            (click)="selectSnackOption(option)">
+                            <div class="flex items-center gap-3">
+                              <span class="text-2xl" [class]="selectedSnackOption()?.id === option.id ? 'opacity-100' : 'opacity-65'">🍴</span>
+                              <div>
+                                <p class="text-slate-800 font-semibold">{{ option.name }}</p>
+                                @if (option.description) {
+                                  <p class="text-xs text-slate-400 font-normal mt-0.5">{{ option.description }}</p>
+                                }
+                              </div>
+                            </div>
+                          </button>
                         }
                       </div>
-                      <div class="text-right shrink-0">
-                        <p class="text-2xl font-bold"
-                           [style.color]="pkg.color ? 'var(--color-' + pkg.color + ')' : 'var(--color-rojo-brillante)'">
-                          {{ pkg.price_cents | currencyMxn }}
-                        </p>
-                        <p class="text-xs text-neutro-500">MXN</p>
-                      </div>
-                    </div>
-                  </button>
+                    }
+                  </div>
                 }
               </div>
 
-              @if (selectedPackage()) {
-                <div id="merienda-section" class="mt-8 p-6 bg-[#fdf5e6] border-2 border-[#F6F090] rounded-2xl transition-all duration-500 shadow-md">
-                  <div class="flex items-center gap-3 mb-2">
-                    <span class="text-2xl">⭐</span>
-                    <h2 class="text-xl font-bold font-display text-gray-800">Selecciona la Merienda para tu fiesta</h2>
-                  </div>
-                  <p class="text-sm text-neutro-500 mb-6 pl-11">Escoge la opción de merienda incluida en tu paquete</p>
+              <div class="flex justify-between pt-4">
+                <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                          (onClick)="activateCallback(1)" />
+                <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                          [disabled]="!canGoToStep3()" (onClick)="activateCallback(3)" />
+              </div>
+            </ng-template>
+          </p-step-panel>
 
-                  @if (snackOptions().length === 0) {
-                    <p class="text-neutro-500 bg-white rounded-lg p-4 pl-11 border border-gray-100">No hay opciones de merienda disponibles.</p>
-                  } @else {
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-11">
-                      @for (option of snackOptions(); track option.id) {
-                        <button
-                          type="button"
-                          class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white"
-                          [class]="selectedSnackOption()?.id === option.id
-                            ? 'border-[#F2A7D8] bg-[#F2A7D8]/10 shadow-sm'
-                            : 'border-neutro-200 hover:border-[#F2A7D8]/50'"
-                          (click)="selectSnackOption(option)">
-                          <div class="flex items-center gap-3">
-                            <span class="text-2xl"
-                               [class]="selectedSnackOption()?.id === option.id ? 'opacity-100 grayscale-0' : 'opacity-60 grayscale'">🍱</span>
-                            <div>
-                              <p class="font-semibold text-gray-800">{{ option.name }}</p>
-                              @if (option.description) {
-                                <p class="text-sm text-neutro-500">{{ option.description }}</p>
-                              }
-                            </div>
+          <!-- STEP 3: Decoración y Actividades -->
+          <p-step-panel [value]="3">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="py-4 flex flex-col gap-6">
+                <!-- Decoration Level Selector -->
+                <div>
+                  <h2 id="decor-selection-header" class="text-lg font-semibold mb-1 text-slate-800">1. Decoración de tu Fiesta</h2>
+                  <p class="text-sm text-slate-500 mb-4">Elige el estilo de decoración que deseas para tu evento.</p>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    @for (dec of activeCategoryConfig()?.decorations; track dec.id) {
+                      <button type="button"
+                        class="p-5 rounded-2xl border-2 text-left transition-all cursor-pointer bg-white relative overflow-hidden flex flex-col justify-between min-h-[160px]"
+                        [class]="selectedDecoration() === dec.id ? 'border-[#F2A7D8] bg-[#F2A7D8]/5 shadow-sm font-semibold' : 'border-slate-200 hover:border-slate-300'"
+                        (click)="selectedDecoration.set(dec.id)">
+                        <div>
+                          <div class="flex justify-between items-start mb-2">
+                            <span class="text-xl">
+                              @if (dec.id === 'petite') { 🌸 }
+                              @else if (dec.id === 'grand') { 🎪 }
+                              @else { 🏰 }
+                            </span>
+                            @if (dec.price_cents === 0) {
+                              <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 rounded text-slate-600">Incluido</span>
+                            } @else {
+                              <span class="text-xs font-semibold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">Upgrade</span>
+                            }
                           </div>
-                        </button>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-
-            <div class="flex justify-between pt-4">
-              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
-                        (onClick)="activateCallback(1)" />
-              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
-                        [disabled]="!canGoToStep3()" (onClick)="activateCallback(3)" />
-            </div>
-          </ng-template>
-        </p-step-panel>
-
-        <!-- STEP 3: Extras -->
-        <p-step-panel [value]="3">
-          <ng-template #content let-activateCallback="activateCallback">
-            <div class="py-4">
-              <h2 id="extras-selection-header" class="text-lg font-semibold mb-2">Extras opcionales</h2>
-              <p class="text-sm text-neutro-500 mb-4">Agrega extras a tu fiesta (puedes omitir este paso)</p>
-
-              @if (extras().length === 0) {
-                <p class="text-neutro-500 bg-neutro-50 rounded-lg p-4">No hay extras disponibles.</p>
-              } @else {
-                <div class="flex flex-col gap-3">
-                  @for (extra of extras(); track extra.id) {
-                    <div class="p-4 rounded-xl border transition-colors"
-                         [class]="getExtraQuantity(extra) > 0
-                           ? 'border-rojo-brillante/40 bg-rojo-brillante/5'
-                           : 'border-neutro-200'">
-                      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div class="flex-1 cursor-pointer" (click)="toggleExtra(extra)">
-                          <h3 class="font-semibold">{{ extra.name }}</h3>
-                          @if (extra.description) {
-                            <p class="text-sm text-neutro-500">{{ extra.description }}</p>
-                          }
-                          @if (extra.pay_at_venue) {
-                            <p class="text-sm font-medium text-morado mt-1">Se cobra en el local</p>
-                          } @else {
-                            <p class="text-sm font-medium text-rojo-brillante mt-1">{{ extra.price_cents | currencyMxn }} c/u</p>
-                          }
+                          <h4 class="font-bold text-slate-800">{{ dec.name }}</h4>
+                          <p class="text-xs text-slate-400 font-normal mt-1 leading-relaxed">
+                            @if (dec.id === 'petite') {
+                              Nuestra decoración básica y elegante con temática Hula Hoop.
+                            } @else if (dec.id === 'grand') {
+                              Mampara más elaborada, detalles premium y globos espectaculares.
+                            } @else {
+                              Nuestra decoración VIP de lujo. Máxima producción con backing completo y arcos de globos orgánicos.
+                            }
+                          </p>
                         </div>
-                        @if (getExtraQuantity(extra) > 0) {
-                          <p-inputNumber
-                            [ngModel]="getExtraQuantity(extra)"
-                            (ngModelChange)="updateExtraQuantity(extra, $event)"
-                            [min]="1"
-                            [max]="50"
-                            [showButtons]="true"
-                            class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
-                        } @else {
-                          <p-button icon="pi pi-plus" [rounded]="true" [outlined]="true"
-                                    severity="secondary" (onClick)="toggleExtra(extra)" />
+                        <p class="text-sm font-bold text-slate-700 mt-3">
+                          {{ dec.price_cents === 0 ? '$0 MXN' : '+' + (dec.price_cents | currencyMxn) }}
+                        </p>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <!-- Activities Selection -->
+                <div>
+                  <h2 id="activities-selection-header" class="text-lg font-semibold mb-3 text-slate-800">2. Actividades de la Fiesta</h2>
+                  @if (selectedCategory() === 'hula_hula') {
+                    <div class="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+                      <span class="text-4xl">🎨</span>
+                      <h4 class="font-semibold text-slate-800 mt-2">¿Quieres agregar talleres y actividades creativas?</h4>
+                      <p class="text-sm text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                        Las actividades creativas como talleres de galletas, peines y bucket hats están disponibles de forma exclusiva en la categoría <strong>Hooping</strong>.
+                      </p>
+                      <button type="button"
+                        class="mt-4 px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-all text-sm shadow-sm"
+                        (click)="setCategory('hooping')">
+                        Subir a Categoría Hooping ✨
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="p-6 bg-[#fdfaf6] border border-slate-200 rounded-2xl shadow-sm">
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xl">🎨</span>
+                        <h3 class="text-base font-bold text-slate-800">Selecciona tu Actividad (1 Incluida en Hooping)</h3>
+                      </div>
+                      <p class="text-xs text-slate-500 mb-4">
+                        Elige la actividad principal para tu fiesta. Las opciones de la pestaña A están incluidas. Las de B y C requieren upgrade.
+                      </p>
+
+                      <!-- Tab list -->
+                      <div class="flex gap-2 border-b border-slate-200 mb-4 pb-0.5">
+                        <button type="button"
+                          class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
+                          [class]="activeActivityTab() === 'A' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                          (click)="activeActivityTab.set('A')">
+                          Opción A (Incluidas)
+                        </button>
+                        <button type="button"
+                          class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
+                          [class]="activeActivityTab() === 'B' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                          (click)="activeActivityTab.set('B')">
+                          Opción B (+ Upgrades)
+                        </button>
+                        <button type="button"
+                          class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
+                          [class]="activeActivityTab() === 'C' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                          (click)="activeActivityTab.set('C')">
+                          Opción C (+ Premium)
+                        </button>
+                      </div>
+
+                      <!-- Tab panels -->
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @for (act of activitiesList(); track act.id) {
+                          @if (act.group === activeActivityTab()) {
+                            <button type="button"
+                              class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white relative flex flex-col justify-between min-h-[100px]"
+                              [class]="selectedActivity()?.id === act.id
+                                ? 'border-primary bg-primary/5 shadow-sm font-semibold'
+                                : 'border-slate-200 hover:border-slate-300'"
+                              (click)="selectActivity(act)">
+                              <div>
+                                <p class="text-slate-800 font-semibold">{{ act.name }}</p>
+                                <p class="text-xs text-slate-400 font-normal mt-1 leading-normal">
+                                  {{ act.group === 'A' ? 'Incluido en paquete' : '+' + (act.price_per_person * 100 | currencyMxn) + ' por persona' }}
+                                </p>
+                              </div>
+                              @if (act.group !== 'A' && selectedActivity()?.id === act.id) {
+                                <p class="text-xs font-bold text-primary mt-2">
+                                  Total: +{{ act.price_per_person * guestCount() * 100 | currencyMxn }} MXN
+                                </p>
+                              }
+                            </button>
+                          }
                         }
                       </div>
                     </div>
                   }
                 </div>
-              }
+              </div>
 
-              @if (selectedExtras().length > 0) {
-                <div class="mt-4 p-4 bg-lima/10 rounded-xl">
-                  <p class="text-sm font-medium mb-2">Extras seleccionados:</p>
-                  @for (se of selectedExtras(); track se.extra.id) {
-                    <div class="flex justify-between text-sm">
-                      <span>{{ se.extra.name }} x {{ se.quantity }}</span>
-                      @if (se.extra.pay_at_venue) {
-                        <span class="text-morado font-medium">Cobro en local</span>
-                      } @else {
-                        <span class="font-medium">{{ se.extra.price_cents * se.quantity | currencyMxn }}</span>
+              <div class="flex justify-between pt-4">
+                <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                          (onClick)="activateCallback(2)" />
+                <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                          [disabled]="selectedCategory() === 'hooping' && !selectedActivity()"
+                          (onClick)="activateCallback(4)" />
+              </div>
+            </ng-template>
+          </p-step-panel>
+
+          <!-- STEP 4: Glam Girls y Extras -->
+          <p-step-panel [value]="4">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="py-4 flex flex-col gap-6">
+                <!-- Glam Girls Section -->
+                <div>
+                  <h2 id="glam-selection-header" class="text-lg font-semibold mb-1 text-slate-800">1. Área Glam Girls (Opcional)</h2>
+                  <p class="text-sm text-slate-500 mb-4">Servicio premium con Glitter mani, make up con gemas faciales y peinados para las invitadas.</p>
+
+                  <div class="p-6 bg-[#fdf5f9] border border-pink-100 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between gap-4">
+                      <div class="flex items-center gap-3">
+                        <span class="text-3xl">💅</span>
+                        <div>
+                          <h4 class="font-bold text-slate-800 text-sm">Habilitar Área Glam Girls</h4>
+                          <p class="text-xs text-slate-400 mt-0.5">Mínimo {{ glamGirlsMinCount() }} niñas. Costo de {{ glamGirlsPriceCents() | currencyMxn }} por niña.</p>
+                        </div>
+                      </div>
+                      <p-toggleSwitch [ngModel]="glamGirlsEnabled()" (ngModelChange)="toggleGlamGirls($event)" />
+                    </div>
+
+                    @if (glamGirlsEnabled()) {
+                      <div class="mt-4 p-4 bg-white border border-pink-100/60 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                          <label class="text-sm font-semibold text-slate-700">Número de niñas a consentir:</label>
+                          <p class="text-xs text-slate-400 mt-0.5">Debe ser al menos {{ glamGirlsMinCount() }} niñas.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                          <button type="button"
+                            class="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                            [disabled]="glamGirlsCount() <= glamGirlsMinCount()"
+                            (click)="updateGlamGirlsCount(glamGirlsCount() - 1)">
+                            <i class="pi pi-minus"></i>
+                          </button>
+                          <span class="text-lg font-bold text-slate-800 w-6 text-center">{{ glamGirlsCount() }}</span>
+                          <button type="button"
+                            class="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
+                            (click)="updateGlamGirlsCount(glamGirlsCount() + 1)">
+                            <i class="pi pi-plus"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="flex justify-between items-center text-sm font-bold text-[#F2A7D8] mt-4 pt-3 border-t border-slate-100">
+                        <span>Subtotal Glam Girls:</span>
+                        <span>{{ glamGirlsCents() | currencyMxn }} MXN</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Regular Extras Section -->
+                <div>
+                  <h2 id="extras-selection-header" class="text-lg font-semibold mb-2 text-slate-800">2. Extras Opcionales</h2>
+                  <p class="text-sm text-slate-500 mb-4">Agrega extras a tu fiesta (puedes omitir este paso)</p>
+
+                  @if (extrasByCategory().length === 0) {
+                    <p class="text-slate-500 bg-slate-50 rounded-xl p-4">No hay extras disponibles.</p>
+                  } @else {
+                    <div class="flex flex-col gap-6">
+                      @for (group of extrasByCategory(); track group.category) {
+                        <div>
+                          <!-- Category header -->
+                          <div class="flex items-center gap-2 mb-3">
+                            <span class="text-xs font-bold uppercase tracking-widest text-slate-400">{{ group.label }}</span>
+                            <div class="flex-1 h-px bg-slate-100"></div>
+                          </div>
+                          <!-- Extras in this category -->
+                          <div class="flex flex-col gap-3">
+                            @for (extra of group.items; track extra.id) {
+                              <div class="p-4 rounded-xl border transition-colors"
+                                   [class]="getExtraQuantity(extra) > 0
+                                     ? 'border-[#F2A7D8]/40 bg-[#F2A7D8]/5'
+                                     : 'border-slate-200 bg-white'">
+                                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                  <div class="flex-1 cursor-pointer" (click)="toggleExtra(extra)">
+                                    <h3 class="font-semibold text-slate-800 text-sm">{{ extra.name }}</h3>
+                                    @if (extra.description) {
+                                      <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ extra.description }}</p>
+                                    }
+                                    @if (extra.variants && extra.variants.length > 0) {
+                                      <div class="mt-2" (click)="$event.stopPropagation()">
+                                        <select
+                                          [ngModel]="getExtraVariantId(extra)"
+                                          (ngModelChange)="updateExtraVariant(extra, $event)"
+                                          class="w-full sm:w-64 text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 font-medium text-slate-700 outline-none focus:border-[#F2A7D8] focus:ring-1 focus:ring-[#F2A7D8]">
+                                          @for (v of extra.variants; track v.id) {
+                                            <option [value]="v.id">{{ v.name }} ({{ v.price_cents | currencyMxn }})</option>
+                                          }
+                                        </select>
+                                      </div>
+                                    } @else {
+                                      @if (extra.pay_at_venue) {
+                                        <p class="text-xs font-semibold text-indigo-600 mt-1">Se cobra en el local</p>
+                                      } @else {
+                                        <p class="text-xs font-semibold text-[#F2A7D8] mt-1">{{ extra.price_cents | currencyMxn }} c/u</p>
+                                      }
+                                    }
+                                  </div>
+                                  @if (getExtraQuantity(extra) > 0) {
+                                    <p-inputNumber
+                                      [ngModel]="getExtraQuantity(extra)"
+                                      (ngModelChange)="updateExtraQuantity(extra, $event)"
+                                      [min]="1"
+                                      [max]="50"
+                                      [showButtons]="true"
+                                      class="w-full sm:w-24 shrink-0 [&_input]:w-full" />
+                                  } @else {
+                                    <p-button icon="pi pi-plus" [rounded]="true" [outlined]="true"
+                                              severity="secondary" (onClick)="toggleExtra(extra)" />
+                                  }
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
                       }
                     </div>
                   }
-                  @if (extrasTotalCents() > 0) {
-                    <div class="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-neutro-200">
-                      <span>Subtotal extras</span>
-                      <span>{{ extrasTotalCents() | currencyMxn }}</span>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-
-            <div class="flex justify-between pt-4">
-              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
-                        (onClick)="activateCallback(2)" />
-              <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
-                        (onClick)="activateCallback(4)" />
-            </div>
-          </ng-template>
-        </p-step-panel>
-
-        <!-- STEP 4: Datos y resumen -->
-        <p-step-panel [value]="4">
-          <ng-template #content let-activateCallback="activateCallback">
-            <div class="py-4">
-              <h2 id="contact-form-header" class="text-lg font-semibold mb-4">Datos de contacto</h2>
-
-              <form [formGroup]="contactForm" class="flex flex-col gap-5 mb-6">
-                <div>
-                  <p-floatlabel variant="on">
-                    <input pInputText id="res-name" formControlName="guest_name" class="w-full" />
-                    <label for="res-name">Nombre completo *</label>
-                  </p-floatlabel>
-                  @if (contactForm.get('guest_name')?.touched && contactForm.get('guest_name')?.invalid) {
-                    <small class="text-red-500 text-xs px-1 mt-1 block">El nombre completo es requerido.</small>
-                  }
-                </div>
-
-                <div>
-                  <p-floatlabel variant="on">
-                    <input pInputText id="res-email" formControlName="guest_email" type="email" class="w-full" />
-                    <label for="res-email">Correo electrónico *</label>
-                  </p-floatlabel>
-                  @if (contactForm.get('guest_email')?.touched && contactForm.get('guest_email')?.invalid) {
-                    <small class="text-red-500 text-xs px-1 mt-1 block">Ingresa un correo electrónico válido.</small>
-                  }
-                </div>
-
-                <div>
-                  <p-floatlabel variant="on">
-                    <p-inputMask id="res-phone" formControlName="guest_phone"
-                                 mask="(999) 999-9999" placeholder="(999) 999-9999" styleClass="w-full" />
-                    <label for="res-phone">Teléfono *</label>
-                  </p-floatlabel>
-                  @if (contactForm.get('guest_phone')?.touched && contactForm.get('guest_phone')?.invalid) {
-                    <small class="text-red-500 text-xs px-1 mt-1 block">Ingresa un número de teléfono de 10 dígitos.</small>
-                  }
-                </div>
-
-                <p-floatlabel variant="on">
-                  <textarea pTextarea id="res-notes" formControlName="notes" [rows]="3" class="w-full"></textarea>
-                  <label for="res-notes">Notas adicionales (opcional)</label>
-                </p-floatlabel>
-              </form>
-
-              <!-- Resumen -->
-              <h2 class="text-lg font-semibold mb-3">Resumen de tu reserva</h2>
-              <div class="bg-neutro-50 rounded-xl p-5 flex flex-col gap-3">
-                <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('fecha')">
-                  <span class="text-neutro-600">Fecha</span>
-                  <span class="font-medium">{{ selectedDate() ? formatDateDisplay(selectedDate()!) : '' }}</span>
-                </div>
-                <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('fecha')">
-                  <span class="text-neutro-600">Horario</span>
-                  <span class="font-medium">
-                    @if (selectedSlot()) {
-                      {{ formatTime(selectedSlot()!.start_time) }} – {{ formatTime(selectedSlot()!.end_time) }}
-                    }
-                  </span>
-                </div>
-                <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
-                  <span class="text-neutro-600">Paquete</span>
-                  <span class="font-medium">{{ selectedPackage()?.name }}</span>
-                </div>
-                <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
-                  <span class="text-neutro-600">Invitados</span>
-                  <span class="font-medium">{{ guestCount() }}</span>
-                </div>
-                @if (selectedSnackOption()) {
-                  <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
-                    <span class="text-neutro-600">Merienda</span>
-                    <span class="font-medium">{{ selectedSnackOption()!.name }}</span>
-                  </div>
-                }
-
-                <hr class="border-neutro-200" />
-
-                <div class="flex justify-between cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
-                  <span class="text-neutro-600">Precio Paquete</span>
-                  <span class="font-medium">{{ subtotalCents() | currencyMxn }}</span>
                 </div>
 
                 @if (selectedExtras().length > 0) {
-                  @for (se of selectedExtras(); track se.extra.id) {
-                    <div class="flex justify-between text-sm cursor-pointer hover:bg-neutro-200/50 p-1.5 rounded-lg transition-all" (click)="handleSummaryClick('extras')">
-                      <span class="text-neutro-500">{{ se.extra.name }} x {{ se.quantity }}</span>
-                      <span>{{ se.extra.price_cents * se.quantity | currencyMxn }}</span>
-                    </div>
-                  }
+                  <div class="mt-4 p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                    <p class="text-sm font-semibold text-slate-700 mb-2">Extras seleccionados:</p>
+                    @for (se of selectedExtras(); track se.extra.id) {
+                      <div class="flex justify-between text-xs text-slate-600">
+                        <span>
+                          {{ se.extra.name }}
+                          @if (se.variant) {
+                            ({{ se.variant.name }})
+                          }
+                          x {{ se.quantity }}
+                        </span>
+                        @if (se.extra.pay_at_venue) {
+                          <span class="text-indigo-600 font-medium">Cobro en local</span>
+                        } @else {
+                          @let price = se.variant ? se.variant.price_cents : se.extra.price_cents;
+                          <span class="font-medium text-slate-700">{{ price * se.quantity | currencyMxn }}</span>
+                        }
+                      </div>
+                    }
+                    @if (extrasTotalCents() > 0) {
+                      <div class="flex justify-between text-xs font-bold text-slate-800 mt-2 pt-2 border-t border-slate-200">
+                        <span>Subtotal extras</span>
+                        <span>{{ extrasTotalCents() | currencyMxn }}</span>
+                      </div>
+                    }
+                  </div>
                 }
-
-                <hr class="border-neutro-200" />
-
-                <div class="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span class="text-rojo-brillante">{{ totalCents() | currencyMxn }}</span>
                 </div>
 
-                @if (hasPartialDeposit()) {
-                  <hr class="border-neutro-200" />
-                  <div class="flex justify-between font-semibold text-green-700">
-                    <span>Anticipo a pagar ahora</span>
-                    <span>{{ depositCents() | currencyMxn }}</span>
-                  </div>
-                  <div class="flex justify-between text-sm text-neutro-500">
-                    <span>Restante a pagar en el local</span>
-                    <span>{{ remainingCents() | currencyMxn }}</span>
-                  </div>
-                }
+              <div class="flex justify-between pt-4">
+                <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                          (onClick)="activateCallback(3)" />
+                <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                          (onClick)="activateCallback(5)" />
               </div>
-            </div>
+            </ng-template>
+          </p-step-panel>
 
-            <!-- ── Quote Sharing & Download Panel ── -->
-            <div class="border border-neutro-200 rounded-xl p-4 bg-white mt-6 mb-2 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div class="text-center md:text-left">
-                <h3 class="font-semibold text-neutro-800 text-sm">¿Solo deseas guardar o compartir la cotización?</h3>
-                <p class="text-xs text-neutro-500">Puedes descargarla en PDF, enviarla por correo o abrir enlace para compartirla por WhatsApp.</p>
-              </div>
-              <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
-                <p-button label="PDF" icon="pi pi-file-pdf" [outlined]="true" severity="secondary" 
-                          [loading]="generatingQuote()" (onClick)="generateQuoteOnly('download')" class="w-full sm:w-auto [&>button]:w-full" />
-                <p-button label="WhatsApp" icon="pi pi-whatsapp" [outlined]="true" severity="success"
-                          [loading]="generatingQuote()" (onClick)="generateQuoteOnly('whatsapp')" class="w-full sm:w-auto [&>button]:w-full" />
-                <p-button label="Correo" icon="pi pi-envelope" [outlined]="true" severity="info"
-                          [loading]="generatingQuote()" (onClick)="generateQuoteOnly('email')" class="w-full sm:w-auto [&>button]:w-full" />
-              </div>
-            </div>
+          <!-- STEP 5: Datos y resumen -->
+          <p-step-panel [value]="5">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="py-4">
+                <h2 id="contact-form-header" class="text-lg font-semibold mb-4 text-slate-800">Datos de contacto</h2>
 
-            <div class="flex flex-col sm:flex-row sm:justify-between items-center gap-3 pt-4">
-              <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary" class="w-full sm:w-auto [&>button]:w-full"
-                        (onClick)="activateCallback(3)" />
-              <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                @if (isAdmin()) {
-                  <p-button label="Crear y Aplicar Pago en Local" icon="pi pi-money-bill" severity="success"
+                <form [formGroup]="contactForm" class="flex flex-col gap-5 mb-6">
+                  <div>
+                    <p-floatlabel variant="on">
+                      <input pInputText id="res-name" formControlName="guest_name" class="w-full" />
+                      <label for="res-name">Nombre completo *</label>
+                    </p-floatlabel>
+                    @if (contactForm.get('guest_name')?.touched && contactForm.get('guest_name')?.invalid) {
+                      <small class="text-red-500 text-xs px-1 mt-1 block">El nombre completo es requerido.</small>
+                    }
+                  </div>
+
+                  <div>
+                    <p-floatlabel variant="on">
+                      <input pInputText id="res-email" formControlName="guest_email" type="email" class="w-full" />
+                      <label for="res-email">Correo electrónico *</label>
+                    </p-floatlabel>
+                    @if (contactForm.get('guest_email')?.touched && contactForm.get('guest_email')?.invalid) {
+                      <small class="text-red-500 text-xs px-1 mt-1 block">Ingresa un correo electrónico válido.</small>
+                    }
+                  </div>
+
+                  <div>
+                    <p-floatlabel variant="on">
+                      <p-inputMask id="res-phone" formControlName="guest_phone"
+                                   mask="(999) 999-9999" placeholder="(999) 999-9999" styleClass="w-full" />
+                      <label for="res-phone">Teléfono *</label>
+                    </p-floatlabel>
+                    @if (contactForm.get('guest_phone')?.touched && contactForm.get('guest_phone')?.invalid) {
+                      <small class="text-red-500 text-xs px-1 mt-1 block">Ingresa un número de teléfono de 10 dígitos.</small>
+                    }
+                  </div>
+
+                  <p-floatlabel variant="on">
+                    <textarea pTextarea id="res-notes" formControlName="notes" [rows]="3" class="w-full"></textarea>
+                    <label for="res-notes">Notas adicionales (opcional)</label>
+                  </p-floatlabel>
+                </form>
+
+                <!-- Summary -->
+                <h2 class="text-lg font-semibold mb-3 text-slate-800">Resumen de tu reserva</h2>
+                <div class="bg-slate-50 rounded-2xl p-5 flex flex-col gap-3 border border-slate-200">
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('fecha')">
+                    <span class="text-slate-500">Fecha</span>
+                    <span class="font-semibold text-slate-800">{{ selectedDate() ? formatDateDisplay(selectedDate()!) : '' }}</span>
+                  </div>
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('fecha')">
+                    <span class="text-slate-500">Horario</span>
+                    <span class="font-semibold text-slate-800">
+                      @if (selectedSlot()) {
+                        {{ formatTime(selectedSlot()!.start_time) }} – {{ formatTime(selectedSlot()!.end_time) }}
+                      }
+                    </span>
+                  </div>
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
+                    <span class="text-slate-500">Categoría</span>
+                    <span class="font-semibold text-slate-800 capitalize">{{ selectedCategory() === 'hula_hula' ? 'Hula Hula' : 'Hooping' }}</span>
+                  </div>
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
+                    <span class="text-slate-500">Paquete</span>
+                    <span class="font-semibold text-slate-800">{{ selectedPackage()?.name }}</span>
+                  </div>
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
+                    <span class="text-slate-500">Invitados</span>
+                    <span class="font-semibold text-slate-800">{{ guestCount() }}</span>
+                  </div>
+                  @if (selectedSnackOption()) {
+                    <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
+                      <span class="text-slate-500">Merienda</span>
+                      <span class="font-semibold text-slate-800">{{ selectedSnackOption()!.name }}</span>
+                    </div>
+                  }
+
+                  <!-- Premium Details in summary -->
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('decoracion')">
+                    <span class="text-slate-500">Decoración</span>
+                    <span class="font-semibold text-slate-800 capitalize">
+                      {{ selectedDecoration() }}
+                      @if (decorationUpgradeCents() > 0) {
+                        (Upgrade: +{{ decorationUpgradeCents() | currencyMxn }})
+                      } @else {
+                        (Incluida)
+                      }
+                    </span>
+                  </div>
+                  @if (selectedCategory() === 'hooping' && selectedActivity()) {
+                    <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('actividad')">
+                      <span class="text-slate-500">Actividad</span>
+                      <span class="font-semibold text-slate-800">
+                        {{ selectedActivity().name }}
+                        @if (activityUpgradeCents() > 0) {
+                          (Upgrade: +{{ activityUpgradeCents() | currencyMxn }})
+                        } @else {
+                          (Incluida)
+                        }
+                      </span>
+                    </div>
+                  }
+                  @if (glamGirlsEnabled()) {
+                    <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('extras')">
+                      <span class="text-slate-500">Glam Girls</span>
+                      <span class="font-semibold text-[#F2A7D8]">{{ glamGirlsCount() }} niñas (+{{ glamGirlsCents() | currencyMxn }})</span>
+                    </div>
+                  }
+
+                  <hr class="border-slate-200" />
+
+                  <div class="flex justify-between cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('paquete')">
+                    <span class="text-slate-500">Precio Paquete Base</span>
+                    <span class="font-semibold text-slate-800">{{ subtotalCents() | currencyMxn }}</span>
+                  </div>
+
+                  @if (selectedExtras().length > 0) {
+                    @for (se of selectedExtras(); track se.extra.id) {
+                      <div class="flex justify-between text-sm cursor-pointer hover:bg-slate-100/80 p-2 rounded-lg transition-all" (click)="handleSummaryClick('extras')">
+                        <span class="text-slate-500">
+                          {{ se.extra.name }}
+                          @if (se.variant) {
+                            ({{ se.variant.name }})
+                          }
+                          x {{ se.quantity }}
+                        </span>
+                        <span class="font-medium text-slate-700">
+                          @if (se.extra.pay_at_venue) {
+                            Cobro en local
+                          } @else {
+                            @let price = se.variant ? se.variant.price_cents : se.extra.price_cents;
+                            {{ price * se.quantity | currencyMxn }}
+                          }
+                        </span>
+                      </div>
+                    }
+                  }
+
+                  <hr class="border-slate-200" />
+
+                  <div class="flex justify-between text-lg font-bold p-2">
+                    <span class="text-slate-800">Total</span>
+                    <span class="text-primary">{{ totalCents() | currencyMxn }}</span>
+                  </div>
+
+                  @if (hasPartialDeposit()) {
+                    <hr class="border-slate-200" />
+                    <div class="flex justify-between font-semibold text-emerald-700 p-2">
+                      <span>Anticipo a pagar ahora</span>
+                      <span>{{ depositCents() | currencyMxn }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-slate-500 px-2 pb-2">
+                      <span>Restante a pagar en el local</span>
+                      <span>{{ remainingCents() | currencyMxn }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- ── Quote Sharing & Download Panel ── -->
+              <div class="border border-slate-200 rounded-2xl p-5 bg-white mt-6 mb-2 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+                <div class="text-center md:text-left">
+                  <h3 class="font-semibold text-slate-800 text-sm">¿Solo deseas guardar o compartir la cotización?</h3>
+                  <p class="text-xs text-slate-500 mt-1 leading-relaxed">Puedes descargarla en PDF, enviarla por correo o abrir enlace para compartirla por WhatsApp.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
+                  <p-button label="PDF" icon="pi pi-file-pdf" [outlined]="true" severity="secondary" 
+                            [loading]="generatingQuote()" (onClick)="generateQuoteOnly('download')" class="w-full sm:w-auto [&>button]:w-full" />
+                  <p-button label="WhatsApp" icon="pi pi-whatsapp" [outlined]="true" severity="success"
+                            [loading]="generatingQuote()" (onClick)="generateQuoteOnly('whatsapp')" class="w-full sm:w-auto [&>button]:w-full" />
+                  <p-button label="Correo" icon="pi pi-envelope" [outlined]="true" severity="info"
+                            [loading]="generatingQuote()" (onClick)="generateQuoteOnly('email')" class="w-full sm:w-auto [&>button]:w-full" />
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:justify-between items-center gap-3 pt-4">
+                <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary" class="w-full sm:w-auto [&>button]:w-full"
+                          (onClick)="activateCallback(4)" />
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  @if (isAdmin()) {
+                    <p-button label="Crear y Aplicar Pago en Local" icon="pi pi-money-bill" severity="success"
+                              [loading]="submitting()"
+                              (onClick)="submitAdminLocalReservation()" class="w-full sm:w-auto [&>button]:w-full" />
+                  }
+                  <p-button [label]="hasPartialDeposit() ? 'Confirmar y pagar anticipo' : 'Confirmar y pagar'" icon="pi pi-credit-card" iconPos="right"
                             [loading]="submitting()"
-                            (onClick)="submitAdminLocalReservation()" class="w-full sm:w-auto [&>button]:w-full" />
+                            (onClick)="submitReservation()" class="w-full sm:w-auto [&>button]:w-full" />
+                </div>
+              </div>
+            </ng-template>
+          </p-step-panel>
+        </p-step-panels>
+      </p-stepper>
+    </div>
+
+    <!-- ── Price summary sidebar (desktop) ── -->
+    <div class="hidden lg:block sticky top-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+          <h3 class="text-sm font-semibold text-slate-700">Resumen de tu reserva</h3>
+        </div>
+        <div class="px-5 py-4 space-y-3 text-xs leading-relaxed">
+          @if (selectedDate()) {
+            <div class="flex items-start justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('fecha')">
+              <span class="text-slate-500 shrink-0">Fecha</span>
+              <span class="font-medium text-slate-800 text-right capitalize text-xs">
+                {{ formatDateDisplay(selectedDate()!) }}
+              </span>
+            </div>
+          } @else {
+            <div class="flex items-center gap-2 text-slate-300 cursor-pointer" (click)="handleSummaryClick('fecha')">
+              <i class="pi pi-calendar text-xs"></i>
+              <span class="text-xs">Elige una fecha</span>
+            </div>
+          }
+
+          @if (selectedSlot()) {
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('fecha')">
+              <span class="text-slate-500 shrink-0">Horario</span>
+              <span class="font-medium text-slate-800 text-xs">
+                {{ formatTime(selectedSlot()!.start_time) }} – {{ formatTime(selectedSlot()!.end_time) }}
+              </span>
+            </div>
+          }
+
+          @if (selectedPackage()) {
+            <hr class="border-slate-100" />
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('paquete')">
+              <span class="text-slate-500 shrink-0">Categoría</span>
+              <span class="font-medium text-slate-800 text-xs capitalize">{{ selectedCategory() === 'hula_hula' ? 'Hula Hula' : 'Hooping' }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('paquete')">
+              <span class="text-slate-500 shrink-0">Paquete</span>
+              <span class="font-medium text-slate-800 text-xs text-right">{{ selectedPackage()!.name }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('paquete')">
+              <span class="text-slate-500 shrink-0">Precio Base</span>
+              <span class="font-medium text-slate-800">{{ subtotalCents() | currencyMxn }}</span>
+            </div>
+
+            <!-- Premium items in sidebar -->
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('decoracion')">
+              <span class="text-slate-500 shrink-0">Decoración</span>
+              <span class="font-medium text-slate-800 text-xs capitalize text-right">
+                {{ selectedDecorationName() }}
+                @if (decorationUpgradeCents() > 0) {
+                  (+{{ decorationUpgradeCents() | currencyMxn }})
                 }
-                <p-button [label]="hasPartialDeposit() ? 'Confirmar y pagar anticipo' : 'Confirmar y pagar'" icon="pi pi-credit-card" iconPos="right"
-                          [loading]="submitting()"
-                          (onClick)="submitReservation()" class="w-full sm:w-auto [&>button]:w-full" />
-              </div>
+              </span>
             </div>
-          </ng-template>
-        </p-step-panel>
-      </p-step-panels>
-    </p-stepper>
-  </div>
-
-  <!-- ── Price summary sidebar (desktop) ── -->
-  <div class="hidden lg:block sticky top-6">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
-        <h3 class="text-sm font-semibold text-slate-700">Resumen de tu reserva</h3>
-      </div>
-      <div class="px-5 py-4 space-y-3 text-sm">
-
-        @if (selectedDate()) {
-          <div class="flex items-start justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('fecha')">
-            <span class="text-slate-500 shrink-0">Fecha</span>
-            <span class="font-medium text-slate-800 text-right capitalize text-xs">
-              {{ formatDateDisplay(selectedDate()!) }}
-            </span>
-          </div>
-        } @else {
-          <div class="flex items-center gap-2 text-slate-300 cursor-pointer" (click)="handleSummaryClick('fecha')">
-            <i class="pi pi-calendar text-xs"></i>
-            <span class="text-xs">Elige una fecha</span>
-          </div>
-        }
-
-        @if (selectedSlot()) {
-          <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('fecha')">
-            <span class="text-slate-500 shrink-0">Horario</span>
-            <span class="font-medium text-slate-800 text-xs">
-              {{ formatTime(selectedSlot()!.start_time) }} – {{ formatTime(selectedSlot()!.end_time) }}
-            </span>
-          </div>
-        }
-
-        @if (selectedPackage()) {
-          <hr class="border-slate-100" />
-          <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('paquete')">
-            <span class="text-slate-500 shrink-0">Paquete</span>
-            <span class="font-medium text-slate-800 text-xs text-right">{{ selectedPackage()!.name }}</span>
-          </div>
-          <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('paquete')">
-            <span class="text-slate-500 shrink-0">Precio</span>
-            <span class="font-medium text-slate-800">{{ subtotalCents() | currencyMxn }}</span>
-          </div>
-        } @else {
-          <div class="flex items-center gap-2 text-slate-300 cursor-pointer" (click)="handleSummaryClick('paquete')">
-            <i class="pi pi-gift text-xs"></i>
-            <span class="text-xs">Elige un paquete</span>
-          </div>
-        }
-
-        @if (selectedExtras().length > 0) {
-          <hr class="border-slate-100" />
-          @for (se of selectedExtras(); track se.extra.id) {
-            <div class="flex items-center justify-between gap-2 text-xs cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('extras')">
-              <span class="text-slate-500 truncate">+ {{ se.extra.name }} x{{ se.quantity }}</span>
-              @if (se.extra.pay_at_venue) {
-                <span class="text-morado font-medium shrink-0">En local</span>
-              } @else {
-                <span class="font-medium text-slate-700 shrink-0">{{ se.extra.price_cents * se.quantity | currencyMxn }}</span>
-              }
+            @if (selectedCategory() === 'hooping' && selectedActivity()) {
+              <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('actividad')">
+                <span class="text-slate-500 shrink-0">Actividad</span>
+                <span class="font-medium text-slate-800 text-xs text-right truncate max-w-[140px]">
+                  {{ selectedActivity().name }}
+                  @if (activityUpgradeCents() > 0) {
+                    (+{{ activityUpgradeCents() | currencyMxn }})
+                  }
+                </span>
+              </div>
+            }
+            @if (glamGirlsEnabled()) {
+              <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('extras')">
+                <span class="text-slate-500 shrink-0">Glam Girls</span>
+                <span class="font-medium text-[#F2A7D8] text-xs">
+                  {{ glamGirlsCount() }} niñas (+{{ glamGirlsCents() | currencyMxn }})
+                </span>
+              </div>
+            }
+          } @else {
+            <div class="flex items-center gap-2 text-slate-300 cursor-pointer" (click)="handleSummaryClick('paquete')">
+              <i class="pi pi-gift text-xs"></i>
+              <span class="text-xs">Elige un paquete</span>
             </div>
           }
-        }
 
-        @if (totalCents() > 0) {
-          <hr class="border-slate-100" />
-          <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('total')">
-            <span class="font-bold text-slate-800">Total</span>
-            <span class="font-bold text-rojo-brillante text-lg">{{ totalCents() | currencyMxn }}</span>
-          </div>
+           @if (selectedExtras().length > 0) {
+             <hr class="border-slate-100" />
+             @for (se of selectedExtras(); track se.extra.id) {
+               <div class="flex items-center justify-between gap-2 text-xs cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('extras')">
+                 <span class="text-slate-500 truncate">
+                   + {{ se.extra.name }}
+                   @if (se.variant) {
+                     ({{ se.variant.name }})
+                   }
+                   x{{ se.quantity }}
+                 </span>
+                 @if (se.extra.pay_at_venue) {
+                   <span class="text-indigo-600 font-medium shrink-0">En local</span>
+                 } @else {
+                   @let price = se.variant ? se.variant.price_cents : se.extra.price_cents;
+                   <span class="font-medium text-slate-700 shrink-0">{{ price * se.quantity | currencyMxn }}</span>
+                 }
+               </div>
+             }
+           }
 
-          @if (hasPartialDeposit()) {
-            <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 space-y-1.5 cursor-pointer" (click)="handleSummaryClick('total')">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-emerald-700 font-semibold">Anticipo hoy</span>
-                <span class="text-emerald-700 font-bold">{{ depositCents() | currencyMxn }}</span>
+          @if (totalCents() > 0) {
+            <hr class="border-slate-100" />
+            <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('total')">
+              <span class="font-bold text-slate-800 text-sm">Total</span>
+              <span class="font-bold text-primary text-base">{{ totalCents() | currencyMxn }}</span>
+            </div>
+
+            @if (hasPartialDeposit()) {
+              <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 space-y-1.5 cursor-pointer" (click)="handleSummaryClick('total')">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-emerald-700 font-semibold">Anticipo hoy</span>
+                  <span class="text-emerald-700 font-bold">{{ depositCents() | currencyMxn }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-500">Resto en local</span>
+                  <span class="text-slate-600 font-medium">{{ remainingCents() | currencyMxn }}</span>
+                </div>
               </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-slate-500">Resto en local</span>
-                <span class="text-slate-600 font-medium">{{ remainingCents() | currencyMxn }}</span>
-              </div>
+            }
+          } @else {
+            <div class="py-4 text-center">
+              <p class="text-xs text-slate-300">Selecciona fecha y paquete para ver el precio</p>
             </div>
           }
-        } @else {
-          <div class="py-4 text-center">
-            <p class="text-xs text-slate-300">Selecciona fecha y paquete para ver el precio</p>
-          </div>
-        }
-
+        </div>
       </div>
     </div>
-  </div>
-
   </div><!-- end grid -->
   }<!-- end @else -->
 </div>
@@ -506,13 +886,13 @@
   <div class="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg z-30 cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-all animate-fade-in"
        (click)="handleSummaryClick('total')">
     <div>
-      <p class="text-xs text-slate-400">Total (Ver resumen/datos) <i class="pi pi-chevron-up text-[10px] ml-0.5"></i></p>
-      <p class="font-bold text-rojo-brillante text-lg leading-tight">{{ totalCents() | currencyMxn }}</p>
+      <p class="text-[10px] text-slate-400">Total (Ver resumen/datos) <i class="pi pi-chevron-up text-[8px] ml-0.5"></i></p>
+      <p class="font-bold text-primary text-base leading-tight">{{ totalCents() | currencyMxn }}</p>
     </div>
     @if (hasPartialDeposit()) {
       <div class="text-right">
-        <p class="text-xs text-slate-400">Anticipo ahora</p>
-        <p class="font-semibold text-emerald-600 leading-tight">{{ depositCents() | currencyMxn }}</p>
+        <p class="text-[10px] text-slate-400">Anticipo ahora</p>
+        <p class="font-semibold text-emerald-600 leading-tight text-sm">{{ depositCents() | currencyMxn }}</p>
       </div>
     }
   </div>
