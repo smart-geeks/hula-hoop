@@ -2,11 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { CurrencyPipe, isPlatformBrowser } from '@angular/common';
+import { CommonModule, CurrencyPipe, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -19,12 +20,16 @@ import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { ReservationService } from '../../../../core/services/reservation.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
-import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
+import type { Quote, QuoteStatus, CreateQuoteData } from '../../../../core/interfaces/quote';
 import type { Client } from '../../../../core/interfaces/client';
 import type { PartyPackage } from '../../../../core/interfaces/package';
-import type { Extra } from '../../../../core/interfaces/extra';
+import type { Extra, ExtraCategory } from '../../../../core/interfaces/extra';
 import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+import { StepperModule } from 'primeng/stepper';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 
 export interface AvailableDate {
   date:    string;
@@ -33,7 +38,7 @@ export interface AvailableDate {
   slot:    Pick<TimeSlot, 'start_time' | 'end_time'>;
 }
 
-type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 
 export interface SlotAvailability {
@@ -63,7 +68,14 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
 @Component({
   selector: 'app-admin-quotes',
   templateUrl: './admin-quotes.html',
-  imports: [CurrencyPipe, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    StepperModule,
+    DatePickerModule,
+    ToggleSwitchModule,
+    CurrencyMxnPipe
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminQuotes {
@@ -83,6 +95,30 @@ export class AdminQuotes {
   // ── Catalog data ─────────────────────────────────────────
   readonly packages     = signal<PartyPackage[]>([]);
   readonly extras       = signal<Extra[]>([]);
+
+  private static readonly EXTRA_CATEGORY_ORDER: ExtraCategory[] = [
+    'extras',
+    'hula_munch_bar',
+    'servicios_adicionales',
+  ];
+
+  private static readonly EXTRA_CATEGORY_LABELS: Record<ExtraCategory, string> = {
+    extras: 'Extras',
+    hula_munch_bar: 'Hula Munch Bar',
+    servicios_adicionales: 'Servicios Adicionales',
+  };
+
+  readonly extrasByCategory = computed(() => {
+    const allExtras = this.extras();
+    return AdminQuotes.EXTRA_CATEGORY_ORDER
+      .map(cat => ({
+        category: cat,
+        label: AdminQuotes.EXTRA_CATEGORY_LABELS[cat],
+        items: allExtras.filter(e => e.category === cat),
+      }))
+      .filter(group => group.items.length > 0);
+  });
+
   readonly snackOptions = signal<SnackOption[]>([]);
   readonly allSlots     = signal<TimeSlot[]>([]);
   readonly allClients      = signal<Client[]>([]);
@@ -116,22 +152,49 @@ export class AdminQuotes {
   readonly savingNewClient  = signal(false);
 
   // Step 2 — Fecha & Horario
-  readonly selectedDate  = signal<string>('');
+  readonly selectedDate  = signal<Date | null>(null);
   readonly daySlots      = signal<SlotAvailability[]>([]);
   readonly selectedSlot  = signal<TimeSlot | null>(null);
   readonly loadingSlots  = signal(false);
 
-  // Step 3 — Paquete
-  readonly selectedPackage = signal<PartyPackage | null>(null);
+  // Step 3 — Paquete & Merienda
+  readonly selectedCategory    = signal<'hula_hula' | 'hooping'>('hula_hula');
+  readonly selectedPackage     = signal<PartyPackage | null>(null);
+  readonly selectedSnack       = signal<SnackOption | null>(null);
+  readonly skipSnack           = signal(false);
 
-  // Step 4 — Merienda
-  readonly selectedSnack = signal<SnackOption | null>(null);
-  readonly skipSnack     = signal(false);
+  // Step 4 — Experiencias & Extras
+  readonly selectedDecoration  = signal<'petite' | 'grand' | 'plus'>('petite');
+  readonly glamGirlsEnabled    = signal<boolean>(false);
+  readonly glamGirlsCount      = signal<number>(5);
+  readonly selectedActivity    = signal<any | null>(null);
+  readonly activeActivityTab   = signal<'A' | 'B' | 'C'>('A');
 
-  // Step 5 — Extras
+  readonly activitiesList = signal([
+    { id: 'act_a1', group: 'A', name: 'Decora tu galleta', price_per_person: 0 },
+    { id: 'act_a2', group: 'A', name: 'Decora tu cupcake', price_per_person: 0 },
+    { id: 'act_a3', group: 'A', name: 'Decora tu rice krispi', price_per_person: 0 },
+    { id: 'act_a4', group: 'A', name: 'Friendship bracelets', price_per_person: 0 },
+    { id: 'act_a5', group: 'A', name: 'Botella sensorial', price_per_person: 0 },
+    { id: 'act_a6', group: 'A', name: 'Capa de superhéroe', price_per_person: 0 },
+    { id: 'act_a7', group: 'A', name: 'Decora tu máscara', price_per_person: 0 },
+
+    { id: 'act_b1', group: 'B', name: 'Ice cream slab', price_per_person: 60 },
+    { id: 'act_b2', group: 'B', name: 'Decora tu pastel', price_per_person: 65 },
+    { id: 'act_b3', group: 'B', name: 'Pinta tu alcancía', price_per_person: 90 },
+    { id: 'act_b4', group: 'B', name: 'Pinta tu canvas', price_per_person: 80 },
+
+    { id: 'act_c1', group: 'C', name: 'Decora tu peine', price_per_person: 65 },
+    { id: 'act_c2', group: 'C', name: 'Decora tu totebag', price_per_person: 85 },
+    { id: 'act_c3', group: 'C', name: 'Decora tu bucket hat', price_per_person: 90 },
+    { id: 'act_c4', group: 'C', name: 'Decora tu lapicera', price_per_person: 65 },
+    { id: 'act_c5', group: 'C', name: 'Decora tu gorra', price_per_person: 80 }
+  ]);
+
   readonly extraQty = signal<Map<string, number>>(new Map());
+  readonly extraVariant = signal<Map<string, string>>(new Map());
 
-  // Step 6 — Resumen
+  // Step 5 — Resumen
   readonly discount = signal<number>(0);
   readonly notes    = signal<string>('');
 
@@ -147,7 +210,6 @@ export class AdminQuotes {
   readonly anticoSaving  = signal(false);
 
   // ── Slot conflict detection (list view) ───────────────────
-  /** Maps quote.id → conflicting contract info when a pending quote's slot is already taken. */
   readonly conflictMap             = signal<Map<string, { folio: string; cliente: string }>>(new Map());
   readonly rescheduleDialog        = signal<Quote | null>(null);
   readonly rescheduleAvailableDates = signal<AvailableDate[]>([]);
@@ -156,6 +218,12 @@ export class AdminQuotes {
 
   // ── Computed ─────────────────────────────────────────────
   readonly STATUS_CONFIG = STATUS_CONFIG;
+
+  readonly minDate = computed(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  });
 
   readonly filteredQuotes = computed(() => {
     const f = this.statusFilter();
@@ -184,34 +252,101 @@ export class AdminQuotes {
     { value: 'vencida',   label: 'Vencida' },
   ];
 
+  readonly filteredPackages = computed(() => {
+    const cat = this.selectedCategory();
+    return this.packages().filter(p => {
+      const isHoopingPkg = p.name.toLowerCase().includes('hooping');
+      return cat === 'hooping' ? isHoopingPkg : !isHoopingPkg;
+    });
+  });
+
+  readonly isMorningSlot = computed(() => {
+    const slot = this.selectedSlot();
+    if (!slot) return false;
+    const hour = parseInt(slot.start_time.split(':')[0], 10);
+    return hour < 12;
+  });
+
+  readonly filteredSnackOptions = computed(() => {
+    const isAM = this.isMorningSlot();
+    const amKeywords = ['chilaquiles', 'molletes', 'croissant', 'crossaint'];
+    return this.snackOptions().filter(option => {
+      const nameLower = option.name.toLowerCase();
+      const isAMOption = amKeywords.some(keyword => nameLower.includes(keyword));
+      return isAM ? isAMOption : !isAMOption;
+    });
+  });
+
   readonly selectedExtras = computed(() => {
     const qty = this.extraQty();
-    return this.extras().filter((e) => (qty.get(e.id) ?? 0) > 0);
+    const vars = this.extraVariant();
+    return this.extras()
+      .filter((e) => (qty.get(e.id) ?? 0) > 0)
+      .map((e) => {
+        const quantity = qty.get(e.id)!;
+        let variantId = vars.get(e.id);
+        if (!variantId && e.variants && e.variants.length > 0) {
+          variantId = e.variants[0].id;
+        }
+        const variant = e.variants?.find((v) => v.id === variantId) || null;
+        return { extra: e, quantity, variant };
+      });
+  });
+
+  // Price calculations
+  readonly subtotalCents = computed(() => {
+    const pkg = this.selectedPackage();
+    return pkg?.price_cents ?? 0;
+  });
+
+  readonly decorationUpgradeCents = computed(() => {
+    const cat = this.selectedCategory();
+    const dec = this.selectedDecoration();
+    if (cat === 'hula_hula') {
+      if (dec === 'grand') return 140000;
+      if (dec === 'plus') return 270000;
+    } else if (cat === 'hooping') {
+      if (dec === 'plus') return 130000;
+    }
+    return 0;
+  });
+
+  readonly activityUpgradeCents = computed(() => {
+    const cat = this.selectedCategory();
+    const act = this.selectedActivity();
+    const guests = this.guestCount();
+    if (cat === 'hooping' && act && act.price_per_person) {
+      return act.price_per_person * guests * 100;
+    }
+    return 0;
+  });
+
+  readonly glamGirlsCents = computed(() => {
+    if (!this.glamGirlsEnabled()) return 0;
+    return this.glamGirlsCount() * 30000;
+  });
+
+  readonly extrasTotalCents = computed(() => {
+    return this.selectedExtras().reduce((sum, se) => {
+      if (se.extra.pay_at_venue) return sum;
+      const unitPrice = se.variant ? se.variant.price_cents : se.extra.price_cents;
+      return sum + (unitPrice * se.quantity);
+    }, 0);
+  });
+
+  readonly totalCents = computed(() => {
+    return this.subtotalCents() +
+           this.extrasTotalCents() +
+           this.decorationUpgradeCents() +
+           this.activityUpgradeCents() +
+           this.glamGirlsCents();
   });
 
   readonly summaryItems = computed(() => {
-    const items: Array<{ descripcion: string; cantidad: number; precio_unitario: number }> = [];
-    const pkg = this.selectedPackage();
-    if (pkg) {
-      items.push({ descripcion: pkg.name, cantidad: 1, precio_unitario: pkg.price_cents / 100 });
-    }
-    const snack = this.selectedSnack();
-    if (snack && !this.skipSnack()) {
-      items.push({ descripcion: `Merienda: ${snack.name}`, cantidad: 1, precio_unitario: 0 });
-    }
-    const qty = this.extraQty();
-    for (const extra of this.extras()) {
-      const q = qty.get(extra.id) ?? 0;
-      if (q > 0) {
-        items.push({ descripcion: extra.name, cantidad: q, precio_unitario: extra.price_cents / 100 });
-      }
-    }
-    return items;
+    return this.buildQuoteItems();
   });
 
-  readonly subtotalAmount = computed(() =>
-    this.summaryItems().reduce((s, it) => s + it.cantidad * it.precio_unitario, 0),
-  );
+  readonly subtotalAmount = computed(() => this.totalCents() / 100);
 
   readonly totalAmount = computed(() => Math.max(0, this.subtotalAmount() - this.discount()));
 
@@ -219,20 +354,14 @@ export class AdminQuotes {
     const pkg = this.selectedPackage();
     if (!pkg) return 0;
     const total = this.totalAmount();
-    switch (pkg.deposit_type) {
-      case 'full':       return total;
-      case 'percentage': return Math.round(total * pkg.deposit_value) / 100;
-      case 'fixed':      return pkg.deposit_value / 100;
-      default:           return 0;
+    if (pkg.deposit_type === 'full') return total;
+    if (pkg.deposit_type === 'percentage') {
+      return Math.round(total * pkg.deposit_value) / 100;
     }
+    return Math.min(pkg.deposit_value / 100, total);
   });
 
   readonly balanceDue = computed(() => Math.max(0, this.totalAmount() - this.depositAmount()));
-
-  readonly packageColor = computed(() => {
-    const pkg = this.selectedPackage();
-    return pkg?.color ? PACKAGE_COLOR_HEX[pkg.color] ?? '#E30D1C' : '#E30D1C';
-  });
 
   readonly todayStr = computed(() => {
     const d = new Date();
@@ -242,10 +371,24 @@ export class AdminQuotes {
   readonly step1Valid = computed(() => this.selectedClient() !== null);
   readonly step2Valid = computed(() => !!this.selectedDate() && this.selectedSlot() !== null);
   readonly step3Valid = computed(() => this.selectedPackage() !== null);
-  readonly step4Valid = computed(() => true);
+  readonly step4Valid = computed(() => this.selectedCategory() === 'hooping' ? this.selectedActivity() !== null : true);
+  readonly step5Valid = computed(() => true);
 
   constructor() {
     this.loadAll();
+
+    effect(() => {
+      const am = this.isMorningSlot();
+      const snack = this.selectedSnack();
+      if (snack) {
+        const nameLower = snack.name.toLowerCase();
+        const amKeywords = ['chilaquiles', 'molletes', 'croissant', 'crossaint'];
+        const isAMOption = amKeywords.some((keyword) => nameLower.includes(keyword));
+        if (am !== isAMOption) {
+          this.selectedSnack.set(null);
+        }
+      }
+    }, { allowSignalWrites: true });
   }
 
   private async loadAll(): Promise<void> {
@@ -273,6 +416,32 @@ export class AdminQuotes {
     void this.checkConflictsForPendingQuotes(quotes);
   }
 
+  // ── Category and Personalization ─────────────────────────
+  setCategory(cat: 'hula_hula' | 'hooping'): void {
+    this.selectedCategory.set(cat);
+    if (cat === 'hula_hula') {
+      this.selectedActivity.set(null);
+      this.selectedDecoration.set('petite');
+    } else {
+      this.selectedDecoration.set('grand');
+    }
+  }
+
+  toggleGlamGirls(val: boolean): void {
+    this.glamGirlsEnabled.set(val);
+    if (!val) {
+      this.glamGirlsCount.set(5);
+    }
+  }
+
+  updateGlamGirlsCount(qty: number): void {
+    this.glamGirlsCount.set(Math.max(5, qty));
+  }
+
+  selectActivity(act: any): void {
+    this.selectedActivity.set(act);
+  }
+
   // ── Wizard navigation ─────────────────────────────────────
   openCreate(): void {
     this.resetWizard();
@@ -287,13 +456,98 @@ export class AdminQuotes {
     const client = this.allClients().find((c) => c.id === quote.client_id) ?? null;
     this.selectedClient.set(client);
     this.guestCount.set(quote.guest_count ?? 10);
-    this.selectedDate.set(quote.fecha_evento ?? '');
+
     if (quote.fecha_evento) {
+      this.selectedDate.set(new Date(quote.fecha_evento + 'T12:00:00'));
       void this.loadSlotsForDate(quote.fecha_evento, quote.hora_inicio ?? undefined);
     }
     this.discount.set(quote.descuento ?? 0);
     this.notes.set(quote.notas ?? '');
-    this.wizardStep.set(6);
+
+    if (quote.package_id) {
+      const pkg = this.packages().find((p) => p.id === quote.package_id) ?? null;
+      this.selectedPackage.set(pkg);
+    }
+
+    if (quote.snack_option_id) {
+      const snack = this.snackOptions().find((s) => s.id === quote.snack_option_id) ?? null;
+      this.selectedSnack.set(snack);
+    } else {
+      this.skipSnack.set(true);
+    }
+
+    // Parse items to determine category, decoration, activities, glam girls, and extras
+    if (quote.items) {
+      const currentPkg = this.selectedPackage();
+      let foundCategory: 'hula_hula' | 'hooping' =
+        currentPkg && currentPkg.name.toLowerCase().includes('hooping') ? 'hooping' : 'hula_hula';
+      let foundDecoration: 'petite' | 'grand' | 'plus' = 'petite';
+      let foundActivity: any = null;
+      let foundGlamGirls = false;
+      let foundGlamGirlsCount = 5;
+      const parsedExtras = new Map<string, number>();
+      const parsedVariants = new Map<string, string>();
+
+      for (const item of quote.items) {
+        const desc = item.descripcion;
+
+        if (desc.startsWith('Upgrade de Decoración:')) {
+          const decType = desc.split(':').pop()?.trim().toLowerCase();
+          if (decType === 'grand') foundDecoration = 'grand';
+          if (decType === 'plus') foundDecoration = 'plus';
+        }
+
+        if (desc.startsWith('Actividad Premium:') || desc.startsWith('Actividad Incluida:')) {
+          foundCategory = 'hooping';
+          const actName = desc.split(':').pop()?.trim();
+          const act = this.activitiesList().find((a) => a.name === actName);
+          if (act) foundActivity = act;
+        }
+
+        if (desc.startsWith('Área Glam Girls')) {
+          foundGlamGirls = true;
+          foundGlamGirlsCount = item.cantidad;
+        }
+
+        const matchedExtra = this.extras().find(
+          (e) => desc === e.name || desc === `${e.name} (cobro en local)`
+        );
+        if (matchedExtra) {
+          parsedExtras.set(matchedExtra.id, item.cantidad);
+        } else {
+          // Check if it matches an extra's variant:
+          for (const e of this.extras()) {
+            if (e.variants && e.variants.length > 0) {
+              const matchedVar = e.variants.find(
+                (v) => {
+                  const varDesc = `${e.name} (${v.name})`;
+                  return desc === varDesc || desc === `${varDesc} (cobro en local)`;
+                }
+              );
+              if (matchedVar) {
+                parsedExtras.set(e.id, item.cantidad);
+                parsedVariants.set(e.id, matchedVar.id);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (foundCategory === 'hooping' && foundDecoration === 'petite') {
+        foundDecoration = 'grand';
+      }
+
+      this.selectedCategory.set(foundCategory);
+      this.selectedDecoration.set(foundDecoration);
+      this.selectedActivity.set(foundActivity);
+      this.glamGirlsEnabled.set(foundGlamGirls);
+      this.glamGirlsCount.set(foundGlamGirlsCount);
+      this.extraQty.set(parsedExtras);
+      this.extraVariant.set(parsedVariants);
+    }
+
+    this.wizardStep.set(5);
     this.drawerOpen.set(true);
   }
 
@@ -302,41 +556,28 @@ export class AdminQuotes {
     this.resetWizard();
   }
 
-  goToStep(step: WizardStep): void {
-    this.wizardStep.set(step);
-  }
-
-  nextStep(): void {
+  onStepChange(step: number | undefined): void {
+    if (step === undefined) return;
     const current = this.wizardStep();
-    if (current < 6) {
-      if (current === 3 && this.snackOptions().length === 0) {
-        this.wizardStep.set(5 as WizardStep);
+    if (step > current) {
+      if (step >= 2 && !this.selectedClient()) {
+        this.showToast('error', 'Debes seleccionar un cliente primero.');
         return;
       }
-      this.wizardStep.set((current + 1) as WizardStep);
-    }
-  }
-
-  prevStep(): void {
-    const current = this.wizardStep();
-    if (current > 1) {
-      if (current === 5 && this.snackOptions().length === 0) {
-        this.wizardStep.set(3 as WizardStep);
+      if (step >= 3 && (!this.selectedDate() || !this.selectedSlot())) {
+        this.showToast('error', 'Debes seleccionar fecha y horario disponible.');
         return;
       }
-      this.wizardStep.set((current - 1) as WizardStep);
+      if (step >= 4 && !this.selectedPackage()) {
+        this.showToast('error', 'Debes seleccionar un paquete.');
+        return;
+      }
+      if (step >= 5 && this.selectedCategory() === 'hooping' && !this.selectedActivity()) {
+        this.showToast('error', 'Debes seleccionar una actividad para la categoría Hooping.');
+        return;
+      }
     }
-  }
-
-  canGoNext(): boolean {
-    switch (this.wizardStep()) {
-      case 1: return this.step1Valid();
-      case 2: return this.step2Valid();
-      case 3: return this.step3Valid();
-      case 4: return this.step4Valid();
-      case 5: return true;
-      default: return false;
-    }
+    this.wizardStep.set(step as WizardStep);
   }
 
   // ── Step 1: Client search ─────────────────────────────────
@@ -405,11 +646,13 @@ export class AdminQuotes {
   }
 
   // ── Step 2: Date & Slot ───────────────────────────────────
-  async onDateChange(event: Event): Promise<void> {
-    const val = (event.target as HTMLInputElement).value;
-    this.selectedDate.set(val);
+  async onDateSelect(date: Date): Promise<void> {
+    this.selectedDate.set(date);
     this.selectedSlot.set(null);
-    if (val) await this.loadSlotsForDate(val);
+    if (date) {
+      const iso = this.formatDateISO(date);
+      await this.loadSlotsForDate(iso);
+    }
   }
 
   private async loadSlotsForDate(date: string, preselectedStart?: string): Promise<void> {
@@ -447,7 +690,7 @@ export class AdminQuotes {
     this.selectedSlot.set(availability.slot);
   }
 
-  // ── Step 3: Package ───────────────────────────────────────
+  // ── Step 3: Package & Merienda ───────────────────────────
   selectPackage(pkg: PartyPackage): void {
     this.selectedPackage.set(pkg);
   }
@@ -461,7 +704,6 @@ export class AdminQuotes {
     return g < pkg.min_guests || g > pkg.max_guests;
   }
 
-  // ── Step 4: Snack ─────────────────────────────────────────
   selectSnack(snack: SnackOption): void {
     this.selectedSnack.set(snack);
     this.skipSnack.set(false);
@@ -472,7 +714,7 @@ export class AdminQuotes {
     this.skipSnack.set(true);
   }
 
-  // ── Step 5: Extras ────────────────────────────────────────
+  // ── Step 4: Extras & Experiencias ─────────────────────────
   getExtraQty(extraId: string): number {
     return this.extraQty().get(extraId) ?? 0;
   }
@@ -486,26 +728,152 @@ export class AdminQuotes {
     this.extraQty.set(map);
   }
 
+  getExtraVariantId(extraId: string): string {
+    const variantId = this.extraVariant().get(extraId);
+    if (variantId) return variantId;
+
+    const extra = this.extras().find((e) => e.id === extraId);
+    if (extra && extra.variants && extra.variants.length > 0) {
+      return extra.variants[0].id;
+    }
+    return '';
+  }
+
+  setExtraVariantId(extraId: string, variantId: string): void {
+    const map = new Map(this.extraVariant());
+    map.set(extraId, variantId);
+    this.extraVariant.set(map);
+  }
+
+  // Helper date formats
+  formatDateISO(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  formatDateDisplay(date: Date): string {
+    return date.toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  isSlotMorning(slot: TimeSlot): boolean {
+    if (!slot?.start_time) return false;
+    const hour = parseInt(slot.start_time.split(':')[0], 10);
+    return hour < 12;
+  }
+
+  formatTime(time: string): string {
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+  }
+
+  private buildQuoteItems(): CreateQuoteData['items'] {
+    const items: CreateQuoteData['items'] = [];
+
+    const pkg = this.selectedPackage();
+    if (pkg) {
+      items.push({
+        descripcion:     pkg.name,
+        cantidad:        1,
+        precio_unitario: pkg.price_cents / 100,
+      });
+    }
+
+    const snack = this.selectedSnack();
+    if (snack && !this.skipSnack()) {
+      items.push({
+        descripcion:     `Merienda: ${snack.name}`,
+        cantidad:        1,
+        precio_unitario: 0,
+      });
+    }
+
+    // Decoration upgrade
+    const cat = this.selectedCategory();
+    const dec = this.selectedDecoration();
+    const decUpgradeCents = this.decorationUpgradeCents();
+    if (decUpgradeCents > 0) {
+      const decName = dec.toUpperCase();
+      items.push({
+        descripcion:     `Upgrade de Decoración: ${decName}`,
+        cantidad:        1,
+        precio_unitario: decUpgradeCents / 100,
+      });
+    }
+
+    // Activity upgrade
+    const act = this.selectedActivity();
+    if (cat === 'hooping' && act) {
+      if (act.price_per_person > 0) {
+        items.push({
+          descripcion:     `Actividad Premium: ${act.name}`,
+          cantidad:        this.guestCount(),
+          precio_unitario: act.price_per_person,
+        });
+      } else {
+        items.push({
+          descripcion:     `Actividad Incluida: ${act.name}`,
+          cantidad:        1,
+          precio_unitario: 0,
+        });
+      }
+    }
+
+    // Glam Girls
+    if (this.glamGirlsEnabled()) {
+      items.push({
+        descripcion:     `Área Glam Girls (Glitter mani, make up, peinados)`,
+        cantidad:        this.glamGirlsCount(),
+        precio_unitario: 300,
+      });
+    }
+
+    for (const se of this.selectedExtras()) {
+      const name = se.variant ? `${se.extra.name} (${se.variant.name})` : se.extra.name;
+      const price = se.variant ? se.variant.price_cents : se.extra.price_cents;
+      items.push({
+        descripcion:     se.extra.pay_at_venue
+          ? `${name} (cobro en local)`
+          : name,
+        cantidad:        se.quantity,
+        precio_unitario: se.extra.pay_at_venue ? 0 : price / 100,
+      });
+    }
+
+    return items;
+  }
+
   // ── Submit wizard ─────────────────────────────────────────
   async onSubmit(): Promise<void> {
     if (this.saving()) return;
     this.saving.set(true);
 
     const payload = {
-      client_id:      this.selectedClient()?.id,
-      fecha:          this.todayStr(),
-      fecha_evento:   this.selectedDate() || undefined,
-      hora_inicio:    this.selectedSlot()?.start_time,
-      hora_fin:       this.selectedSlot()?.end_time,
-      time_slot_id:   this.selectedSlot()?.id,
-      guest_count:    this.guestCount(),
-      estado:         'borrador' as QuoteStatus,
-      subtotal:       this.subtotalAmount(),
-      descuento:      this.discount(),
-      total:          this.totalAmount(),
-      deposit_amount: this.depositAmount(),
-      notas:          this.notes().trim() || undefined,
-      items:          this.summaryItems().map((it) => ({
+      client_id:       this.selectedClient()?.id,
+      fecha:           this.todayStr(),
+      fecha_evento:    this.selectedDate() ? this.formatDateISO(this.selectedDate()!) : undefined,
+      hora_inicio:     this.selectedSlot()?.start_time,
+      hora_fin:        this.selectedSlot()?.end_time,
+      time_slot_id:    this.selectedSlot()?.id,
+      guest_count:     this.guestCount(),
+      estado:          'borrador' as QuoteStatus,
+      subtotal:        this.subtotalAmount(),
+      descuento:       this.discount(),
+      total:           this.totalAmount(),
+      deposit_amount:  this.depositAmount(),
+      package_id:      this.selectedPackage()?.id ?? undefined,
+      snack_option_id: this.selectedSnack()?.id ?? undefined,
+      notas:           this.notes().trim() || undefined,
+      items:           this.summaryItems().map((it) => ({
         descripcion:     it.descripcion,
         cantidad:        it.cantidad,
         precio_unitario: it.precio_unitario,
@@ -1026,13 +1394,14 @@ export class AdminQuotes {
     this.newClientPhone.set('');
     this.newClientEmail.set('');
     this.guestCount.set(10);
-    this.selectedDate.set('');
+    this.selectedDate.set(null);
     this.selectedSlot.set(null);
     this.daySlots.set([]);
     this.selectedPackage.set(null);
     this.selectedSnack.set(null);
     this.skipSnack.set(false);
     this.extraQty.set(new Map());
+    this.extraVariant.set(new Map());
     this.discount.set(0);
     this.notes.set('');
     this.editingQuote.set(null);
