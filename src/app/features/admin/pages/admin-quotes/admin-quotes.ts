@@ -15,7 +15,6 @@ import { VenueService } from '../../../../core/services/venue.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
-import type { PartyPackage } from '../../../../core/interfaces/package';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 
 export interface AvailableDate {
@@ -514,14 +513,6 @@ export class AdminQuotes {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', {
       day: '2-digit', month: 'short', year: 'numeric',
     });
-  }
-
-  formatDepositLabel(pkg: PartyPackage): string {
-    switch (pkg.deposit_type) {
-      case 'full':       return 'Pago completo';
-      case 'percentage': return `${pkg.deposit_value}% de anticipo`;
-      case 'fixed':      return `$${(pkg.deposit_value / 100).toLocaleString('es-MX')} de anticipo`;
-    }
   }
 
   private async markAsSent(quote: Quote): Promise<void> {
