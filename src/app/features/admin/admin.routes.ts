@@ -45,6 +45,20 @@ export const adminRoutes: Routes = [
         data: { permission: 'clientes:r' }
       },
       {
+        path: 'cotizaciones/nueva',
+        loadComponent: () =>
+          import('./pages/admin-quote-wizard/admin-quote-wizard').then((m) => m.AdminQuoteWizard),
+        canActivate: [permissionGuard],
+        data: { permission: 'cotizaciones:r' }
+      },
+      {
+        path: 'cotizaciones/:id/editar',
+        loadComponent: () =>
+          import('./pages/admin-quote-wizard/admin-quote-wizard').then((m) => m.AdminQuoteWizard),
+        canActivate: [permissionGuard],
+        data: { permission: 'cotizaciones:r' }
+      },
+      {
         path: 'cotizaciones',
         loadComponent: () =>
           import('./pages/admin-quotes/admin-quotes').then((m) => m.AdminQuotes),

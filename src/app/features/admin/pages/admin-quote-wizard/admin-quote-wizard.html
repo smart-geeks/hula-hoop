@@ -1,0 +1,64 @@
+<div class="min-h-screen bg-slate-50">
+  <div class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
+    <nav class="flex items-center gap-2 text-sm" aria-label="Migas de pan">
+      <button type="button" (click)="goBack()"
+        class="text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors font-medium">
+        <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
+        Cotizaciones
+      </button>
+      <span class="text-slate-300" aria-hidden="true">/</span>
+      <span class="font-semibold text-slate-800">{{ editMode() ? 'Editar cotización' : 'Nueva cotización' }}</span>
+    </nav>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-6 items-start">
+
+    <aside class="w-full lg:w-64 shrink-0 lg:sticky lg:top-24 space-y-4">
+      <nav class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" aria-label="Pasos">
+        @for (step of stepLabels; track step.n) {
+          <button type="button" (click)="goToStep(step.n)"
+            [attr.aria-current]="currentStep() === step.n ? 'step' : null"
+            [class]="'w-full flex items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors border-l-4 '
+              + (currentStep() === step.n
+                  ? 'border-rojo-brillante bg-red-50 text-rojo-brillante font-semibold'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 font-medium')">
+            <span [class]="'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 '
+              + (currentStep() === step.n ? 'bg-rojo-brillante text-white' : 'bg-slate-100 text-slate-500')">
+              {{ step.n }}
+            </span>
+            {{ step.label }}
+          </button>
+        }
+      </nav>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Precio estimado</p>
+        <p class="text-2xl font-black text-slate-400 mt-2">—</p>
+      </div>
+    </aside>
+
+    <main class="flex-1 min-w-0 space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 min-h-96">
+        @switch (currentStep()) {
+          @case (1) { <p class="text-slate-400 text-sm">Step 1 placeholder</p> }
+          @case (2) { <p class="text-slate-400 text-sm">Step 2 placeholder</p> }
+          @case (3) { <p class="text-slate-400 text-sm">Step 3 placeholder</p> }
+          @case (4) { <p class="text-slate-400 text-sm">Step 4 placeholder</p> }
+          @case (5) { <p class="text-slate-400 text-sm">Step 5 placeholder</p> }
+        }
+      </div>
+      <div class="flex justify-between">
+        <button type="button" (click)="prev()" [disabled]="currentStep() === 1"
+          class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm">
+          <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i> Anterior
+        </button>
+        @if (currentStep() < 5) {
+          <button type="button" (click)="next()"
+            class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-rojo-brillante text-white text-sm font-semibold hover:bg-rojo-brillante/90 transition-colors shadow-sm">
+            Siguiente <i class="pi pi-arrow-right text-xs" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    </main>
+
+  </div>
+</div>
