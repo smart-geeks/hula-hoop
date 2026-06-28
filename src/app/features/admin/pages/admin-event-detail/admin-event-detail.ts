@@ -17,7 +17,8 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { QuoteAmendmentService } from '../../../../core/services/quote-amendment.service';
 import { ExtraService } from '../../../../core/services/extra.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
-import type { Contract, ContractStatus, ContractPayment } from '../../../../core/interfaces/contract';
+import type { Contract, ContractStatus, ContractPayment, PaymentSplit } from '../../../../core/interfaces/contract';
+import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
 import type { Quote } from '../../../../core/interfaces/quote';
 import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 import type { AdminExpense } from '../../../../core/interfaces/expense';
@@ -31,7 +32,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 @Component({
   selector: 'app-admin-event-detail',
   templateUrl: './admin-event-detail.html',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [CurrencyPipe, DatePipe, RouterLink, PaymentSplitsInputComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventDetail {
@@ -68,7 +69,7 @@ export class AdminEventDetail {
   readonly payDialog  = signal(false);
   readonly payMonto   = signal(0);
   readonly payFecha   = signal('');
-  readonly payMetodo  = signal<PayMethod>('efectivo');
+  readonly paySplits  = signal<PaymentSplit[]>([]);
   readonly payNotas   = signal('');
   readonly paySaving  = signal(false);
 
@@ -106,6 +107,22 @@ export class AdminEventDetail {
   );
 
   readonly saldoPendiente = computed(() => this.contract()?.saldo_pendiente ?? 0);
+
+  readonly paySplitsValid = computed(() => {
+    const splits = this.paySplits();
+    const total  = this.payMonto();
+    return splits.length > 0 &&
+      splits.every((s) => s.monto > 0) &&
+      Math.abs(splits.reduce((acc, s) => acc + s.monto, 0) - total) < 0.01;
+  });
+
+  readonly amendPaySplitsValid = computed(() => {
+    const splits = this.amendPaySplits();
+    const total  = this.amendPayMonto();
+    return splits.length > 0 &&
+      splits.every((s) => s.monto > 0) &&
+      Math.abs(splits.reduce((acc, s) => acc + s.monto, 0) - total) < 0.01;
+  });
 
   readonly pagoProgress = computed(() => {
     const c = this.contract();
@@ -163,7 +180,7 @@ export class AdminEventDetail {
   readonly amendPayDialog  = signal(false);
   readonly amendPayMonto   = signal(0);
   readonly amendPayFecha   = signal('');
-  readonly amendPayMetodo  = signal<PayMethod>('efectivo');
+  readonly amendPaySplits  = signal<PaymentSplit[]>([]);
   readonly amendPayNotas   = signal('');
   readonly amendPaySaving  = signal(false);
 
@@ -243,9 +260,10 @@ export class AdminEventDetail {
   // ── Payments ──────────────────────────────────────────────
   openPayDialog(): void {
     if (this.isLocked()) return;
-    this.payMonto.set(this.contract()?.saldo_pendiente ?? 0);
+    const saldo = this.contract()?.saldo_pendiente ?? 0;
+    this.payMonto.set(saldo);
     this.payFecha.set(new Date().toISOString().split('T')[0]);
-    this.payMetodo.set('efectivo');
+    this.paySplits.set([{ metodo: 'efectivo', monto: saldo }]);
     this.payNotas.set('');
     this.payDialog.set(true);
   }
@@ -255,21 +273,26 @@ export class AdminEventDetail {
   }
 
   async submitPayment(): Promise<void> {
+    const splits = this.paySplits();
+    const metodo = splits.length === 1 ? splits[0].metodo : 'combinado';
     await this.registerPayment(
       this.payMonto(),
       this.payFecha(),
-      this.payMetodo(),
-      this.payNotas().trim()
+      metodo,
+      this.payNotas().trim(),
+      splits,
     );
   }
 
-  async registerPayment(monto: number, fecha: string, metodo: PayMethod, notas: string): Promise<void> {
+  async registerPayment(monto: number, fecha: string, metodo: PayMethod | 'combinado', notas: string, splits?: PaymentSplit[]): Promise<void> {
     const c = this.contract();
     if (!c || monto <= 0 || !fecha) return;
 
     this.paySaving.set(true);
     const success = await this.contractService.addPayment(c.id, {
-      monto, fecha, metodo, tipo: 'abono', notas: notas || 'Pago registrado desde Event Hub',
+      monto, fecha, metodo, tipo: 'abono',
+      notas: notas || 'Pago registrado desde Event Hub',
+      payment_splits: splits ?? [{ metodo: metodo as PaymentSplit['metodo'], monto }],
     });
 
     if (success) {
@@ -611,9 +634,10 @@ export class AdminEventDetail {
     this.amendment.set(result);
     this.amendmentEditing.set(false);
 
-    this.amendPayMonto.set(Math.abs(delta));
+    const amendMonto = Math.abs(delta);
+    this.amendPayMonto.set(amendMonto);
     this.amendPayFecha.set(new Date().toISOString().split('T')[0]);
-    this.amendPayMetodo.set('efectivo');
+    this.amendPaySplits.set([{ metodo: 'efectivo', monto: amendMonto }]);
     this.amendPayNotas.set(`Extra: ${this.amendmentNotas() || 'Modificación de cotización'}`);
     this.amendPayDialog.set(true);
   }
@@ -629,12 +653,15 @@ export class AdminEventDetail {
 
     this.amendPaySaving.set(true);
     try {
+      const amendSplits = this.amendPaySplits();
+      const amendMetodo = amendSplits.length === 1 ? amendSplits[0].metodo : 'combinado';
       const success = await this.contractService.addPayment(c.id, {
         monto,
         fecha,
-        metodo: this.amendPayMetodo(),
+        metodo: amendMetodo,
         tipo: 'extra',
         notas: this.amendPayNotas() || 'Pago por modificación de cotización',
+        payment_splits: amendSplits,
       });
 
       if (!success) {
