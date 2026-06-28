@@ -1,0 +1,105 @@
+@if (levels().length > 0) {
+  <section
+    id="paquetes-decoracion"
+    aria-labelledby="decoration-section-title"
+    class="relative bg-[#F5EDD8] overflow-hidden py-12 md:py-20"
+    style="scroll-margin-top: 6rem;">
+
+    <!-- Título -->
+    <div class="relative z-10 text-center mb-4 px-4">
+      <h2 id="decoration-section-title"
+          class="font-bubblegum text-5xl md:text-7xl lg:text-8xl font-black text-[#6C63FF] uppercase tracking-wide drop-shadow-sm">
+        Paquetes Decoración
+      </h2>
+    </div>
+
+    <!-- Subtítulo -->
+    <div class="relative z-10 text-center mb-12 px-6 max-w-2xl mx-auto">
+      <p class="font-display font-semibold text-base md:text-lg text-slate-700 italic">
+        Todos nuestros paquetes de decoración son diseños personalizados y únicos.
+      </p>
+    </div>
+
+    <!-- Cards -->
+    <div class="relative z-10 flex flex-col gap-10 max-w-5xl mx-auto px-4 md:px-8">
+
+      @for (level of levels(); track level.id; let i = $index) {
+        <article
+          class="flex flex-col md:flex-row rounded-3xl overflow-hidden border-4 border-[#6C63FF] shadow-xl bg-white"
+          [class.md:flex-row-reverse]="i % 2 !== 0"
+          [attr.aria-label]="level.name + ' — paquete de decoración'">
+
+          <!-- Image side (55% on md+) -->
+          <div class="relative md:w-[55%] flex-shrink-0 min-h-56 md:min-h-72 bg-slate-100 overflow-hidden">
+            @if (level.image_url) {
+              <img
+                [src]="level.image_url"
+                [alt]="level.name + ' — paquete de decoración'"
+                class="absolute inset-0 w-full h-full object-cover" />
+            } @else {
+              <div class="absolute inset-0 flex items-center justify-center bg-slate-100">
+                <i class="pi pi-image text-6xl text-slate-300" aria-hidden="true"></i>
+              </div>
+            }
+
+            <!-- Rotated level name — positioned on left edge for even cards, right edge for odd -->
+            <div
+              class="absolute top-1/2 -translate-y-1/2 z-10"
+              [class.left-0]="i % 2 === 0"
+              [class.-translate-x-1/2]="i % 2 === 0"
+              [class.right-0]="i % 2 !== 0"
+              [class.translate-x-1/2]="i % 2 !== 0">
+              <span
+                class="font-bubblegum text-5xl md:text-6xl font-black uppercase block"
+                style="writing-mode: vertical-rl; transform: rotate(180deg); color: white; -webkit-text-stroke: 2px #6C63FF; text-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                aria-hidden="true">
+                {{ level.name }}
+              </span>
+            </div>
+
+            <!-- Dimension notes at image bottom -->
+            @if (level.notes) {
+              <div class="absolute bottom-0 left-0 right-0 bg-black/40 px-4 py-2 z-10">
+                <p class="font-display text-xs text-white text-center whitespace-pre-line leading-relaxed">
+                  {{ level.notes }}
+                </p>
+              </div>
+            }
+          </div>
+
+          <!-- Content side (45% on md+) -->
+          <div class="md:w-[45%] flex flex-col justify-between gap-6 p-6 md:p-8">
+
+            <!-- Inclusions list -->
+            <div>
+              <p class="font-display font-black text-sm uppercase tracking-widest text-[#6C63FF] mb-3">
+                Incluye:
+              </p>
+              <ul class="flex flex-col gap-2" [attr.aria-label]="'Incluye en ' + level.name">
+                @for (item of level.inclusions; track item) {
+                  <li class="flex gap-2 text-sm font-display text-slate-700">
+                    <span class="text-[#6C63FF] font-black flex-shrink-0 leading-snug">+</span>
+                    <span class="leading-snug">{{ item }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <!-- Price badge -->
+            <div class="flex" [class.justify-end]="i % 2 === 0" [class.justify-start]="i % 2 !== 0">
+              <div
+                class="bg-[#6C63FF] text-white rounded-full px-7 py-3 shadow-lg inline-flex items-center"
+                [attr.aria-label]="'Precio: ' + (level.base_price_cents | currencyMxn)">
+                <span class="font-bubblegum text-3xl md:text-4xl font-black">
+                  {{ level.base_price_cents | currencyMxn }}
+                </span>
+              </div>
+            </div>
+
+          </div>
+        </article>
+      }
+
+    </div>
+  </section>
+}
