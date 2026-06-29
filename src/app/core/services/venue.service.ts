@@ -19,6 +19,8 @@ export class VenueService {
     this.venues().find(v => v.id === this.currentVenueId()) ?? null
   );
 
+  private readonly initResolvers: (() => void)[] = [];
+
   constructor() {
     effect(() => {
       const user = this.auth.currentUser();
@@ -28,7 +30,20 @@ export class VenueService {
         this.venues.set([]);
         this.currentVenueId.set(null);
         this.loading.set(false);
+        this.resolveInit();
       }
+    });
+  }
+
+  private resolveInit(): void {
+    this.initResolvers.forEach((r) => r());
+    this.initResolvers.length = 0;
+  }
+
+  async awaitReady(): Promise<void> {
+    if (!this.loading()) return;
+    return new Promise<void>((resolve) => {
+      this.initResolvers.push(resolve);
     });
   }
 
@@ -157,7 +172,11 @@ export class VenueService {
 
   private async loadVenues(): Promise<void> {
     const client = this.supabase.client;
-    if (!client) return;
+    if (!client) {
+      this.loading.set(false);
+      this.resolveInit();
+      return;
+    }
 
     this.loading.set(true);
 
@@ -170,6 +189,7 @@ export class VenueService {
     if (error) {
       console.error('Error loading venues:', error.message);
       this.loading.set(false);
+      this.resolveInit();
       return;
     }
 
@@ -183,6 +203,7 @@ export class VenueService {
     if (resolved) this.storeId(resolved);
 
     this.loading.set(false);
+    this.resolveInit();
   }
 
   private readStoredId(): string | null {

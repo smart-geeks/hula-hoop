@@ -44,6 +44,8 @@ export class PermissionService {
     await this.auth.awaitReady();
     if (!this.auth.isLoggedIn()) return;
 
+    await this.venueService.awaitReady();
+
     if (this.currentPermissions() !== null && !this.loading()) return;
 
     return new Promise<void>((resolve) => {
