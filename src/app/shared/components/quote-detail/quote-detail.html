@@ -1,0 +1,153 @@
+<div class="space-y-5">
+
+  <!-- ① Cabecera -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <p class="text-xs text-slate-400 mb-0.5 uppercase tracking-wide">Cotización</p>
+        <p class="text-2xl font-bold text-slate-800 font-mono">{{ quote().folio }}</p>
+        <p class="text-sm text-slate-400 mt-1">Emitida el {{ quote().fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
+      </div>
+      <span [class]="'px-3 py-1.5 rounded-full text-xs font-semibold ' + statusClass()">
+        {{ statusLabel() }}
+      </span>
+    </div>
+  </div>
+
+  <!-- ② Cliente + Evento -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm grid grid-cols-1 gap-6 md:grid-cols-2">
+    <!-- Cliente -->
+    <div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Cliente</p>
+      @if (quote().client; as c) {
+        <p class="font-semibold text-slate-800 text-sm">{{ c.nombre }}</p>
+        @if (c.telefono) {
+          <p class="text-sm text-slate-500 mt-1"><i class="pi pi-phone text-xs mr-1" aria-hidden="true"></i>{{ c.telefono }}</p>
+        }
+        @if (c.email) {
+          <p class="text-sm text-slate-500 mt-1"><i class="pi pi-envelope text-xs mr-1" aria-hidden="true"></i>{{ c.email }}</p>
+        }
+      } @else {
+        <p class="text-sm text-slate-400 italic">Sin cliente asignado</p>
+      }
+    </div>
+    <!-- Evento -->
+    <div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Evento</p>
+      @if (quote().fecha_evento) {
+        <p class="font-semibold text-slate-800 text-sm">{{ quote().fecha_evento | date:"EEEE d 'de' MMMM yyyy":'':'es-MX' }}</p>
+      } @else {
+        <p class="text-sm text-slate-400 italic">Sin fecha asignada</p>
+      }
+      @if (quote().hora_inicio) {
+        <p class="text-sm text-slate-500 mt-1">
+          <i class="pi pi-clock text-xs mr-1" aria-hidden="true"></i>
+          {{ quote().hora_inicio }}{{ quote().hora_fin ? ' – ' + quote().hora_fin : '' }}
+        </p>
+      }
+      @if (quote().guest_count) {
+        <p class="text-sm text-slate-500 mt-1">
+          <i class="pi pi-users text-xs mr-1" aria-hidden="true"></i>
+          {{ quote().guest_count }} invitados
+        </p>
+      }
+    </div>
+  </div>
+
+  <!-- ③ Conceptos por categoría -->
+  @if (itemGroups().length > 0) {
+  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    @for (group of itemGroups(); track group.label) {
+    <div>
+      <div class="px-6 py-3 bg-slate-50 border-b border-slate-100">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ group.label }}</p>
+      </div>
+      <div class="divide-y divide-slate-50">
+        @for (entry of group.items; track entry.raw.id) {
+        <div class="flex items-start justify-between px-6 py-4 text-sm gap-4">
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-slate-800">{{ entry.cleanDesc }}</p>
+            @if (entry.raw.cantidad > 1) {
+              <p class="text-xs text-slate-400 mt-0.5">{{ entry.raw.cantidad }} × {{ entry.raw.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+            }
+          </div>
+          <div class="shrink-0 text-right">
+            @if (entry.raw.precio_unitario === 0) {
+              <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Incluido</span>
+            } @else {
+              <p class="font-semibold text-slate-700">{{ entry.raw.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- ④ Totales -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Totales</p>
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between text-slate-600">
+        <span>Subtotal</span>
+        <span>{{ quote().subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      @if (quote().descuento > 0) {
+      <div class="flex justify-between text-emerald-600">
+        <span>Descuento</span>
+        <span>− {{ quote().descuento | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      }
+      <div class="border-t border-slate-100 pt-2 flex justify-between text-base font-bold text-slate-800">
+        <span>Total</span>
+        <span>{{ quote().total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      @if (depositBalance(); as db) {
+      <div class="flex justify-between font-semibold text-rojo-brillante">
+        <span>Anticipo requerido</span>
+        <span>{{ db.deposit | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      <div class="flex justify-between text-slate-500">
+        <span>Saldo al evento</span>
+        <span>{{ db.balance | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- ⑤ Notas -->
+  @if (quote().notas) {
+  <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Notas</p>
+    <p class="text-sm text-slate-700">{{ quote().notas }}</p>
+  </div>
+  }
+
+  <!-- ⑥ Estado del contrato (solo si se pasa contract) -->
+  @if (contract(); as c) {
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Contrato</p>
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-slate-500">Total del contrato</span>
+        <span class="font-medium">{{ c.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      @if (saldoContrato(); as sc) {
+      <div class="flex justify-between">
+        <span class="text-slate-500">Pagado</span>
+        <span class="font-medium text-emerald-600">{{ sc.paid | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      <div class="flex justify-between font-semibold">
+        <span class="text-slate-700">Saldo pendiente</span>
+        <span [class]="sc.saldo > 0 ? 'text-rojo-brillante' : 'text-emerald-600'">
+          {{ sc.saldo | currency:'MXN':'symbol-narrow':'1.0-0' }}
+        </span>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+</div>
