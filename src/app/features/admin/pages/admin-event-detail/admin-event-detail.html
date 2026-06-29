@@ -942,81 +942,11 @@
     </a>
   </div>
   } @else {
-  @let q = quote()!;
   <div class="space-y-5">
-    <!-- Quote header -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-      <div class="flex items-start justify-between mb-4">
-        <div>
-          <p class="text-xs text-slate-400 mb-0.5">Cotización origen</p>
-          <p class="text-xl font-bold text-slate-800 font-mono">{{ q.folio }}</p>
-          <p class="text-sm text-slate-500 mt-0.5">Emitida el {{ q.fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
-        </div>
-        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Aprobada</span>
-      </div>
-    </div>
-
-    <!-- Quote items -->
-    @if ((q.items ?? []).length > 0) {
-    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
-        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Conceptos cotizados</h2>
-      </div>
-      <div class="divide-y divide-slate-50">
-        @for (item of q.items; track item.id) {
-        <div class="flex items-center justify-between px-6 py-4 text-sm">
-          <div>
-            <p class="font-medium text-slate-800">{{ item.descripcion }}</p>
-            @if (item.cantidad > 1) {
-            <p class="text-xs text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
-            }
-          </div>
-          <p class="font-semibold text-slate-700 shrink-0 ml-4">
-            @if (item.precio_unitario === 0) {
-              <span class="text-emerald-600 text-xs">Incluido</span>
-            } @else {
-              {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0' }}
-            }
-          </p>
-        </div>
-        }
-      </div>
-    </div>
-    }
-
-    <!-- Quote totals -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-      <h2 class="font-semibold text-slate-700 mb-4">Totales cotización</h2>
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span class="text-slate-500">Subtotal</span>
-          <span class="font-medium">{{ q.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
-        </div>
-        @if (q.descuento > 0) {
-        <div class="flex justify-between">
-          <span class="text-slate-500">Descuento</span>
-          <span class="font-medium text-emerald-600">− {{ q.descuento | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
-        </div>
-        }
-        <hr class="border-slate-100" />
-        <div class="flex justify-between text-base font-bold text-slate-800">
-          <span>Total</span>
-          <span>{{ q.total | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
-        </div>
-        @if ((q.deposit_amount ?? 0) > 0) {
-        <div class="flex justify-between font-semibold text-rojo-brillante">
-          <span>Anticipo</span>
-          <span>{{ (q.deposit_amount ?? 0) | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
-        </div>
-        }
-      </div>
-      @if (q.notas) {
-      <div class="mt-4 pt-4 border-t border-slate-100">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Notas</p>
-        <p class="text-sm text-slate-700">{{ q.notas }}</p>
-      </div>
-      }
-    </div>
+    <app-quote-detail
+      [quote]="quote()!"
+      [contract]="contract()"
+    />
 
     <!-- Amendment badge (when there's a pending amendment) -->
     @if (amendment() && amendment()!.status === 'pending_approval') {

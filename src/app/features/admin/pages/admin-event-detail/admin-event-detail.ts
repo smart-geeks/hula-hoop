@@ -19,6 +19,7 @@ import { ExtraService } from '../../../../core/services/extra.service';
 import { getStatusCfg } from '../../../../core/utils/status-config';
 import type { Contract, ContractStatus, ContractPayment, PaymentSplit } from '../../../../core/interfaces/contract';
 import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
+import { QuoteDetailComponent } from '../../../../shared/components/quote-detail/quote-detail';
 import type { Quote } from '../../../../core/interfaces/quote';
 import type { EventTask, TaskStatus } from '../../../../core/interfaces/event-task';
 import type { AdminExpense } from '../../../../core/interfaces/expense';
@@ -32,7 +33,7 @@ type PayMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 @Component({
   selector: 'app-admin-event-detail',
   templateUrl: './admin-event-detail.html',
-  imports: [CurrencyPipe, DatePipe, RouterLink, PaymentSplitsInputComponent],
+  imports: [CurrencyPipe, DatePipe, RouterLink, PaymentSplitsInputComponent, QuoteDetailComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminEventDetail {
