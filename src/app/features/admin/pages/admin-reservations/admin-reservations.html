@@ -446,7 +446,7 @@
         </div>
         <div>
           <label for="new-res-phone" class="block text-sm font-medium text-slate-700 mb-1">
-            Teléfono
+            Teléfono <span class="text-slate-400 font-normal">(opcional)</span>
           </label>
           <input id="new-res-phone" type="tel" [value]="newResPhone()"
                  (input)="newResPhone.set($any($event.target).value)"
@@ -469,7 +469,7 @@
                   (onClick)="goToStep(2)" />
         <p-button label="Crear reserva" icon="pi pi-check" iconPos="right"
                   [loading]="newResSubmitting()"
-                  [disabled]="!newResName().trim() || !newResPhone().trim()"
+                  [disabled]="!newResName().trim()"
                   (onClick)="submitNewReservation()" />
       </div>
     }
