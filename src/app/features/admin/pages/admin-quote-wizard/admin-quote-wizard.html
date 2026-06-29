@@ -596,6 +596,54 @@
                   </div>
                 }
               </div>
+
+              <!-- Líneas personalizadas -->
+              <div class="mt-6 border-t border-slate-100 pt-5">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-semibold text-slate-700">Líneas personalizadas</h3>
+                  <button type="button" (click)="addFreeLine()"
+                    class="flex items-center gap-1.5 text-xs font-semibold text-rojo-brillante hover:text-rojo-brillante/80 transition-colors">
+                    <i class="pi pi-plus-circle text-xs" aria-hidden="true"></i>
+                    Agregar línea
+                  </button>
+                </div>
+                @for (line of freeLines(); track $index; let i = $index) {
+                  <div class="flex gap-2 items-center mb-2">
+                    <input
+                      type="text"
+                      [value]="line.descripcion"
+                      (input)="updateFreeLine(i, 'descripcion', $any($event.target).value)"
+                      placeholder="Descripción del concepto"
+                      class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30" />
+                    <input
+                      type="number"
+                      [value]="line.cantidad"
+                      (input)="updateFreeLine(i, 'cantidad', $any($event.target).value)"
+                      min="1"
+                      class="w-16 rounded-lg border border-slate-200 px-2 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
+                      aria-label="Cantidad" />
+                    <div class="relative">
+                      <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" aria-hidden="true">$</span>
+                      <input
+                        type="number"
+                        [value]="line.precio_unitario"
+                        (input)="updateFreeLine(i, 'precio_unitario', $any($event.target).value)"
+                        min="0"
+                        step="0.01"
+                        class="w-28 rounded-lg border border-slate-200 pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
+                        aria-label="Precio unitario" />
+                    </div>
+                    <button type="button" (click)="removeFreeLine(i)"
+                      class="w-7 h-7 shrink-0 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-600 flex items-center justify-center text-base transition-colors"
+                      aria-label="Eliminar línea">
+                      ×
+                    </button>
+                  </div>
+                }
+                @if (freeLines().length === 0) {
+                  <p class="text-xs text-slate-400 italic">Sin líneas personalizadas. Usa "Agregar línea" para conceptos fuera del catálogo.</p>
+                }
+              </div>
             </div>
           }
 
@@ -607,82 +655,13 @@
                 <p class="text-sm text-slate-500">Revisa la información final, aplica descuentos y guarda la cotización</p>
               </div>
 
-              <div class="bg-slate-50 rounded-xl p-4 space-y-3 text-xs text-slate-600">
-                @if (selectedClient()) {
-                  <div class="flex items-center gap-2">
-                    <i class="pi pi-user text-slate-400"></i>
-                    <span class="font-semibold text-slate-800">{{ selectedClient()!.nombre }}</span>
-                  </div>
-                }
-                @if (selectedDate()) {
-                  <div class="flex items-center gap-2">
-                    <i class="pi pi-calendar text-slate-400"></i>
-                    <span>{{ formatDateDisplay(selectedDate()!) }} · {{ selectedSlot() ? formatTime(selectedSlot()!.start_time) + ' – ' + formatTime(selectedSlot()!.end_time) : '' }}</span>
-                  </div>
-                }
-                <div class="flex items-center gap-2">
-                  <i class="pi pi-users text-slate-400"></i>
-                  <span>Categoría {{ selectedCategory() === 'hooping' ? 'Hooping' : 'Hula Hula' }} · {{ guestCount() }} invitados</span>
-                </div>
-              </div>
-
-              <!-- Concept breakdown list -->
-              <div class="border border-slate-100 rounded-xl overflow-hidden text-xs">
-                <div class="bg-slate-50 px-4 py-2 border-b border-slate-100">
-                  <p class="font-semibold text-slate-500 uppercase tracking-wide">Conceptos</p>
-                </div>
-                <div class="divide-y divide-slate-100 bg-white">
-                  @for (item of summaryItems(); track $index) {
-                    <div class="flex justify-between items-center px-4 py-2.5">
-                      <div>
-                        <p class="font-semibold text-slate-800">{{ item.descripcion }}</p>
-                        @if (item.precio_unitario === 0) {
-                          <p class="text-[10px] text-emerald-600 font-medium">Incluido</p>
-                        } @else if (item.cantidad > 1) {
-                          <p class="text-[10px] text-slate-400">{{ item.cantidad }} × {{ item.precio_unitario * 100 | currencyMxn }}</p>
-                        }
-                      </div>
-                      <span class="font-bold text-slate-800">
-                        {{ item.precio_unitario === 0 ? '—' : (item.cantidad * item.precio_unitario * 100 | currencyMxn) }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </div>
+              <app-quote-detail [quote]="summaryQuote()" />
 
               <!-- Admin Discount field -->
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Descuento ($ MXN)</label>
                 <input type="number" [value]="discount()" (input)="discount.set(+($any($event.target).value))" min="0" step="1" placeholder="0"
                   class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30" />
-              </div>
-
-              <!-- Pricing calculations -->
-              <div class="bg-slate-50 rounded-xl p-5 space-y-2 text-xs border border-slate-100">
-                <div class="flex justify-between">
-                  <span class="text-slate-500">Subtotal</span>
-                  <span class="font-semibold text-slate-700">{{ subtotalAmount() * 100 | currencyMxn }}</span>
-                </div>
-                @if (discount() > 0) {
-                  <div class="flex justify-between text-red-500">
-                    <span>Descuento administrativo</span>
-                    <span>- {{ discount() * 100 | currencyMxn }}</span>
-                  </div>
-                }
-                <div class="flex justify-between text-base font-extrabold text-slate-800 border-t border-slate-200/60 pt-2.5">
-                  <span>Total final</span>
-                  <span>{{ totalAmount() * 100 | currencyMxn }}</span>
-                </div>
-                <div class="flex justify-between text-rojo-brillante font-semibold">
-                  <span>Anticipo requerido (bloqueo)</span>
-                  <span>{{ depositAmount() * 100 | currencyMxn }}</span>
-                </div>
-                @if (balanceDue() > 0) {
-                  <div class="flex justify-between text-slate-500 italic">
-                    <span>Saldo pendiente en evento</span>
-                    <span>{{ balanceDue() * 100 | currencyMxn }}</span>
-                  </div>
-                }
               </div>
 
               <!-- Additional comments -->

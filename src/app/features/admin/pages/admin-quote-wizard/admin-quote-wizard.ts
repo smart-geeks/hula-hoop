@@ -20,6 +20,7 @@ import { ReservationService } from '../../../../core/services/reservation.servic
 import { ContractService } from '../../../../core/services/contract.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
+import { QuoteDetailComponent } from '../../../../shared/components/quote-detail/quote-detail';
 import type { Quote, QuoteStatus, CreateQuoteData } from '../../../../core/interfaces/quote';
 import type { Client } from '../../../../core/interfaces/client';
 import type { PartyPackage } from '../../../../core/interfaces/package';
@@ -40,7 +41,7 @@ const PACKAGE_COLOR_HEX: Record<string, string> = {
 @Component({
   selector: 'app-admin-quote-wizard',
   templateUrl: './admin-quote-wizard.html',
-  imports: [FormsModule, DatePickerModule, ToggleSwitchModule, CurrencyMxnPipe],
+  imports: [FormsModule, DatePickerModule, ToggleSwitchModule, CurrencyMxnPipe, QuoteDetailComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminQuoteWizard {
@@ -147,6 +148,13 @@ export class AdminQuoteWizard {
   readonly extraQty     = signal<Map<string, number>>(new Map());
   readonly extraVariant = signal<Map<string, string>>(new Map());
 
+  // ── Step 4 — Líneas personalizadas ───────────────────────────
+  readonly freeLines = signal<{ descripcion: string; cantidad: number; precio_unitario: number }[]>([]);
+
+  readonly freeLinesTotal = computed(() =>
+    this.freeLines().reduce((s, l) => s + Math.round(l.cantidad * l.precio_unitario * 100), 0)
+  );
+
   // ── Step 5 — Resumen ─────────────────────────────────────────
   readonly discount = signal(0);
   readonly notes    = signal('');
@@ -219,7 +227,7 @@ export class AdminQuoteWizard {
   );
   readonly totalCents     = computed(() =>
     this.subtotalCents() + this.extrasTotalCents() + this.decorationUpgradeCents() +
-    this.activityUpgradeCents() + this.glamGirlsCents()
+    this.activityUpgradeCents() + this.glamGirlsCents() + this.freeLinesTotal()
   );
   readonly subtotalAmount = computed(() => this.totalCents() / 100);
   readonly totalAmount    = computed(() => Math.max(0, this.subtotalAmount() - this.discount()));
@@ -232,6 +240,46 @@ export class AdminQuoteWizard {
   });
   readonly balanceDue    = computed(() => Math.max(0, this.totalAmount() - this.depositAmount()));
   readonly summaryItems  = computed(() => this.buildQuoteItems());
+
+  readonly summaryQuote = computed((): Quote => {
+    const client = this.selectedClient();
+    const slot   = this.selectedSlot();
+    const date   = this.selectedDate();
+    const items  = this.summaryItems().map((item, i) => ({
+      id:              `preview-${i}`,
+      quote_id:        'preview',
+      descripcion:     item.descripcion,
+      cantidad:        item.cantidad,
+      precio_unitario: item.precio_unitario,
+      subtotal:        item.cantidad * item.precio_unitario,
+    }));
+    return {
+      id:               'preview',
+      venue_id:         '',
+      folio:            this.editingQuote()?.folio ?? 'Nueva cotización',
+      public_token:     '',
+      client_id:        client?.id ?? null,
+      fecha:            this.todayStr(),
+      fecha_evento:     date ? this.formatDateISO(date) : null,
+      hora_inicio:      slot?.start_time ?? null,
+      hora_fin:         slot?.end_time ?? null,
+      guest_count:      this.guestCount(),
+      estado:           this.editingQuote()?.estado ?? 'borrador',
+      subtotal:         this.subtotalCents() / 100,
+      descuento:        this.discount(),
+      total:            this.totalAmount(),
+      deposit_amount:   this.depositAmount() > 0 ? this.depositAmount() : null,
+      time_slot_id:     null,
+      mp_preference_id: null,
+      snack_option_id:  null,
+      package_id:       null,
+      notas:            this.notes() || null,
+      created_at:       '',
+      client:           client ? { nombre: client.nombre, email: client.email ?? null, telefono: client.telefono ?? null } : undefined,
+      items,
+    };
+  });
+
   readonly step1Valid    = computed(() => this.selectedClient() !== null);
   readonly step2Valid    = computed(() => !!this.selectedDate() && this.selectedSlot() !== null);
   readonly step3Valid    = computed(() => this.selectedPackage() !== null);
@@ -283,6 +331,7 @@ export class AdminQuoteWizard {
   }
 
   private populateFromQuote(quote: Quote): void {
+    this.freeLines.set([]);
     this.editingQuote.set(quote);
     this.selectedClient.set(this.allClients().find(c => c.id === quote.client_id) ?? null);
     this.guestCount.set(quote.guest_count ?? 10);
@@ -331,6 +380,38 @@ export class AdminQuoteWizard {
       this.selectedCategory.set(cat); this.selectedDecoration.set(dec); this.selectedActivity.set(act);
       this.glamGirlsEnabled.set(glamEnabled); this.glamGirlsCount.set(glamCount);
       this.extraQty.set(extQty); this.extraVariant.set(extVar);
+
+      // Collect unmatched items as free lines
+      const KNOWN_PREFIXES = [
+        'Merienda:', 'Upgrade de Decoración:', 'Actividad Premium:',
+        'Actividad Incluida:', 'Área Glam Girls',
+      ];
+      const matchedDescs = new Set<string>([
+        ...(this.selectedPackage() ? [this.selectedPackage()!.name] : []),
+        ...[...extQty.keys()].flatMap(id => {
+          const e = this.extras().find(x => x.id === id);
+          if (!e) return [];
+          const vid = extVar.get(id);
+          const vname = vid ? e.variants?.find(v => v.id === vid)?.name : undefined;
+          return vname
+            ? [`${e.name} (${vname})`, `${e.name} (${vname}) (cobro en local)`]
+            : [e.name, `${e.name} (cobro en local)`];
+        }),
+      ]);
+
+      const recovered = quote.items
+        .filter(item => {
+          const d = item.descripcion;
+          if (KNOWN_PREFIXES.some(p => d.startsWith(p))) return false;
+          return !matchedDescs.has(d);
+        })
+        .map(item => ({
+          descripcion:     item.descripcion,
+          cantidad:        item.cantidad,
+          precio_unitario: item.precio_unitario,
+        }));
+
+      this.freeLines.set(recovered);
     }
     this.currentStep.set(5);
   }
@@ -447,6 +528,24 @@ export class AdminQuoteWizard {
     const map = new Map(this.extraVariant()); map.set(extraId, variantId); this.extraVariant.set(map);
   }
 
+  addFreeLine(): void {
+    this.freeLines.update(l => [...l, { descripcion: '', cantidad: 1, precio_unitario: 0 }]);
+  }
+
+  removeFreeLine(i: number): void {
+    this.freeLines.update(l => l.filter((_, idx) => idx !== i));
+  }
+
+  updateFreeLine(i: number, field: 'descripcion' | 'cantidad' | 'precio_unitario', value: string): void {
+    this.freeLines.update(l =>
+      l.map((line, idx) =>
+        idx === i
+          ? { ...line, [field]: field === 'descripcion' ? value : Math.max(0, parseFloat(value) || 0) }
+          : line
+      )
+    );
+  }
+
   // ── Submit ───────────────────────────────────────────────────
   async onSubmit(): Promise<void> {
     if (this.saving()) return;
@@ -511,6 +610,16 @@ export class AdminQuoteWizard {
       const name  = se.variant ? `${se.extra.name} (${se.variant.name})` : se.extra.name;
       const price = se.variant ? se.variant.price_cents : se.extra.price_cents;
       items.push({ descripcion: se.extra.pay_at_venue ? `${name} (cobro en local)` : name, cantidad: se.quantity, precio_unitario: se.extra.pay_at_venue ? 0 : price / 100 });
+    }
+    // Free/custom lines
+    for (const line of this.freeLines()) {
+      if (line.descripcion.trim()) {
+        items.push({
+          descripcion:     line.descripcion.trim(),
+          cantidad:        line.cantidad,
+          precio_unitario: line.precio_unitario,
+        });
+      }
     }
     return items;
   }
