@@ -72,7 +72,11 @@
         </thead>
         <tbody class="divide-y divide-slate-50">
           @for (quote of filteredQuotes(); track quote.id) {
-          <tr class="hover:bg-slate-50/60 transition-colors">
+          <tr
+            class="hover:bg-slate-50/60 transition-colors cursor-pointer"
+            (click)="openEdit(quote)"
+            role="button"
+            [attr.aria-label]="'Ver cotización ' + quote.folio">
             <td class="px-6 py-4">
               <p class="font-semibold text-slate-800">{{ quote.folio }}</p>
               <p class="text-xs text-slate-400 mt-0.5">{{ quote.client?.nombre ?? 'Sin cliente' }}</p>
@@ -108,7 +112,7 @@
                     <i class="pi pi-exclamation-triangle text-xs"></i>
                     {{ conflict.folio }}
                   </span>
-                  <button (click)="openRescheduleDialog(quote)"
+                  <button (click)="openRescheduleDialog(quote); $event.stopPropagation()"
                     class="px-2 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1"
                     title="Cambiar fecha de la cotización">
                     <i class="pi pi-calendar text-xs"></i>
@@ -117,7 +121,7 @@
                 </div>
                 } @else if (quote.estado === 'borrador' || quote.estado === 'enviada') {
                 <!-- Registrar anticipo → crear contrato -->
-                <button (click)="openAnticoDialog(quote)"
+                <button (click)="openAnticoDialog(quote); $event.stopPropagation()"
                   class="px-2 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1"
                   title="Registrar anticipo y crear contrato">
                   <i class="pi pi-money-bill text-xs"></i>
@@ -127,7 +131,7 @@
 
                 <!-- Ir al evento (aprobada con contrato) -->
                 @if (contractByQuote().get(quote.id); as contractId) {
-                <button (click)="goToEvent(contractId)"
+                <button (click)="goToEvent(contractId); $event.stopPropagation()"
                   class="px-2 py-1.5 rounded-lg text-xs font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors flex items-center gap-1"
                   title="Ver evento">
                   <i class="pi pi-calendar text-xs"></i>
@@ -136,28 +140,28 @@
                 }
 
                 <!-- PDF -->
-                <button (click)="downloadPdf(quote)"
+                <button (click)="downloadPdf(quote); $event.stopPropagation()"
                   class="p-2 rounded-lg text-slate-400 hover:text-rojo-brillante hover:bg-red-50 transition-colors"
                   title="Descargar PDF">
                   <i class="pi pi-file-pdf text-sm"></i>
                 </button>
 
                 <!-- Copy public link -->
-                <button (click)="copyPublicLink(quote)"
+                <button (click)="copyPublicLink(quote); $event.stopPropagation()"
                   class="p-2 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
                   title="Copiar link del cliente">
                   <i class="pi pi-link text-sm"></i>
                 </button>
 
                 <!-- Send popover trigger -->
-                <button (click)="openSendPanel(quote)"
+                <button (click)="openSendPanel(quote); $event.stopPropagation()"
                   class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                   title="Enviar cotización">
                   <i class="pi pi-send text-sm"></i>
                 </button>
 
                 <!-- Edit -->
-                <button (click)="openEdit(quote)"
+                <button (click)="openEdit(quote); $event.stopPropagation()"
                   class="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                   title="Editar">
                   <i class="pi pi-pencil text-sm"></i>
@@ -165,7 +169,7 @@
 
                 <!-- Delete (borrador only) -->
                 @if (quote.estado === 'borrador') {
-                <button (click)="confirmDelete(quote)"
+                <button (click)="confirmDelete(quote); $event.stopPropagation()"
                   class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                   title="Eliminar">
                   <i class="pi pi-trash text-sm"></i>
