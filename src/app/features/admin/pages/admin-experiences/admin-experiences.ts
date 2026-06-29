@@ -68,6 +68,7 @@ export class AdminExperiences {
   );
 
   readonly newInclusion = signal('');
+  readonly newGlamInclusion = signal('');
 
   // Activities dialog
   readonly showActivityDialog = signal(false);
@@ -129,6 +130,8 @@ export class AdminExperiences {
       activities: config.activities,
       glam_girls_price_cents: config.glam_girls_price_cents,
       glam_girls_min_count: config.glam_girls_min_count,
+      glam_girls_description: config.glam_girls_description,
+      glam_girls_inclusions: config.glam_girls_inclusions || [],
     });
     this.categoryConfigsSaving.set(false);
     if (result) {
@@ -231,6 +234,28 @@ export class AdminExperiences {
   updateGlamGirlsMinCount(config: PackageCategoryConfig, minCount: number): void {
     this.categoryConfigs.update(list =>
       list.map(c => c.id === config.id ? { ...config, glam_girls_min_count: minCount } : c));
+  }
+
+  addGlamInclusion(config: PackageCategoryConfig): void {
+    const text = this.newGlamInclusion().trim();
+    if (!text) return;
+    const currentInclusions = config.glam_girls_inclusions || [];
+    if (!currentInclusions.includes(text)) {
+      const updated = { ...config, glam_girls_inclusions: [...currentInclusions, text] };
+      this.categoryConfigs.update(list => list.map(c => c.id === config.id ? updated : c));
+    }
+    this.newGlamInclusion.set('');
+  }
+
+  removeGlamInclusion(config: PackageCategoryConfig, index: number): void {
+    const currentInclusions = [...(config.glam_girls_inclusions || [])];
+    currentInclusions.splice(index, 1);
+    this.categoryConfigs.update(list => list.map(c => c.id === config.id ? { ...config, glam_girls_inclusions: currentInclusions } : c));
+  }
+
+  updateGlamGirlsDescription(config: PackageCategoryConfig, desc: string): void {
+    this.categoryConfigs.update(list =>
+      list.map(c => c.id === config.id ? { ...config, glam_girls_description: desc } : c));
   }
 
   // ── Decoration levels methods ──────────────────────────────────────────────

@@ -54,6 +54,34 @@
                              [min]="0" [showButtons]="true" styleClass="w-full" />
             </div>
           </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Descripción de Glam Girls</label>
+            <textarea pTextarea [ngModel]="config.glam_girls_description"
+                      (ngModelChange)="updateGlamGirlsDescription(config, $event || '')"
+                      [rows]="3" class="w-full text-sm" placeholder="Ej: Área Glam Girls (Glitter mani, make up, peinados)"></textarea>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Inclusiones de Glam Girls</label>
+            <div class="flex gap-2">
+              <input pInputText [value]="newGlamInclusion()" (input)="newGlamInclusion.set($any($event.target).value)"
+                     (keydown.enter)="$event.preventDefault(); addGlamInclusion(config)"
+                     placeholder="Ej: Peinados con ligas" class="flex-1" />
+              <p-button icon="pi pi-plus" (onClick)="addGlamInclusion(config)" [outlined]="true"
+                        aria-label="Agregar inclusión de Glam Girls" pTooltip="Agregar" />
+            </div>
+            <div class="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+              @for (inc of config.glam_girls_inclusions; track inc; let i = $index) {
+                <p-tag [value]="inc" severity="success" [rounded]="true">
+                  <button type="button" class="ml-1.5 cursor-pointer text-xs" (click)="removeGlamInclusion(config, i)"
+                          [attr.aria-label]="'Quitar ' + inc">✕</button>
+                </p-tag>
+              } @empty {
+                <span class="text-sm text-slate-400 italic">No hay inclusiones configuradas.</span>
+              }
+            </div>
+          </div>
         </div>
 
         <!-- Inclusiones -->

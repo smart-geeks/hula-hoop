@@ -427,7 +427,9 @@
                 <!-- Glam Girls Section -->
                 <div>
                   <h2 id="glam-selection-header" class="text-lg font-semibold mb-1 text-slate-800">1. Área Glam Girls (Opcional)</h2>
-                  <p class="text-sm text-slate-500 mb-4">Servicio premium con Glitter mani, make up con gemas faciales y peinados para las invitadas.</p>
+                  <p class="text-sm text-slate-500 mb-4">
+                    {{ activeCategoryConfig()?.glam_girls_description || 'Servicio premium con Glitter mani, make up con gemas faciales y peinados para las invitadas.' }}
+                  </p>
 
                   <div class="p-6 bg-[#fdf5f9] border border-pink-100 rounded-2xl shadow-sm">
                     <div class="flex items-center justify-between gap-4">
@@ -440,6 +442,17 @@
                       </div>
                       <p-toggleSwitch [ngModel]="glamGirlsEnabled()" (ngModelChange)="toggleGlamGirls($event)" />
                     </div>
+
+                    @if (activeCategoryConfig()?.glam_girls_inclusions?.length) {
+                      <div class="mt-4 flex flex-wrap gap-2 pt-3 border-t border-pink-100/50">
+                        @for (inc of activeCategoryConfig()?.glam_girls_inclusions; track inc) {
+                          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-pink-600 border border-pink-100">
+                            <i class="pi pi-check text-[10px]"></i>
+                            {{ inc }}
+                          </span>
+                        }
+                      </div>
+                    }
 
                     @if (glamGirlsEnabled()) {
                       <div class="mt-4 p-4 bg-white border border-pink-100/60 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
