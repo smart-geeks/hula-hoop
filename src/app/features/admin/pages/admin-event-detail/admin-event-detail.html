@@ -453,101 +453,158 @@
           <div>
             <span class="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-2">Especificaciones y Datos Técnicos</span>
             <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Nombre del Cliente</div>
-                <div class="p-3 text-slate-700 font-medium">{{ contract()?.client?.nombre ?? '—' }}</div>
+                <div class="p-3 text-slate-700 font-medium col-span-2">{{ contract()?.client?.nombre ?? '—' }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Contacto</div>
-                <div class="p-3 text-slate-700 font-medium">{{ contract()?.client?.telefono ?? '—' }} / {{ contract()?.client?.email ?? '—' }}</div>
+                <div class="p-3 text-slate-700 font-medium col-span-2">{{ contract()?.client?.telefono ?? '—' }} / {{ contract()?.client?.email ?? '—' }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Fecha del Evento</div>
-                <div class="p-3 text-slate-700 font-medium">{{ formatDate(contract()?.fecha_evento) }}</div>
+                <div class="p-3 text-slate-700 font-medium col-span-2">{{ formatDate(contract()?.fecha_evento) }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Horario del Evento</div>
-                <div class="p-3 text-slate-700 font-medium">De {{ formatTime(contract()?.hora_inicio) }} a {{ formatTime(contract()?.hora_fin) }}</div>
+                <div class="p-3 text-slate-700 font-medium col-span-2">De {{ formatTime(contract()?.hora_inicio) }} a {{ formatTime(contract()?.hora_fin) }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Paquete Contratado</div>
-                <div class="p-3 text-slate-700 font-medium">{{ getContractPackage(quote()) }}</div>
+                <div class="p-3 text-slate-700 font-medium border-r">{{ getContractPackage(quote()) }}</div>
+                <div class="p-3 text-slate-700 font-semibold text-right">{{ getContractPackagePrice(quote()) | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Merienda</div>
-                <div class="p-3 text-slate-700 font-medium">{{ getContractSnack(quote()) }}</div>
+                <div class="p-3 text-slate-700 font-medium border-r">{{ getContractSnack(quote()) }}</div>
+                <div class="p-3 text-slate-700 font-semibold text-right">
+                  @if (getContractSnackPrice(quote()) > 0) {
+                    {{ getContractSnackPrice(quote()) | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  } @else if (getContractSnack(quote()) !== '—') {
+                    Incluido
+                  } @else {
+                    —
+                  }
+                </div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Actividad</div>
-                <div class="p-3 text-slate-700 font-medium">
-                  @if (getContractActivities(quote()).length > 0) {
-                    <div class="space-y-1">
-                      @for (act of getContractActivities(quote()); track $index) {
-                        <div>{{ act }}</div>
-                      }
-                    </div>
-                  } @else {
-                    —
-                  }
-                </div>
+                @if (getContractActivitiesWithPrices(quote()).length > 0) {
+                  <div class="col-span-2 divide-y divide-slate-100">
+                    @for (item of getContractActivitiesWithPrices(quote()); track $index) {
+                      <div class="grid grid-cols-[1fr_140px]">
+                        <div class="p-3 text-slate-700 font-medium border-r">{{ item.text }}</div>
+                        <div class="p-3 text-slate-700 font-semibold text-right">
+                          @if (item.price > 0) {
+                            {{ item.price | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                          } @else {
+                            @if (item.text.toLowerCase().includes('cobro en local') || item.text.toLowerCase().includes('en local')) {
+                              Cobro en local
+                            } @else {
+                              Incluido
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="p-3 text-slate-700 font-medium border-r">—</div>
+                  <div class="p-3 text-slate-700 font-medium text-right">—</div>
+                }
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Decoración</div>
-                <div class="p-3 text-slate-700 font-medium">
-                  @if (getContractDecorations(quote()).length > 0) {
-                    <div class="space-y-1">
-                      @for (dec of getContractDecorations(quote()); track $index) {
-                        <div>{{ dec }}</div>
-                      }
-                    </div>
-                  } @else {
-                    —
-                  }
-                </div>
+                @if (getContractDecorationsWithPrices(quote()).length > 0) {
+                  <div class="col-span-2 divide-y divide-slate-100">
+                    @for (item of getContractDecorationsWithPrices(quote()); track $index) {
+                      <div class="grid grid-cols-[1fr_140px]">
+                        <div class="p-3 text-slate-700 font-medium border-r">{{ item.text }}</div>
+                        <div class="p-3 text-slate-700 font-semibold text-right">
+                          @if (item.price > 0) {
+                            {{ item.price | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                          } @else {
+                            @if (item.text.toLowerCase().includes('cobro en local') || item.text.toLowerCase().includes('en local')) {
+                              Cobro en local
+                            } @else {
+                              Incluido
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="p-3 text-slate-700 font-medium border-r">—</div>
+                  <div class="p-3 text-slate-700 font-medium text-right">—</div>
+                }
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Glam Girls</div>
-                <div class="p-3 text-slate-700 font-medium">
-                  @if (getContractGlam(quote()).length > 0) {
-                    <div class="space-y-1">
-                      @for (glam of getContractGlam(quote()); track $index) {
-                        <div>{{ glam }}</div>
-                      }
-                    </div>
-                  } @else {
-                    —
-                  }
-                </div>
+                @if (getContractGlamWithPrices(quote()).length > 0) {
+                  <div class="col-span-2 divide-y divide-slate-100">
+                    @for (item of getContractGlamWithPrices(quote()); track $index) {
+                      <div class="grid grid-cols-[1fr_140px]">
+                        <div class="p-3 text-slate-700 font-medium border-r">{{ item.text }}</div>
+                        <div class="p-3 text-slate-700 font-semibold text-right">
+                          @if (item.price > 0) {
+                            {{ item.price | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                          } @else {
+                            @if (item.text.toLowerCase().includes('cobro en local') || item.text.toLowerCase().includes('en local')) {
+                              Cobro en local
+                            } @else {
+                              Incluido
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="p-3 text-slate-700 font-medium border-r">—</div>
+                  <div class="p-3 text-slate-700 font-medium text-right">—</div>
+                }
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Extras</div>
-                <div class="p-3 text-slate-700 font-medium">
-                  @if (getContractExtrasList(quote()).length > 0) {
-                    <div class="space-y-1">
-                      @for (ext of getContractExtrasList(quote()); track $index) {
-                        <div>{{ ext }}</div>
-                      }
-                    </div>
-                  } @else {
-                    —
-                  }
-                </div>
+                @if (getContractExtrasWithPrices(quote()).length > 0) {
+                  <div class="col-span-2 divide-y divide-slate-100">
+                    @for (item of getContractExtrasWithPrices(quote()); track $index) {
+                      <div class="grid grid-cols-[1fr_140px]">
+                        <div class="p-3 text-slate-700 font-medium border-r">{{ item.text }}</div>
+                        <div class="p-3 text-slate-700 font-semibold text-right">
+                          @if (item.price > 0) {
+                            {{ item.price | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                          } @else {
+                            @if (item.text.toLowerCase().includes('cobro en local') || item.text.toLowerCase().includes('en local')) {
+                              Cobro en local
+                            } @else {
+                              Incluido
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="p-3 text-slate-700 font-medium border-r">—</div>
+                  <div class="p-3 text-slate-700 font-medium text-right">—</div>
+                }
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
-                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Costo Renta Salón</div>
-                <div class="p-3 text-slate-700 font-semibold">{{ contract()?.salon_renta | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
-              </div>
-              <div class="grid grid-cols-2 border-b border-slate-200 bg-red-50/10">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200 bg-red-50/10">
                 <div class="p-3 bg-red-50/20 font-bold text-red-700 border-r">Total Contrato</div>
-                <div class="p-3 text-slate-800 font-black">{{ contract()?.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
+                <div class="p-3 border-r"></div>
+                <div class="p-3 text-slate-800 font-black text-right">{{ contract()?.total_contrato | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
-              <div class="grid grid-cols-2 border-b border-slate-200">
+              <div class="grid grid-cols-[180px_1fr_140px] border-b border-slate-200">
                 <div class="p-3 bg-emerald-50/10 font-semibold text-emerald-700 border-r">Anticipo Pagado</div>
-                <div class="p-3 text-emerald-700 font-bold">{{ contract()?.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
+                <div class="p-3 border-r"></div>
+                <div class="p-3 text-emerald-700 font-bold text-right">{{ contract()?.deposito_pagado | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
-              <div class="grid grid-cols-2 bg-slate-50/50">
+              <div class="grid grid-cols-[180px_1fr_140px] bg-slate-50/50">
                 <div class="p-3 bg-red-50/30 font-bold text-red-600 border-r">Saldo Pendiente</div>
-                <div class="p-3 text-red-600 font-bold">{{ contract()?.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
+                <div class="p-3 border-r"></div>
+                <div class="p-3 text-red-600 font-bold text-right">{{ contract()?.saldo_pendiente | currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
               </div>
             </div>
           </div>

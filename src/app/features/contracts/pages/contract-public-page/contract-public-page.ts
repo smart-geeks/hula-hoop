@@ -341,19 +341,50 @@ export class ContractPublicPage implements AfterViewInit {
 
     const q = this.quote();
     const amendments = this.approvedAmendments();
-
     const pkg = this.getContractPackage(q);
+    const pkgPrice = this.getContractPackagePrice(q);
     const snack = this.getContractSnack(q);
 
-    const formatPrintList = (items: string[]) => {
-      if (items.length === 0) return '—';
-      return items.map(it => `<div style="margin-bottom: 2px;">${it}</div>`).join('');
+    const formatPrintList = (items: { text: string; price: number }[]) => {
+      if (items.length === 0) {
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px;">
+            <span style="color: #64748b;">—</span>
+            <span style="color: #64748b;">—</span>
+          </div>
+        `;
+      }
+      return items.map((it, idx) => {
+        const borderStyle = idx < items.length - 1 ? 'border-bottom: 1px solid #cbd5e1;' : '';
+        let priceStr = '—';
+        if (it.price > 0) {
+          priceStr = `$${it.price.toLocaleString('es-MX')} MXN`;
+        } else {
+          if (it.text.toLowerCase().includes('cobro en local') || it.text.toLowerCase().includes('en local')) {
+            priceStr = 'Cobro en local';
+          } else {
+            priceStr = 'Incluido';
+          }
+        }
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; ${borderStyle}">
+            <span>${it.text}</span>
+            <span style="font-weight: bold; text-align: right; white-space: nowrap; margin-left: 20px;">${priceStr}</span>
+          </div>
+        `;
+      }).join('');
     };
 
-    const activitiesHtml = formatPrintList(this.getContractActivities(q));
-    const decorationsHtml = formatPrintList(this.getContractDecorations(q));
-    const glamHtml = formatPrintList(this.getContractGlam(q));
-    const extrasHtml = formatPrintList(this.getContractExtrasList(q));
+    const activitiesHtml = formatPrintList(this.getContractActivitiesWithPrices(q));
+    const decorationsHtml = formatPrintList(this.getContractDecorationsWithPrices(q));
+    const glamHtml = formatPrintList(this.getContractGlamWithPrices(q));
+    const extrasHtml = formatPrintList(this.getContractExtrasWithPrices(q));
+
+    let snackPriceHtml = '—';
+    if (snack !== '—') {
+      const snackPrice = this.getContractSnackPrice(q);
+      snackPriceHtml = snackPrice > 0 ? `$${snackPrice.toLocaleString('es-MX')} MXN` : 'Incluido';
+    }
 
     const fechaEvento = c.fecha_evento
       ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
@@ -460,35 +491,61 @@ export class ContractPublicPage implements AfterViewInit {
       <div class="section-title">ESPECIFICACIONES DEL SERVICIO Y EVENTO</div>
       <table class="details-table">
         <tr>
-          <td class="label">Cliente</td><td>${c.client?.nombre ?? '—'}</td>
-          <td class="label">Fecha Evento</td><td>${fechaEvento}</td>
+          <td class="label">Cliente</td>
+          <td colspan="2">${c.client?.nombre ?? '—'}</td>
         </tr>
         <tr>
-          <td class="label">Teléfono</td><td>${c.client?.telefono ?? '—'}</td>
-          <td class="label">Horario</td><td>De ${fmtTime(c.hora_inicio)} a ${fmtTime(c.hora_fin)}</td>
+          <td class="label">Contacto</td>
+          <td colspan="2">${c.client?.telefono ?? '—'} / ${c.client?.email ?? '—'}</td>
         </tr>
         <tr>
-          <td class="label">Email</td><td>${c.client?.email ?? '—'}</td>
-          <td class="label">Paquete Contratado</td><td>${pkg}</td>
+          <td class="label">Fecha Evento</td>
+          <td colspan="2">${fechaEvento}</td>
         </tr>
         <tr>
-          <td class="label">Merienda</td><td>${snack}</td>
-          <td class="label">Actividad</td><td>${activitiesHtml}</td>
+          <td class="label">Horario</td>
+          <td colspan="2">De ${fmtTime(c.hora_inicio)} a ${fmtTime(c.hora_fin)}</td>
         </tr>
         <tr>
-          <td class="label">Decoración</td><td>${decorationsHtml}</td>
-          <td class="label">Glam Girls</td><td>${glamHtml}</td>
+          <td class="label">Paquete Contratado</td>
+          <td>${pkg}</td>
+          <td style="text-align: right; font-weight: bold;">$${pkgPrice.toLocaleString('es-MX')} MXN</td>
         </tr>
         <tr>
-          <td class="label">Extras</td><td colspan="3">${extrasHtml}</td>
+          <td class="label">Merienda</td>
+          <td>${snack}</td>
+          <td style="text-align: right; font-weight: bold;">${snackPriceHtml}</td>
         </tr>
         <tr>
-          <td class="label">Total Contrato</td><td><strong>$${c.total_contrato.toLocaleString('es-MX')} MXN</strong></td>
-          <td class="label">Anticipo Pagado</td><td style="color:#16a34a;font-weight:600">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
+          <td class="label">Actividad</td>
+          <td style="padding: 0;" colspan="2">${activitiesHtml}</td>
         </tr>
         <tr>
-          <td class="label">Saldo Pendiente</td><td style="color:#dc2626;font-weight:700"><strong>$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</strong></td>
-          <td class="label">Salón Renta</td><td>$${c.salon_renta.toLocaleString('es-MX')} MXN</td>
+          <td class="label">Decoración</td>
+          <td style="padding: 0;" colspan="2">${decorationsHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Glam Girls</td>
+          <td style="padding: 0;" colspan="2">${glamHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Extras</td>
+          <td style="padding: 0;" colspan="2">${extrasHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Total Contrato</td>
+          <td></td>
+          <td style="text-align: right; font-weight: bold; font-size: 13px;">$${c.total_contrato.toLocaleString('es-MX')} MXN</td>
+        </tr>
+        <tr>
+          <td class="label" style="color:#16a34a;">Anticipo Pagado</td>
+          <td></td>
+          <td style="text-align: right; font-weight: bold; color:#16a34a; font-size: 13px;">$${c.deposito_pagado.toLocaleString('es-MX')} MXN</td>
+        </tr>
+        <tr>
+          <td class="label" style="color:#dc2626;">Saldo Pendiente</td>
+          <td></td>
+          <td style="text-align: right; font-weight: bold; color:#dc2626; font-size: 13px;">$${c.saldo_pendiente.toLocaleString('es-MX')} MXN</td>
         </tr>
       </table>
       <div class="section-title">CLÁUSULAS</div>
@@ -563,6 +620,11 @@ export class ContractPublicPage implements AfterViewInit {
     return quote.items[0]?.descripcion || '—';
   }
 
+  getContractPackagePrice(quote: any): number {
+    if (!quote || !quote.items || quote.items.length === 0) return 0;
+    return quote.items[0]?.subtotal ?? 0;
+  }
+
   getContractSnack(quote: any): string {
     if (!quote) return '—';
     if (quote.snack_option?.name) return quote.snack_option.name;
@@ -572,11 +634,27 @@ export class ContractPublicPage implements AfterViewInit {
     return snackItem.descripcion.replace(/^Merienda:\s*/, '');
   }
 
+  getContractSnackPrice(quote: any): number {
+    if (!quote || !quote.items) return 0;
+    const snackItem = quote.items.find((it: any) => it.descripcion.startsWith('Merienda:'));
+    return snackItem?.subtotal ?? 0;
+  }
+
   getContractActivities(quote: any): string[] {
     if (!quote || !quote.items) return [];
     return quote.items
       .filter((it: any) => it.descripcion.startsWith('Actividad Premium:') || it.descripcion.startsWith('Actividad Incluida:'))
       .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractActivitiesWithPrices(quote: any): { text: string; price: number }[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Actividad Premium:') || it.descripcion.startsWith('Actividad Incluida:'))
+      .map((it: any) => ({
+        text: `+ ${it.descripcion} (x${it.cantidad})`,
+        price: it.subtotal ?? 0
+      }));
   }
 
   getContractDecorations(quote: any): string[] {
@@ -586,11 +664,31 @@ export class ContractPublicPage implements AfterViewInit {
       .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
   }
 
+  getContractDecorationsWithPrices(quote: any): { text: string; price: number }[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Upgrade de Decoración:') || it.descripcion.includes('Decoración'))
+      .map((it: any) => ({
+        text: `+ ${it.descripcion} (x${it.cantidad})`,
+        price: it.subtotal ?? 0
+      }));
+  }
+
   getContractGlam(quote: any): string[] {
     if (!quote || !quote.items) return [];
     return quote.items
       .filter((it: any) => it.descripcion.includes('Glam Girls'))
       .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractGlamWithPrices(quote: any): { text: string; price: number }[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.includes('Glam Girls'))
+      .map((it: any) => ({
+        text: `+ ${it.descripcion} (x${it.cantidad})`,
+        price: it.subtotal ?? 0
+      }));
   }
 
   getContractExtrasList(quote: any): string[] {
@@ -607,6 +705,25 @@ export class ContractPublicPage implements AfterViewInit {
         return true;
       })
       .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractExtrasWithPrices(quote: any): { text: string; price: number }[] {
+    if (!quote || !quote.items) return [];
+    const pkgDesc = this.getContractPackage(quote);
+    return quote.items
+      .filter((it: any) => {
+        const desc = it.descripcion;
+        if (desc === pkgDesc) return false;
+        if (desc.startsWith('Merienda:')) return false;
+        if (desc.startsWith('Actividad Premium:') || desc.startsWith('Actividad Incluida:')) return false;
+        if (desc.startsWith('Upgrade de Decoración:') || desc.includes('Decoración')) return false;
+        if (desc.includes('Glam Girls')) return false;
+        return true;
+      })
+      .map((it: any) => ({
+        text: `+ ${it.descripcion} (x${it.cantidad})`,
+        price: it.subtotal ?? 0
+      }));
   }
 
   getContractExtras(quote: any): string {
