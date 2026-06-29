@@ -650,7 +650,7 @@ export class AdminQuotes {
           return `
             <div class="inclusions-card" style="background-color: ${theme.lightHex}; border-color: ${theme.mainHex};">
               <img class="inc-mascot-planeta" src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/planeta.png" alt="Planeta" />
-              <img class="inc-mascot-rojo" src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/rojo.png" alt="Mascota" />
+              <img class="inc-mascot-rojo" src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/personaje-h.png" alt="Mascota" />
               <div class="inc-title" style="color: ${theme.textHex};">
                 <span>✨</span> Tu paquete ${quote.package.name} incluye:
               </div>
