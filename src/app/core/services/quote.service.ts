@@ -15,7 +15,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name), package:packages(*)')
       .eq('venue_id', venueId)
       .order('created_at', { ascending: false });
 
@@ -32,7 +32,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name), package:packages(*)')
       .eq('id', id)
       .single();
 
@@ -127,7 +127,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name), package:packages(*)')
       .eq('public_token', token)
       .single();
 

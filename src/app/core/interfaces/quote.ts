@@ -1,3 +1,5 @@
+import type { PartyPackage } from './package';
+
 export type QuoteStatus = 'borrador' | 'enviada' | 'aprobada' | 'rechazada' | 'vencida';
 
 export interface QuoteItem {
@@ -35,6 +37,7 @@ export interface Quote {
   client?: { nombre: string; email: string | null; telefono: string | null };
   items?: QuoteItem[];
   snack_option?: { name: string };
+  package?: PartyPackage;
 }
 
 export interface CreateQuoteData {
