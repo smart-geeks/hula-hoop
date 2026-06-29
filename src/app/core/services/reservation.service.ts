@@ -127,13 +127,19 @@ export class ReservationService {
     return true;
   }
 
-  async updatePlaydateReservationPaidAmount(id: string, paid_deposit_cents: number, status: ReservationStatus): Promise<boolean> {
+  async updatePlaydateReservationPaidAmount(
+    id: string,
+    paid_deposit_cents: number,
+    status: ReservationStatus,
+    metodo?: string,
+    payment_splits?: { metodo: string; monto: number }[],
+  ): Promise<boolean> {
     const client = this.supabase.client;
     if (!client) return false;
 
     const { error } = await client
       .from('playdate_reservations')
-      .update({ paid_deposit_cents, status })
+      .update({ paid_deposit_cents, status, metodo: metodo ?? null, payment_splits: payment_splits ?? null })
       .eq('id', id);
 
     if (error) {

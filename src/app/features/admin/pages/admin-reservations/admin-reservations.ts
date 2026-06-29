@@ -16,6 +16,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
+import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
+import type { PaymentSplit } from '../../../../core/interfaces/contract';
 import { ReservationService, type AvailablePlaydateSlot } from '../../../../core/services/reservation.service';
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { VenueService } from '../../../../core/services/venue.service';
@@ -61,6 +63,7 @@ interface PlayDayRow {
     InputNumberModule,
     CurrencyMxnPipe,
     CurrencyPipe,
+    PaymentSplitsInputComponent,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -106,7 +109,20 @@ export class AdminReservations {
   // ── Payment dialog ─────────────────────────────────────────────────────────
   readonly paymentVisible    = signal(false);
   readonly paymentRow        = signal<PlayDayRow | null>(null);
-  readonly paymentInput      = signal<number>(0);
+  readonly paySplits         = signal<PaymentSplit[]>([]);
+  readonly paySplitsValid    = computed(() => {
+    const s = this.paySplits();
+    return s.length > 0 && s.every(p => p.monto > 0);
+  });
+  readonly paySplitsTotal    = computed(() =>
+    this.paySplits().reduce((sum, p) => sum + p.monto, 0)
+  );
+  readonly paymentRemaining  = computed(() => {
+    const row = this.paymentRow();
+    if (!row) return 0;
+    const rem = row.total_cents - row.paid_deposit_cents;
+    return rem > 0 ? rem / 100 : 0;
+  });
   readonly paymentSubmitting = signal(false);
 
   // ── New reservation modal ──────────────────────────────────────────────────
@@ -243,8 +259,7 @@ export class AdminReservations {
   // ── Payment ────────────────────────────────────────────────────────────────
   openPayment(row: PlayDayRow): void {
     this.paymentRow.set(row);
-    const remaining = row.total_cents - row.paid_deposit_cents;
-    this.paymentInput.set(remaining > 0 ? remaining / 100 : 0);
+    this.paySplits.set([]);
     this.paymentVisible.set(true);
   }
 
@@ -252,8 +267,11 @@ export class AdminReservations {
     const row = this.paymentRow();
     if (!row) return;
 
-    const addedCents = Math.round(this.paymentInput() * 100);
+    const splits    = this.paySplits();
+    const addedCents = Math.round(this.paySplitsTotal() * 100);
     if (addedCents <= 0) { this.paymentVisible.set(false); return; }
+
+    const metodo = splits.length === 1 ? splits[0].metodo : 'combinado';
 
     this.paymentSubmitting.set(true);
     const newPaid = row.paid_deposit_cents + addedCents;
@@ -263,7 +281,7 @@ export class AdminReservations {
         : row.status;
 
     const ok = await this.reservationService.updatePlaydateReservationPaidAmount(
-      row.id, newPaid, newStatus,
+      row.id, newPaid, newStatus, metodo, splits,
     );
 
     if (ok) {

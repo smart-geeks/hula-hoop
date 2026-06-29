@@ -271,13 +271,10 @@
           </span>
         </div>
       </div>
-      <div>
-        <label for="pago-monto" class="block text-sm font-medium text-slate-600 mb-2">Monto a cobrar (MXN)</label>
-        <p-inputNumber inputId="pago-monto" [ngModel]="paymentInput()" (ngModelChange)="paymentInput.set($event)"
-                       mode="currency" currency="MXN" locale="es-MX" [min]="0"
-                       class="w-full [&_input]:w-full text-xl" />
-      </div>
-      @if (payRow.status === 'pending_payment' && ((paymentInput() * 100) + payRow.paid_deposit_cents) >= payRow.total_cents) {
+      <app-payment-splits-input
+        [total]="paymentRemaining()"
+        [(splits)]="paySplits" />
+      @if (payRow.status === 'pending_payment' && (paySplitsTotal() * 100 + payRow.paid_deposit_cents) >= payRow.total_cents) {
         <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800">
           <i class="pi pi-check-circle mr-1"></i> Se confirmará la reserva automáticamente e imprimirá el ticket.
         </div>
@@ -288,7 +285,7 @@
         <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
                   (onClick)="paymentVisible.set(false)" />
         <p-button label="Registrar pago" icon="pi pi-check" iconPos="right"
-                  [loading]="paymentSubmitting()" [disabled]="!paymentInput() || paymentInput() <= 0"
+                  [loading]="paymentSubmitting()" [disabled]="!paySplitsValid()"
                   (onClick)="submitPayment()" />
       </div>
     </ng-template>
