@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, HostListener } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -466,6 +466,116 @@ export class QuotePublicPage {
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); }, 400);
+  }
+
+  readonly showCalendarMenu = signal(false);
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.calendar-dropdown-container')) {
+      this.showCalendarMenu.set(false);
+    }
+  }
+
+  toggleCalendarMenu(): void {
+    this.showCalendarMenu.update(v => !v);
+  }
+
+  private getEventDateTime(isEnd: boolean = false): Date {
+    const quote = this.quote();
+    if (!quote || !quote.fecha_evento) return new Date();
+
+    const dateParts = quote.fecha_evento.split('-');
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1;
+    const day = parseInt(dateParts[2], 10);
+
+    let hour = 12;
+    let min = 0;
+
+    const timeStr = isEnd ? (quote.hora_fin || '15:00') : (quote.hora_inicio || '12:00');
+    try {
+      const timeParts = timeStr.split(':');
+      if (timeParts.length >= 2) {
+        hour = parseInt(timeParts[0], 10);
+        min = parseInt(timeParts[1], 10);
+      }
+    } catch (e) {
+      if (isEnd) hour = 15;
+    }
+
+    return new Date(year, month, day, hour, min);
+  }
+
+  addToGoogleCalendar(): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    const startDate = this.getEventDateTime(false);
+    const endDate = this.getEventDateTime(true);
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formatDateForGoogle = (date: Date) => {
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+    };
+
+    const startStr = formatDateForGoogle(startDate);
+    const endStr = formatDateForGoogle(endDate);
+    const text = encodeURIComponent(`Fiesta en Hula Hoop - ${quote.package?.name ?? 'Cumpleaños'}`);
+    const details = encodeURIComponent(
+      `¡Tu fiesta en Hula Hoop está confirmada!\n\n` +
+      `Folio de Cotización: ${quote.folio}\n` +
+      `Cliente: ${quote.client?.nombre ?? ''}\n` +
+      `Invitados: ${quote.guest_count ?? 0} personas\n` +
+      `Ver cotización en línea: ${window.location.origin}/cotizacion/${quote.public_token}`
+    );
+    const location = encodeURIComponent('Hula Hoop');
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startStr}/${endStr}&details=${details}&location=${location}`;
+
+    window.open(googleUrl, '_blank');
+  }
+
+  downloadIcs(): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    const startDate = this.getEventDateTime(false);
+    const endDate = this.getEventDateTime(true);
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formatDateForIcs = (date: Date) => {
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+    };
+
+    const startStr = formatDateForIcs(startDate);
+    const endStr = formatDateForIcs(endDate);
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Hula Hoop//Fiesta Reservation//EN',
+      'BEGIN:VEVENT',
+      `UID:${quote.id || quote.folio}@hulahoop.mx`,
+      `DTSTAMP:${formatDateForIcs(new Date())}`,
+      `DTSTART:${startStr}`,
+      `DTEND:${endStr}`,
+      `SUMMARY:Fiesta en Hula Hoop - ${quote.package?.name ?? 'Cumpleaños'}`,
+      `DESCRIPTION:Confirmación de Fiesta\\nFolio: ${quote.folio}\\nCliente: ${quote.client?.nombre ?? ''}\\nVer cotización en línea: ${window.location.origin}/cotizacion/${quote.public_token}`,
+      'LOCATION:Hula Hoop',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fiesta-${quote.folio}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 
   shareWhatsApp(): void {

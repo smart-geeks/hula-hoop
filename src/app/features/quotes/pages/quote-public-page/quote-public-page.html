@@ -316,9 +316,31 @@
               Confirmado
             </span>
             <h3 class="text-lg font-black text-slate-800 tracking-tight">¡Tu fiesta está agendada!</h3>
-            <p class="text-slate-600 text-sm mt-1 leading-relaxed">
+            <p class="text-slate-600 text-sm mt-1 leading-relaxed mb-4">
               El anticipo ha sido registrado con éxito. Tu fecha está 100% reservada. ¡Nos vemos muy pronto para celebrar en grande!
             </p>
+            
+            <!-- Calendar Button and Menu -->
+            <div class="relative calendar-dropdown-container inline-block">
+              <button
+                (click)="toggleCalendarMenu()"
+                class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-800 text-xs font-black shadow-sm transition-all cursor-pointer">
+                <i class="pi pi-calendar text-emerald-600"></i>
+                <span>Agregar al calendario</span>
+                <i class="pi pi-chevron-down text-[9px] text-emerald-600 ml-1"></i>
+              </button>
+              
+              @if (showCalendarMenu()) {
+                <div class="absolute left-0 mt-1.5 w-48 bg-white border border-emerald-100 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden text-left">
+                  <button (click)="addToGoogleCalendar(); toggleCalendarMenu()" class="w-full px-4 py-2.5 hover:bg-emerald-50/50 text-slate-700 flex items-center gap-2.5 font-bold text-xs cursor-pointer text-left border-none bg-transparent">
+                    <i class="pi pi-google text-red-500 text-sm"></i> Google Calendar
+                  </button>
+                  <button (click)="downloadIcs(); toggleCalendarMenu()" class="w-full px-4 py-2.5 hover:bg-emerald-50/50 text-slate-700 flex items-center gap-2.5 font-bold text-xs cursor-pointer text-left border-none bg-transparent">
+                    <i class="pi pi-calendar-plus text-blue-500 text-sm"></i> iCal / Outlook (.ics)
+                  </button>
+                </div>
+              }
+            </div>
           </div>
         </div>
       </div>
