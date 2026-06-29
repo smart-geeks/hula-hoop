@@ -42,6 +42,8 @@ export class AuthService {
   private loadedProfileUserId: string | null = null;
   private profileFetchInProgress = false;
   private readonly initResolvers: (() => void)[] = [];
+  /** Debounce timer to avoid clearing profile on transient SIGNED_OUT during token refresh */
+  private signOutTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -158,9 +160,22 @@ export class AuthService {
 
         if (!user) {
           this.currentUser.set(null);
-          this.userProfile.set(null);
-          this.loadedProfileUserId = null;
+          // Delay clearing profile: Supabase can fire SIGNED_OUT transiently
+          // before SIGNED_IN during token refresh. A 3-second debounce prevents
+          // the admin menu from flickering during that window.
+          this.signOutTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+              this.userProfile.set(null);
+              this.loadedProfileUserId = null;
+            });
+          }, 3000);
           return;
+        }
+
+        // Cancel pending sign-out — user is still authenticated
+        if (this.signOutTimer !== null) {
+          clearTimeout(this.signOutTimer);
+          this.signOutTimer = null;
         }
 
         this.currentUser.set(user);
