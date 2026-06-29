@@ -429,22 +429,16 @@
               </span>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 mb-4">
-              @for (m of [['efectivo','Efectivo','pi-money-bill'],['tarjeta','Tarjeta','pi-credit-card'],['transferencia','Transfer.','pi-send']]; track m[0]) {
-                <button (click)="paymentMethod.set($any(m[0]))"
-                  [class]="'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border text-xs font-medium transition-all '
-                    + (paymentMethod() === m[0]
-                      ? 'border-rojo-brillante bg-rojo-brillante text-white'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-100')">
-                  <i [class]="'pi text-base ' + m[2]"></i>
-                  {{ m[1] }}
-                </button>
-              }
+            <div class="mb-4">
+              <app-payment-splits-input
+                [total]="cartTotal()"
+                [(splits)]="posSplits"
+              />
             </div>
 
-            <button (click)="checkout()" [disabled]="processing()"
+            <button (click)="checkout()" [disabled]="processing() || !posSplitsValid()"
               class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all"
-              [class]="processing() ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90 active:scale-95 shadow-sm'">
+              [class]="(processing() || !posSplitsValid()) ? 'bg-slate-300 cursor-not-allowed' : 'bg-rojo-brillante hover:bg-rojo-brillante/90 active:scale-95 shadow-sm'">
               @if (processing()) {
                 <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
               } @else {

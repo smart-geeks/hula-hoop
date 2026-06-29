@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -22,13 +23,14 @@ import type { PosSession, PosSale, CartItem, PaymentMethod, CashierProfile } fro
 import type { InventoryItem } from '../../../../core/interfaces/inventory';
 import type { RestaurantItem } from '../../../../core/interfaces/restaurant-item';
 import type { Extra } from '../../../../core/interfaces/extra';
-import type { Contract, ContractPayment } from '../../../../core/interfaces/contract';
+import type { Contract, ContractPayment, PaymentSplit } from '../../../../core/interfaces/contract';
 import type { Category } from '../../../../core/interfaces/category';
+import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
 
 @Component({
   selector: 'app-admin-pos',
   templateUrl: './admin-pos.html',
-  imports: [FormsModule, CurrencyPipe, DecimalPipe, DatePipe],
+  imports: [FormsModule, CurrencyPipe, DecimalPipe, DatePipe, PaymentSplitsInputComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPos {
@@ -56,8 +58,8 @@ export class AdminPos {
   readonly contracts      = signal<Contract[]>([]);
   readonly cart           = signal<CartItem[]>([]);
   readonly searchQuery    = signal('');
-  readonly paymentMethod  = signal<PaymentMethod>('efectivo');
   readonly categoryFilter = signal('all');
+  readonly posSplits      = signal<PaymentSplit[]>([]);
   readonly toast          = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   readonly selectedContractId  = signal('');
   readonly showNewSession      = signal(false);
@@ -212,6 +214,14 @@ export class AdminPos {
     this.cart().reduce((s, item) => s + item.cantidad, 0),
   );
 
+  readonly posSplitsValid = computed(() => {
+    const splits = this.posSplits();
+    const total  = this.cartTotal();
+    return splits.length > 0 &&
+      splits.every((s) => s.monto > 0) &&
+      Math.abs(splits.reduce((acc, s) => acc + s.monto, 0) - total) < 0.01;
+  });
+
   readonly sessionTotal = computed(() =>
     this.salesHistory().reduce((s, sale) => s + sale.total, 0),
   );
@@ -239,6 +249,12 @@ export class AdminPos {
   constructor() {
     this.loadAll();
     this.loadTodayContractPayments();
+    effect(() => {
+      const total = this.cartTotal();
+      if (total > 0 && this.posSplits().length === 0) {
+        this.posSplits.set([{ metodo: 'efectivo', monto: total }]);
+      }
+    }, { allowSignalWrites: true });
   }
 
   private async loadAll(): Promise<void> {
@@ -594,7 +610,10 @@ export class AdminPos {
     this.cart.update((list) => list.filter((c) => !(c.id === id && c.tipo === tipo)));
   }
 
-  clearCart(): void { this.cart.set([]); }
+  clearCart(): void {
+    this.cart.set([]);
+    this.posSplits.set([]);
+  }
 
   async checkout(): Promise<void> {
     const session = this.activeSession();
@@ -604,11 +623,15 @@ export class AdminPos {
     const cartSnapshot = this.cart();
     const cashierId    = this.activeCashier()?.id ?? null;
 
+    const checkoutSplits = this.posSplits();
+    const pagado_con = checkoutSplits.length === 1 ? checkoutSplits[0].metodo : 'combinado';
+
     const sale = await this.posService.registerSale({
       session_id:            session.id,
       cashier_id:            cashierId,
       total:                 this.cartTotal(),
-      pagado_con:            this.paymentMethod(),
+      pagado_con,
+      payment_splits:        checkoutSplits,
       contract_id:           this.scopeType() === 'contrato' ? (this.scopeContractId() ?? null) : null,
       playdate_date:         this.scopeType() === 'playdate' ? new Date().toISOString().split('T')[0] : null,
       playdate_time_slot_id: this.scopeType() === 'playdate' ? (this.activeTimeSlotId() ?? null) : null,
