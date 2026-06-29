@@ -303,9 +303,12 @@
 
     <!-- ── Paid confirmation block ───────────────────────────────────────────── -->
     @if (isPaid()) {
-      <div class="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 rounded-3xl p-6 mb-8 shadow-sm">
-        <div class="absolute -right-4 -bottom-6 w-32 h-32 opacity-10 pointer-events-none sm:opacity-20 sm:w-40 sm:h-40">
-          <img src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/personaje-h.png" alt="Mascota" class="w-full h-full object-contain" />
+      <div class="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 rounded-3xl p-6 mb-8 shadow-sm">
+        <!-- Clipped background wrapper for mascot decoration -->
+        <div class="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+          <div class="absolute -right-4 -bottom-6 w-32 h-32 opacity-10 sm:opacity-20 sm:w-40 sm:h-40">
+            <img src="https://jzdfxbbnhkzdetrpmqdx.supabase.co/storage/v1/object/public/Personajes/personaje-h.png" alt="Mascota" class="w-full h-full object-contain" />
+          </div>
         </div>
         <div class="relative z-10 flex items-start gap-4">
           <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
