@@ -621,7 +621,7 @@
                       (input)="updateFreeLine(i, 'cantidad', $any($event.target).value)"
                       min="1"
                       class="w-16 rounded-lg border border-slate-200 px-2 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
-                      aria-label="Cantidad" />
+                      [attr.aria-label]="'Cantidad línea ' + (i + 1)" />
                     <div class="relative">
                       <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" aria-hidden="true">$</span>
                       <input
@@ -631,7 +631,7 @@
                         min="0"
                         step="0.01"
                         class="w-28 rounded-lg border border-slate-200 pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rojo-brillante/30"
-                        aria-label="Precio unitario" />
+                        [attr.aria-label]="'Precio unitario línea ' + (i + 1)" />
                     </div>
                     <button type="button" (click)="removeFreeLine(i)"
                       class="w-7 h-7 shrink-0 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-600 flex items-center justify-center text-base transition-colors"
