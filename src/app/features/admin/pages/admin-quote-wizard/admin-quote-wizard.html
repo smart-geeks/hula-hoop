@@ -493,7 +493,7 @@
                             @if ((activeCategoryConfig()?.included_activity_groups || []).includes(act.group)) {
                               Incluido
                             } @else {
-                              + {{ act.price_per_person | currencyMxn }}
+                              + {{ act.price_per_person * 100 | currencyMxn }}
                             }
                           </span>
                         </button>

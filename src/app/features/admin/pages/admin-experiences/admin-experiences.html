@@ -198,7 +198,7 @@
                 <td><p-tag [value]="'Grupo ' + act.group" [severity]="act.group === 'A' ? 'success' : (act.group === 'B' ? 'info' : 'warn')" /></td>
                 <td><span class="font-semibold text-slate-700">{{ act.name }}</span></td>
                 <td>
-                  {{ act.price_per_person | currencyMxn }}
+                  {{ act.price_per_person * 100 | currencyMxn }}
                   @if ((config.included_activity_groups || []).includes(act.group)) {
                     <span class="text-xs text-green-600 font-semibold ml-2">(Incluido)</span>
                   }
