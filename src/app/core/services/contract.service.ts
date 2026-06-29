@@ -374,11 +374,22 @@ export class ContractService {
     const client = this.supabase.client;
     if (!client) return `CT-${year}-001`;
 
-    const { count } = await client
+    const { data } = await client
       .from('contracts')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', `${year}-01-01`);
+      .select('folio')
+      .like('folio', `CT-${year}-%`)
+      .order('folio', { ascending: false })
+      .limit(1);
 
-    return `CT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
+    if (data && data.length > 0) {
+      const lastFolio = data[0].folio;
+      const parts = lastFolio.split('-');
+      const lastNum = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNum)) {
+        return `CT-${year}-${String(lastNum + 1).padStart(3, '0')}`;
+      }
+    }
+
+    return `CT-${year}-001`;
   }
 }

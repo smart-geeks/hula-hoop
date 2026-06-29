@@ -342,10 +342,18 @@ export class ContractPublicPage implements AfterViewInit {
     const q = this.quote();
     const amendments = this.approvedAmendments();
 
-    const pkg = q?.items?.[0]?.descripcion ?? '—';
-    const snack = q?.items?.find((i: {descripcion: string}) => i.descripcion.startsWith('Merienda:'))?.descripcion.replace('Merienda:', '').trim() ?? '—';
-    const extras = q?.items?.filter((i: {descripcion: string}) => i.descripcion !== pkg && !i.descripcion.startsWith('Merienda:'))
-      .map((i: {descripcion: string; cantidad: number}) => `${i.descripcion} (x${i.cantidad})`).join(', ') || '—';
+    const pkg = this.getContractPackage(q);
+    const snack = this.getContractSnack(q);
+
+    const formatPrintList = (items: string[]) => {
+      if (items.length === 0) return '—';
+      return items.map(it => `<div style="margin-bottom: 2px;">${it}</div>`).join('');
+    };
+
+    const activitiesHtml = formatPrintList(this.getContractActivities(q));
+    const decorationsHtml = formatPrintList(this.getContractDecorations(q));
+    const glamHtml = formatPrintList(this.getContractGlam(q));
+    const extrasHtml = formatPrintList(this.getContractExtrasList(q));
 
     const fechaEvento = c.fecha_evento
       ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
@@ -460,11 +468,19 @@ export class ContractPublicPage implements AfterViewInit {
           <td class="label">Horario</td><td>De ${fmtTime(c.hora_inicio)} a ${fmtTime(c.hora_fin)}</td>
         </tr>
         <tr>
-          <td class="label">Paquete</td><td>${pkg}</td>
-          <td class="label">Merienda</td><td>${snack}</td>
+          <td class="label">Email</td><td>${c.client?.email ?? '—'}</td>
+          <td class="label">Paquete Contratado</td><td>${pkg}</td>
         </tr>
         <tr>
-          <td class="label">Extras</td><td colspan="3">${extras}</td>
+          <td class="label">Merienda</td><td>${snack}</td>
+          <td class="label">Actividad</td><td>${activitiesHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Decoración</td><td>${decorationsHtml}</td>
+          <td class="label">Glam Girls</td><td>${glamHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Extras</td><td colspan="3">${extrasHtml}</td>
         </tr>
         <tr>
           <td class="label">Total Contrato</td><td><strong>$${c.total_contrato.toLocaleString('es-MX')} MXN</strong></td>
@@ -548,10 +564,49 @@ export class ContractPublicPage implements AfterViewInit {
   }
 
   getContractSnack(quote: any): string {
-    if (!quote || !quote.items) return '—';
+    if (!quote) return '—';
+    if (quote.snack_option?.name) return quote.snack_option.name;
+    if (!quote.items) return '—';
     const snackItem = quote.items.find((it: any) => it.descripcion.startsWith('Merienda:'));
     if (!snackItem) return '—';
     return snackItem.descripcion.replace(/^Merienda:\s*/, '');
+  }
+
+  getContractActivities(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Actividad Premium:') || it.descripcion.startsWith('Actividad Incluida:'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractDecorations(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Upgrade de Decoración:') || it.descripcion.includes('Decoración'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractGlam(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.includes('Glam Girls'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractExtrasList(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    const pkgDesc = this.getContractPackage(quote);
+    return quote.items
+      .filter((it: any) => {
+        const desc = it.descripcion;
+        if (desc === pkgDesc) return false;
+        if (desc.startsWith('Merienda:')) return false;
+        if (desc.startsWith('Actividad Premium:') || desc.startsWith('Actividad Incluida:')) return false;
+        if (desc.startsWith('Upgrade de Decoración:') || desc.includes('Decoración')) return false;
+        if (desc.includes('Glam Girls')) return false;
+        return true;
+      })
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
   }
 
   getContractExtras(quote: any): string {

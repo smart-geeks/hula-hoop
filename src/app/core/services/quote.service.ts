@@ -15,7 +15,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
       .eq('venue_id', venueId)
       .order('created_at', { ascending: false });
 
@@ -32,7 +32,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
       .eq('id', id)
       .single();
 
@@ -127,7 +127,7 @@ export class QuoteService {
 
     const { data, error } = await client
       .from('quotes')
-      .select('*, client:clients(nombre, email, telefono), items:quote_items(*)')
+      .select('*, client:clients(nombre, email, telefono), items:quote_items(*), snack_option:snack_options(name)')
       .eq('public_token', token)
       .single();
 
@@ -155,11 +155,22 @@ export class QuoteService {
     const client = this.supabase.client;
     if (!client) return `QT-${year}-001`;
 
-    const { count } = await client
+    const { data } = await client
       .from('quotes')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', `${year}-01-01`);
+      .select('folio')
+      .like('folio', `QT-${year}-%`)
+      .order('folio', { ascending: false })
+      .limit(1);
 
-    return `QT-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
+    if (data && data.length > 0) {
+      const lastFolio = data[0].folio;
+      const parts = lastFolio.split('-');
+      const lastNum = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNum)) {
+        return `QT-${year}-${String(lastNum + 1).padStart(3, '0')}`;
+      }
+    }
+
+    return `QT-${year}-001`;
   }
 }

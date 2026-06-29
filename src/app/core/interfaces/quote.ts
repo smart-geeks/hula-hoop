@@ -34,6 +34,7 @@ export interface Quote {
   // Relations
   client?: { nombre: string; email: string | null; telefono: string | null };
   items?: QuoteItem[];
+  snack_option?: { name: string };
 }
 
 export interface CreateQuoteData {

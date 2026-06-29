@@ -125,14 +125,15 @@ export class AdminQuoteWizard {
   readonly glamGirlsCount     = signal(5);
   readonly selectedActivity   = signal<any | null>(null);
   readonly activeActivityTab  = signal<'A' | 'B' | 'C'>('A');
+  readonly activityParticipantCount = signal<number>(10);
 
   readonly activitiesList = signal([
     { id: 'act_a1', group: 'A', name: 'Decora tu galleta',     price_per_person: 0  },
     { id: 'act_a2', group: 'A', name: 'Decora tu cupcake',     price_per_person: 0  },
     { id: 'act_a3', group: 'A', name: 'Decora tu rice krispi', price_per_person: 0  },
-    { id: 'act_a4', group: 'A', name: 'Friendship bracelets',  price_per_person: 0  },
+    { id: 'act_a4', group: 'A', name: 'Friendship bracelets +4 años',  price_per_person: 0  },
     { id: 'act_a5', group: 'A', name: 'Botella sensorial',     price_per_person: 0  },
-    { id: 'act_a6', group: 'A', name: 'Capa de superhéroe',    price_per_person: 0  },
+    { id: 'act_a6', group: 'A', name: 'Decora tu capa superheróe',    price_per_person: 0  },
     { id: 'act_a7', group: 'A', name: 'Decora tu máscara',     price_per_person: 0  },
     { id: 'act_b1', group: 'B', name: 'Ice cream slab',        price_per_person: 60 },
     { id: 'act_b2', group: 'B', name: 'Decora tu pastel',      price_per_person: 65 },
@@ -216,7 +217,7 @@ export class AdminQuoteWizard {
   readonly activityUpgradeCents = computed(() => {
     const act = this.selectedActivity();
     return this.selectedCategory() === 'hooping' && act?.price_per_person
-      ? act.price_per_person * this.guestCount() * 100 : 0;
+      ? act.price_per_person * this.activityParticipantCount() * 100 : 0;
   });
   readonly glamGirlsCents   = computed(() => this.glamGirlsEnabled() ? this.glamGirlsCount() * 30000 : 0);
   readonly extrasTotalCents = computed(() =>
@@ -298,6 +299,14 @@ export class AdminQuoteWizard {
       if (this.isMorningSlot() !== isAMOpt) this.selectedSnack.set(null);
     }, { allowSignalWrites: true });
 
+    effect(() => {
+      const guests = this.guestCount();
+      const currentParticipants = this.activityParticipantCount();
+      if (currentParticipants > guests) {
+        this.activityParticipantCount.set(guests);
+      }
+    }, { allowSignalWrites: true });
+
     this.init();
   }
 
@@ -363,6 +372,7 @@ export class AdminQuoteWizard {
           const aName = d.split(':').pop()?.trim();
           const found = this.activitiesList().find(a => a.name === aName);
           if (found) act = found;
+          this.activityParticipantCount.set(item.cantidad);
         }
         if (d.startsWith('Área Glam Girls')) { glamEnabled = true; glamCount = item.cantidad; }
         const me = this.extras().find(e => d === e.name || d === `${e.name} (cobro en local)`);
@@ -418,15 +428,15 @@ export class AdminQuoteWizard {
 
   // ── Navigation ───────────────────────────────────────────────
   goBack(): void { void this.router.navigate(['/admin/cotizaciones']); }
-  goToStep(n: WizardStep): void { this.currentStep.set(n); }
-  prev(): void { const s = this.currentStep(); if (s > 1) this.currentStep.set((s-1) as WizardStep); }
+  goToStep(n: WizardStep): void { this.currentStep.set(n); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  prev(): void { const s = this.currentStep(); if (s > 1) { this.currentStep.set((s-1) as WizardStep); window.scrollTo({ top: 0, behavior: 'smooth' }); } }
   next(): void {
     const s = this.currentStep();
     if (s === 1 && !this.selectedClient()) { this.showToast('error', 'Debes seleccionar un cliente primero.'); return; }
     if (s === 2 && (!this.selectedDate() || !this.selectedSlot())) { this.showToast('error', 'Debes seleccionar fecha y horario disponible.'); return; }
     if (s === 3 && !this.selectedPackage()) { this.showToast('error', 'Debes seleccionar un paquete.'); return; }
     if (s === 4 && this.selectedCategory() === 'hooping' && !this.selectedActivity()) { this.showToast('error', 'Debes seleccionar una actividad para Hooping.'); return; }
-    if (s < 5) this.currentStep.set((s+1) as WizardStep);
+    if (s < 5) { this.currentStep.set((s+1) as WizardStep); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
 
   // ── Step 1 ───────────────────────────────────────────────────
@@ -511,7 +521,28 @@ export class AdminQuoteWizard {
   // ── Step 4 ───────────────────────────────────────────────────
   toggleGlamGirls(val: boolean): void { this.glamGirlsEnabled.set(val); if (!val) this.glamGirlsCount.set(5); }
   updateGlamGirlsCount(qty: number): void { this.glamGirlsCount.set(Math.max(5, qty)); }
-  selectActivity(act: any): void { this.selectedActivity.set(act); }
+  selectActivity(act: any): void {
+    this.selectedActivity.set(act);
+    this.activityParticipantCount.set(this.guestCount());
+  }
+
+  onActivityParticipantCountInput(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    if (!raw) return;
+    const val = parseInt(raw, 10);
+    if (isNaN(val)) return;
+    const guests = this.guestCount();
+    this.activityParticipantCount.set(Math.min(guests, Math.max(1, val)));
+  }
+
+  onActivityParticipantCountBlur(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    const val = parseInt(raw, 10);
+    const guests = this.guestCount();
+    const clean = isNaN(val) ? 1 : Math.min(guests, Math.max(1, val));
+    this.activityParticipantCount.set(clean);
+    (event.target as HTMLInputElement).value = String(clean);
+  }
   getExtraQty(extraId: string): number { return this.extraQty().get(extraId) ?? 0; }
   setExtraQty(extraId: string, delta: number): void {
     const map = new Map(this.extraQty());
@@ -602,7 +633,7 @@ export class AdminQuoteWizard {
     if (decUp > 0) items.push({ descripcion: `Upgrade de Decoración: ${this.selectedDecoration().toUpperCase()}`, cantidad: 1, precio_unitario: decUp / 100 });
     const cat = this.selectedCategory(); const act = this.selectedActivity();
     if (cat === 'hooping' && act) {
-      if (act.price_per_person > 0) items.push({ descripcion: `Actividad Premium: ${act.name}`, cantidad: this.guestCount(), precio_unitario: act.price_per_person });
+      if (act.price_per_person > 0) items.push({ descripcion: `Actividad Premium: ${act.name}`, cantidad: this.activityParticipantCount(), precio_unitario: act.price_per_person });
       else items.push({ descripcion: `Actividad Incluida: ${act.name}`, cantidad: 1, precio_unitario: 0 });
     }
     if (this.glamGirlsEnabled()) items.push({ descripcion: 'Área Glam Girls (Glitter mani, make up, peinados)', cantidad: this.glamGirlsCount(), precio_unitario: 300 });

@@ -142,6 +142,7 @@ export class PrivateReservationPage {
   readonly glamGirlsCount = signal<number>(5);
   readonly selectedActivity = signal<any | null>(null);
   readonly activeActivityTab = signal<'A' | 'B' | 'C'>('A');
+  readonly activityParticipantCount = signal<number>(10);
 
   // ── Computed ──
   readonly activeCategoryConfig = computed(() =>
@@ -235,9 +236,8 @@ export class PrivateReservationPage {
   readonly activityUpgradeCents = computed(() => {
     const cat = this.selectedCategory();
     const act = this.selectedActivity();
-    const guests = this.guestCount();
     if (cat === 'hooping' && act && act.price_per_person) {
-      return act.price_per_person * guests * 100; // Convertido a centavos
+      return act.price_per_person * this.activityParticipantCount() * 100; // Convertido a centavos
     }
     return 0;
   });
@@ -312,8 +312,17 @@ export class PrivateReservationPage {
       this.glamGirlsEnabled();
       this.glamGirlsCount();
       this.selectedActivity();
+      this.activityParticipantCount();
       this.lastGeneratedReservation.set(null);
       this.generatedQuoteToken.set(null);
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const guests = this.guestCount();
+      const currentParticipants = this.activityParticipantCount();
+      if (currentParticipants > guests) {
+        this.activityParticipantCount.set(guests);
+      }
     }, { allowSignalWrites: true });
 
     effect(() => {
@@ -542,6 +551,25 @@ export class PrivateReservationPage {
 
   selectActivity(activity: any): void {
     this.selectedActivity.set(activity);
+    this.activityParticipantCount.set(this.guestCount());
+  }
+
+  onActivityParticipantCountInput(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    if (!raw) return;
+    const val = parseInt(raw, 10);
+    if (isNaN(val)) return;
+    const guests = this.guestCount();
+    this.activityParticipantCount.set(Math.min(guests, Math.max(1, val)));
+  }
+
+  onActivityParticipantCountBlur(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    const val = parseInt(raw, 10);
+    const guests = this.guestCount();
+    const clean = isNaN(val) ? 1 : Math.min(guests, Math.max(1, val));
+    this.activityParticipantCount.set(clean);
+    (event.target as HTMLInputElement).value = String(clean);
   }
 
   // ── Step navigation ──
@@ -629,6 +657,7 @@ export class PrivateReservationPage {
     }
     
     this.activeStep.set(step);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   navigateToStepWithWarning(targetStep: number, warningDetail: string, focusSelector?: string): void {
@@ -1033,7 +1062,7 @@ export class PrivateReservationPage {
       if (act.price_per_person > 0) {
         items.push({
           descripcion:     `Actividad Premium: ${act.name}`,
-          cantidad:        this.guestCount(),
+          cantidad:        this.activityParticipantCount(),
           precio_unitario: act.price_per_person,
         });
       } else {

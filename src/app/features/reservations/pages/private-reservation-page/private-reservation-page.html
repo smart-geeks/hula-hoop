@@ -371,13 +371,40 @@
                               </div>
                               @if (act.group !== 'A' && selectedActivity()?.id === act.id) {
                                 <p class="text-xs font-bold text-primary mt-2">
-                                  Total: +{{ act.price_per_person * guestCount() * 100 | currencyMxn }} MXN
+                                  Total: +{{ act.price_per_person * activityParticipantCount() * 100 | currencyMxn }} MXN
                                 </p>
                               }
                             </button>
                           }
                         }
                       </div>
+
+                      <!-- Participant Count Selector (only for group B and C activities) -->
+                      @if (selectedActivity(); as act) {
+                        @if (act.group !== 'A' && act.price_per_person > 0) {
+                          <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                            <div>
+                              <p class="text-sm font-semibold text-slate-800">Participantes para la actividad</p>
+                              <p class="text-xs text-slate-500">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados del paquete)</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <p-button icon="pi pi-minus" [rounded]="true" [text]="true" severity="secondary"
+                                        [disabled]="activityParticipantCount() <= 1"
+                                        (onClick)="activityParticipantCount.set(activityParticipantCount() - 1)" />
+                              <input type="number"
+                                     [value]="activityParticipantCount()"
+                                     (input)="onActivityParticipantCountInput($event)"
+                                     (blur)="onActivityParticipantCountBlur($event)"
+                                     class="w-16 text-center text-base font-bold border border-slate-300 rounded focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                     min="1"
+                                     [max]="guestCount()" />
+                              <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="secondary"
+                                        [disabled]="activityParticipantCount() >= guestCount()"
+                                        (onClick)="activityParticipantCount.set(activityParticipantCount() + 1)" />
+                            </div>
+                          </div>
+                        }
+                      }
                     </div>
                   }
                 </div>
@@ -647,8 +674,8 @@
                       <span class="text-slate-500">Actividad</span>
                       <span class="font-semibold text-slate-800">
                         {{ selectedActivity().name }}
-                        @if (activityUpgradeCents() > 0) {
-                          (Upgrade: +{{ activityUpgradeCents() | currencyMxn }})
+                        @if (selectedActivity().group !== 'A' && activityUpgradeCents() > 0) {
+                          ({{ activityParticipantCount() }} pers. +{{ activityUpgradeCents() | currencyMxn }})
                         } @else {
                           (Incluida)
                         }
@@ -803,13 +830,13 @@
                 }
               </span>
             </div>
-            @if (selectedCategory() === 'hooping' && selectedActivity()) {
+             @if (selectedCategory() === 'hooping' && selectedActivity()) {
               <div class="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors" (click)="handleSummaryClick('actividad')">
                 <span class="text-slate-500 shrink-0">Actividad</span>
                 <span class="font-medium text-slate-800 text-xs text-right truncate max-w-[140px]">
                   {{ selectedActivity().name }}
-                  @if (activityUpgradeCents() > 0) {
-                    (+{{ activityUpgradeCents() | currencyMxn }})
+                  @if (selectedActivity().group !== 'A' && activityUpgradeCents() > 0) {
+                    ({{ activityParticipantCount() }} pers. +{{ activityUpgradeCents() | currencyMxn }})
                   }
                 </span>
               </div>

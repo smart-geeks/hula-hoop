@@ -158,11 +158,22 @@ export class PurchaseService {
     const client = this.supabase.client;
     if (!client) return `OC-${year}-001`;
 
-    const { count } = await client
+    const { data } = await client
       .from('purchases')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', `${year}-01-01`);
+      .select('folio')
+      .like('folio', `OC-${year}-%`)
+      .order('folio', { ascending: false })
+      .limit(1);
 
-    return `OC-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`;
+    if (data && data.length > 0) {
+      const lastFolio = data[0].folio;
+      const parts = lastFolio.split('-');
+      const lastNum = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNum)) {
+        return `OC-${year}-${String(lastNum + 1).padStart(3, '0')}`;
+      }
+    }
+
+    return `OC-${year}-001`;
   }
 }

@@ -73,7 +73,11 @@
           </div>
           <div class="shrink-0 text-right">
             @if (entry.raw.precio_unitario === 0) {
-              <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Incluido</span>
+              @if (entry.raw.descripcion.toLowerCase().includes('cobro en local') || entry.raw.descripcion.toLowerCase().includes('en local')) {
+                <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">Cobro en local</span>
+              } @else {
+                <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Incluido</span>
+              }
             } @else {
               <p class="font-semibold text-slate-700">{{ entry.raw.subtotal | currency:'MXN':'symbol-narrow':'1.0-0' }}</p>
             }

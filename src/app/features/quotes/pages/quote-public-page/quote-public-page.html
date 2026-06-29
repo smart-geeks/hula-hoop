@@ -152,7 +152,11 @@
               </div>
               <p class="font-semibold text-slate-800 shrink-0 ml-4">
                 @if (item.precio_unitario === 0) {
-                  <span class="text-emerald-600 text-sm">Incluido</span>
+                  @if (item.descripcion.toLowerCase().includes('cobro en local') || item.descripcion.toLowerCase().includes('en local')) {
+                    <span class="text-indigo-600 text-sm">Cobro en local</span>
+                  } @else {
+                    <span class="text-emerald-600 text-sm">Incluido</span>
+                  }
                 } @else {
                   {{ (item.cantidad * item.precio_unitario) | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 }

@@ -81,7 +81,7 @@
             }
             @if (activityUpgradeCents() > 0) {
               <div class="flex justify-between text-slate-600">
-                <span>Actividad</span>
+                <span>Actividad ({{ activityParticipantCount() }} pers.)</span>
                 <span class="font-medium">{{ activityUpgradeCents() | currencyMxn }}</span>
               </div>
             }
@@ -507,6 +507,33 @@
                         }
                       }
                     </div>
+
+                    <!-- Participant Count Selector (only for group B and C activities) -->
+                    @if (selectedActivity(); as act) {
+                      @if (act.group !== 'A' && act.price_per_person > 0) {
+                        <div class="mt-4 p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 animate-fade-in">
+                          <div>
+                            <p class="text-xs font-semibold text-slate-800">Participantes para la actividad</p>
+                            <p class="text-[10px] text-slate-400">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados)</p>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() - 1)"
+                              [disabled]="activityParticipantCount() <= 1"
+                              class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">−</button>
+                            <input type="number"
+                              [value]="activityParticipantCount()"
+                              (input)="onActivityParticipantCountInput($event)"
+                              (blur)="onActivityParticipantCountBlur($event)"
+                              class="w-12 text-center text-sm font-bold border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              min="1"
+                              [max]="guestCount()" />
+                            <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() + 1)"
+                              [disabled]="activityParticipantCount() >= guestCount()"
+                              class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">+</button>
+                          </div>
+                        </div>
+                      }
+                    }
                   </div>
                 }
               </div>

@@ -478,8 +478,60 @@
                 <div class="p-3 text-slate-700 font-medium">{{ getContractSnack(quote()) }}</div>
               </div>
               <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Actividad</div>
+                <div class="p-3 text-slate-700 font-medium">
+                  @if (getContractActivities(quote()).length > 0) {
+                    <div class="space-y-1">
+                      @for (act of getContractActivities(quote()); track $index) {
+                        <div>{{ act }}</div>
+                      }
+                    </div>
+                  } @else {
+                    —
+                  }
+                </div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Decoración</div>
+                <div class="p-3 text-slate-700 font-medium">
+                  @if (getContractDecorations(quote()).length > 0) {
+                    <div class="space-y-1">
+                      @for (dec of getContractDecorations(quote()); track $index) {
+                        <div>{{ dec }}</div>
+                      }
+                    </div>
+                  } @else {
+                    —
+                  }
+                </div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
+                <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Glam Girls</div>
+                <div class="p-3 text-slate-700 font-medium">
+                  @if (getContractGlam(quote()).length > 0) {
+                    <div class="space-y-1">
+                      @for (glam of getContractGlam(quote()); track $index) {
+                        <div>{{ glam }}</div>
+                      }
+                    </div>
+                  } @else {
+                    —
+                  }
+                </div>
+              </div>
+              <div class="grid grid-cols-2 border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Extras</div>
-                <div class="p-3 text-slate-700 font-medium">{{ getContractExtras(quote()) }}</div>
+                <div class="p-3 text-slate-700 font-medium">
+                  @if (getContractExtrasList(quote()).length > 0) {
+                    <div class="space-y-1">
+                      @for (ext of getContractExtrasList(quote()); track $index) {
+                        <div>{{ ext }}</div>
+                      }
+                    </div>
+                  } @else {
+                    —
+                  }
+                </div>
               </div>
               <div class="grid grid-cols-2 border-b border-slate-200">
                 <div class="p-3 bg-slate-50/50 font-semibold text-slate-500 border-r">Costo Renta Salón</div>

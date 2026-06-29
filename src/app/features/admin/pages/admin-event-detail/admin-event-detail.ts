@@ -497,10 +497,49 @@ export class AdminEventDetail {
   }
 
   getContractSnack(quote: any): string {
-    if (!quote || !quote.items) return '—';
+    if (!quote) return '—';
+    if (quote.snack_option?.name) return quote.snack_option.name;
+    if (!quote.items) return '—';
     const snackItem = quote.items.find((it: any) => it.descripcion.startsWith('Merienda:'));
     if (!snackItem) return '—';
     return snackItem.descripcion.replace(/^Merienda:\s*/, '');
+  }
+
+  getContractActivities(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Actividad Premium:') || it.descripcion.startsWith('Actividad Incluida:'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractDecorations(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.startsWith('Upgrade de Decoración:') || it.descripcion.includes('Decoración'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractGlam(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    return quote.items
+      .filter((it: any) => it.descripcion.includes('Glam Girls'))
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
+  }
+
+  getContractExtrasList(quote: any): string[] {
+    if (!quote || !quote.items) return [];
+    const pkgDesc = this.getContractPackage(quote);
+    return quote.items
+      .filter((it: any) => {
+        const desc = it.descripcion;
+        if (desc === pkgDesc) return false;
+        if (desc.startsWith('Merienda:')) return false;
+        if (desc.startsWith('Actividad Premium:') || desc.startsWith('Actividad Incluida:')) return false;
+        if (desc.startsWith('Upgrade de Decoración:') || desc.includes('Decoración')) return false;
+        if (desc.includes('Glam Girls')) return false;
+        return true;
+      })
+      .map((it: any) => `+ ${it.descripcion} (x${it.cantidad})`);
   }
 
   getContractExtras(quote: any): string {
@@ -1049,7 +1088,16 @@ export class AdminEventDetail {
     const quoteData = this.quote();
     const pkg = this.getContractPackage(quoteData);
     const snack = this.getContractSnack(quoteData);
-    const extras = this.getContractExtras(quoteData);
+
+    const formatPrintList = (items: string[]) => {
+      if (items.length === 0) return '—';
+      return items.map(it => `<div style="margin-bottom: 2px;">${it}</div>`).join('');
+    };
+
+    const activitiesHtml = formatPrintList(this.getContractActivities(quoteData));
+    const decorationsHtml = formatPrintList(this.getContractDecorations(quoteData));
+    const glamHtml = formatPrintList(this.getContractGlam(quoteData));
+    const extrasHtml = formatPrintList(this.getContractExtrasList(quoteData));
 
     const fechaEvento = c.fecha_evento
       ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-MX', { dateStyle: 'long' })
@@ -1118,8 +1166,18 @@ export class AdminEventDetail {
         <tr>
           <td class="label">Merienda</td>
           <td>${snack}</td>
+          <td class="label">Actividad</td>
+          <td>${activitiesHtml}</td>
+        </tr>
+        <tr>
+          <td class="label">Decoración</td>
+          <td>${decorationsHtml}</td>
+          <td class="label">Glam Girls</td>
+          <td>${glamHtml}</td>
+        </tr>
+        <tr>
           <td class="label">Extras</td>
-          <td>${extras}</td>
+          <td colspan="3">${extrasHtml}</td>
         </tr>
         <tr>
           <td class="label">Costo Renta Salón</td>
