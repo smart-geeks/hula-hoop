@@ -308,105 +308,84 @@
                 <!-- Activities Selection -->
                 <div>
                   <h2 id="activities-selection-header" class="text-lg font-semibold mb-3 text-slate-800">2. Actividades de la Fiesta</h2>
-                  @if (selectedCategory() === 'hula_hula') {
-                    <div class="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center">
-                      <span class="text-4xl">🎨</span>
-                      <h4 class="font-semibold text-slate-800 mt-2">¿Quieres agregar talleres y actividades creativas?</h4>
-                      <p class="text-sm text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
-                        Las actividades creativas como talleres de galletas, peines y bucket hats están disponibles de forma exclusiva en la categoría <strong>Hooping</strong>.
-                      </p>
-                      <button type="button"
-                        class="mt-4 px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-all text-sm shadow-sm"
-                        (click)="setCategory('hooping')">
-                        Subir a Categoría Hooping ✨
-                      </button>
+                  <div class="p-6 bg-[#fdfaf6] border border-slate-200 rounded-2xl shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-xl">🎨</span>
+                      <h3 class="text-base font-bold text-slate-800">Selecciona tu Actividad</h3>
                     </div>
-                  } @else {
-                    <div class="p-6 bg-[#fdfaf6] border border-slate-200 rounded-2xl shadow-sm">
-                      <div class="flex items-center gap-2 mb-2">
-                        <span class="text-xl">🎨</span>
-                        <h3 class="text-base font-bold text-slate-800">Selecciona tu Actividad (1 Incluida en Hooping)</h3>
-                      </div>
-                      <p class="text-xs text-slate-500 mb-4">
-                        Elige la actividad principal para tu fiesta. Las opciones de la pestaña A están incluidas. Las de B y C requieren upgrade.
-                      </p>
+                    <p class="text-xs text-slate-500 mb-4">
+                      Elige la actividad principal para tu fiesta. Las actividades en grupos marcados como "incluidos" tienen costo $0, mientras que las demás se cobran por participante.
+                    </p>
 
-                      <!-- Tab list -->
-                      <div class="flex gap-2 border-b border-slate-200 mb-4 pb-0.5">
+                    <!-- Tab list -->
+                    <div class="flex gap-2 border-b border-slate-200 mb-4 pb-0.5">
+                      @for (grp of ['A', 'B', 'C']; track grp) {
                         <button type="button"
                           class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
-                          [class]="activeActivityTab() === 'A' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                          (click)="activeActivityTab.set('A')">
-                          Opción A (Incluidas)
-                        </button>
-                        <button type="button"
-                          class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
-                          [class]="activeActivityTab() === 'B' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                          (click)="activeActivityTab.set('B')">
-                          Opción B (+ Upgrades)
-                        </button>
-                        <button type="button"
-                          class="px-4 py-2 text-sm font-semibold transition-all border-b-2"
-                          [class]="activeActivityTab() === 'C' ? 'border-[#F2A7D8] text-[#F2A7D8]' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                          (click)="activeActivityTab.set('C')">
-                          Opción C (+ Premium)
-                        </button>
-                      </div>
-
-                      <!-- Tab panels -->
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        @for (act of activitiesList(); track act.id) {
-                          @if (act.group === activeActivityTab()) {
-                            <button type="button"
-                              class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white relative flex flex-col justify-between min-h-[100px]"
-                              [class]="selectedActivity()?.id === act.id
-                                ? 'border-primary bg-primary/5 shadow-sm font-semibold'
-                                : 'border-slate-200 hover:border-slate-300'"
-                              (click)="selectActivity(act)">
-                              <div>
-                                <p class="text-slate-800 font-semibold">{{ act.name }}</p>
-                                <p class="text-xs text-slate-400 font-normal mt-1 leading-normal">
-                                  {{ act.group === 'A' ? 'Incluido en paquete' : '+' + (act.price_per_person * 100 | currencyMxn) + ' por persona' }}
-                                </p>
-                              </div>
-                              @if (act.group !== 'A' && selectedActivity()?.id === act.id) {
-                                <p class="text-xs font-bold text-primary mt-2">
-                                  Total: +{{ act.price_per_person * activityParticipantCount() * 100 | currencyMxn }} MXN
-                                </p>
-                              }
-                            </button>
+                          [class]="activeActivityTab() === grp ? 'border-[#F2A7D8] text-[#F2A7D8] border-b-2 border-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                          (click)="activeActivityTab.set(grp === 'A' ? 'A' : grp === 'B' ? 'B' : 'C')">
+                          Grupo {{ grp }}
+                          @if ((activeCategoryConfig()?.included_activity_groups || []).includes(grp)) {
+                            <span class="text-[10px] text-green-600 font-bold ml-1">(Incluido)</span>
                           }
-                        }
-                      </div>
+                        </button>
+                      }
+                    </div>
 
-                      <!-- Participant Count Selector (only for group B and C activities) -->
-                      @if (selectedActivity(); as act) {
-                        @if (act.group !== 'A' && act.price_per_person > 0) {
-                          <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                    <!-- Tab panels -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      @for (act of activitiesList(); track act.id) {
+                        @if (act.group === activeActivityTab()) {
+                          <button type="button"
+                            class="p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white relative flex flex-col justify-between min-h-[100px]"
+                            [class]="selectedActivity()?.id === act.id
+                              ? 'border-[#F2A7D8] bg-[#F2A7D8]/5 shadow-sm font-semibold'
+                              : 'border-slate-200 hover:border-slate-300'"
+                            (click)="selectActivity(act)">
                             <div>
-                              <p class="text-sm font-semibold text-slate-800">Participantes para la actividad</p>
-                              <p class="text-xs text-slate-500">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados del paquete)</p>
+                              <p class="text-slate-800 font-semibold">{{ act.name }}</p>
+                              <p class="text-xs text-slate-400 font-normal mt-1 leading-normal">
+                                {{ (activeCategoryConfig()?.included_activity_groups || []).includes(act.group) ? 'Incluido en paquete' : '+' + (act.price_per_person * 100 | currencyMxn) + ' por persona' }}
+                              </p>
                             </div>
-                            <div class="flex items-center gap-2">
-                              <p-button icon="pi pi-minus" [rounded]="true" [text]="true" severity="secondary"
-                                        [disabled]="activityParticipantCount() <= 1"
-                                        (onClick)="activityParticipantCount.set(activityParticipantCount() - 1)" />
-                              <input type="number"
-                                     [value]="activityParticipantCount()"
-                                     (input)="onActivityParticipantCountInput($event)"
-                                     (blur)="onActivityParticipantCountBlur($event)"
-                                     class="w-16 text-center text-base font-bold border border-slate-300 rounded focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                     min="1"
-                                     [max]="guestCount()" />
-                              <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="secondary"
-                                        [disabled]="activityParticipantCount() >= guestCount()"
-                                        (onClick)="activityParticipantCount.set(activityParticipantCount() + 1)" />
-                            </div>
-                          </div>
+                            @if (!(activeCategoryConfig()?.included_activity_groups || []).includes(act.group) && selectedActivity()?.id === act.id) {
+                              <p class="text-xs font-bold text-primary mt-2">
+                                Total: +{{ act.price_per_person * activityParticipantCount() * 100 | currencyMxn }} MXN
+                              </p>
+                            }
+                          </button>
                         }
                       }
                     </div>
-                  }
+
+                    <!-- Participant Count Selector (only for non-included activities) -->
+                    @if (selectedActivity(); as act) {
+                      @if (!(activeCategoryConfig()?.included_activity_groups || []).includes(act.group)) {
+                        <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                          <div>
+                            <p class="text-sm font-semibold text-slate-800">Participantes para la actividad</p>
+                            <p class="text-xs text-slate-500">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados del paquete)</p>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <p-button icon="pi pi-minus" [rounded]="true" [text]="true" severity="secondary"
+                                      [disabled]="activityParticipantCount() <= 1"
+                                      (onClick)="activityParticipantCount.set(activityParticipantCount() - 1)" />
+                            <input type="number"
+                                   [value]="activityParticipantCount()"
+                                   (input)="onActivityParticipantCountInput($event)"
+                                   (blur)="onActivityParticipantCountBlur($event)"
+                                   class="w-16 text-center text-base font-bold border border-slate-300 rounded focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                   min="1"
+                                   [max]="guestCount()" />
+                            <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="secondary"
+                                      [disabled]="activityParticipantCount() >= guestCount()"
+                                      (onClick)="activityParticipantCount.set(activityParticipantCount() + 1)" />
+                          </div>
+                        </div>
+                      }
+                    }
+                  </div>
+                </div>
                 </div>
               </div>
 

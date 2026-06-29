@@ -468,74 +468,66 @@
                 </div>
               </div>
 
-              <!-- Actividades (Solo Hooping) -->
+              <!-- Actividades -->
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Actividad de la Fiesta</label>
-                @if (selectedCategory() === 'hula_hula') {
-                  <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                    <p class="text-xs text-slate-500">
-                      Los talleres y actividades creativas (galletas, cupcakes, buckets) están reservados exclusivamente para la categoría <strong>Hooping</strong>.
-                    </p>
-                    <button type="button" (click)="setCategory('hooping')"
-                      class="mt-2.5 px-3 py-1.5 bg-rojo-brillante text-white text-xs font-semibold rounded-lg shadow-sm">
-                      Subir a Hooping ✨
-                    </button>
+                <div class="border border-slate-200 rounded-xl bg-slate-50/50 p-4 space-y-4">
+                  <div class="flex border-b border-slate-200">
+                    @for (grp of ['A', 'B', 'C']; track grp) {
+                      <button type="button" (click)="activeActivityTab.set(grp === 'A' ? 'A' : grp === 'B' ? 'B' : 'C')"
+                        [class]="'px-4 py-2 text-xs font-bold -mb-px transition-colors '
+                          + (activeActivityTab() === grp ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600')">
+                        Grupo {{ grp }}
+                      </button>
+                    }
                   </div>
-                } @else {
-                  <div class="border border-slate-200 rounded-xl bg-slate-50/50 p-4 space-y-4">
-                    <div class="flex border-b border-slate-200">
-                      @for (grp of ['A', 'B', 'C']; track grp) {
-                        <button type="button" (click)="activeActivityTab.set(grp === 'A' ? 'A' : grp === 'B' ? 'B' : 'C')"
-                          [class]="'px-4 py-2 text-xs font-bold -mb-px transition-colors '
-                            + (activeActivityTab() === grp ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600')">
-                          Grupo {{ grp }}
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    @for (act of activitiesList(); track act.id) {
+                      @if (act.group === activeActivityTab()) {
+                        <button type="button" (click)="selectActivity(act)"
+                          [class]="'flex items-center justify-between p-3 rounded-lg border text-left transition-all bg-white '
+                            + (selectedActivity()?.id === act.id ? 'border-indigo-600 bg-indigo-50/10 ring-1 ring-indigo-500' : 'border-slate-200 hover:border-slate-300')">
+                          <span class="text-xs font-medium text-slate-800">{{ act.name }}</span>
+                          <span class="text-[10px] font-bold text-slate-500 shrink-0">
+                            @if ((activeCategoryConfig()?.included_activity_groups || []).includes(act.group)) {
+                              Incluido
+                            } @else {
+                              + {{ act.price_per_person | currencyMxn }}
+                            }
+                          </span>
                         </button>
-                      }
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      @for (act of activitiesList(); track act.id) {
-                        @if (act.group === activeActivityTab()) {
-                          <button type="button" (click)="selectActivity(act)"
-                            [class]="'flex items-center justify-between p-3 rounded-lg border text-left transition-all bg-white '
-                              + (selectedActivity()?.id === act.id ? 'border-indigo-600 bg-indigo-50/10 ring-1 ring-indigo-500' : 'border-slate-200 hover:border-slate-300')">
-                            <span class="text-xs font-medium text-slate-800">{{ act.name }}</span>
-                            <span class="text-[10px] font-bold text-slate-500 shrink-0">
-                              {{ act.price_per_person === 0 ? 'Incluido' : '+ $' + act.price_per_person + '.00' }}
-                            </span>
-                          </button>
-                        }
-                      }
-                    </div>
-
-                    <!-- Participant Count Selector (only for group B and C activities) -->
-                    @if (selectedActivity(); as act) {
-                      @if (act.group !== 'A' && act.price_per_person > 0) {
-                        <div class="mt-4 p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 animate-fade-in">
-                          <div>
-                            <p class="text-xs font-semibold text-slate-800">Participantes para la actividad</p>
-                            <p class="text-[10px] text-slate-400">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados)</p>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() - 1)"
-                              [disabled]="activityParticipantCount() <= 1"
-                              class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">−</button>
-                            <input type="number"
-                              [value]="activityParticipantCount()"
-                              (input)="onActivityParticipantCountInput($event)"
-                              (blur)="onActivityParticipantCountBlur($event)"
-                              class="w-12 text-center text-sm font-bold border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              min="1"
-                              [max]="guestCount()" />
-                            <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() + 1)"
-                              [disabled]="activityParticipantCount() >= guestCount()"
-                              class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">+</button>
-                          </div>
-                        </div>
                       }
                     }
                   </div>
-                }
+
+                  <!-- Participant Count Selector (only for non-included activities) -->
+                  @if (selectedActivity(); as act) {
+                    @if (!(activeCategoryConfig()?.included_activity_groups || []).includes(act.group)) {
+                      <div class="mt-4 p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 animate-fade-in">
+                        <div>
+                          <p class="text-xs font-semibold text-slate-800">Participantes para la actividad</p>
+                          <p class="text-[10px] text-slate-400">¿Para cuántos niños deseas contratar esta actividad? (Máx. {{ guestCount() }} invitados)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() - 1)"
+                            [disabled]="activityParticipantCount() <= 1"
+                            class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">−</button>
+                          <input type="number"
+                            [value]="activityParticipantCount()"
+                            (input)="onActivityParticipantCountInput($event)"
+                            (blur)="onActivityParticipantCountBlur($event)"
+                            class="w-12 text-center text-sm font-bold border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            min="1"
+                            [max]="guestCount()" />
+                          <button type="button" (click)="activityParticipantCount.set(activityParticipantCount() + 1)"
+                            [disabled]="activityParticipantCount() >= guestCount()"
+                            class="w-7 h-7 rounded border border-slate-300 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-50">+</button>
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
               </div>
 
               <!-- Glam Girls -->

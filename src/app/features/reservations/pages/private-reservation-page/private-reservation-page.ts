@@ -234,12 +234,12 @@ export class PrivateReservationPage {
   });
 
   readonly activityUpgradeCents = computed(() => {
-    const cat = this.selectedCategory();
     const act = this.selectedActivity();
-    if (cat === 'hooping' && act && act.price_per_person) {
-      return act.price_per_person * this.activityParticipantCount() * 100; // Convertido a centavos
-    }
-    return 0;
+    const config = this.activeCategoryConfig();
+    if (!act || !config) return 0;
+    const includedGroups = config.included_activity_groups || [];
+    if (includedGroups.includes(act.group)) return 0;
+    return (act.price_per_person || 0) * this.activityParticipantCount() * 100;
   });
 
   readonly glamGirlsCents = computed(() => {
@@ -550,8 +550,12 @@ export class PrivateReservationPage {
   }
 
   selectActivity(activity: any): void {
-    this.selectedActivity.set(activity);
-    this.activityParticipantCount.set(this.guestCount());
+    if (this.selectedActivity()?.id === activity.id && this.selectedCategory() !== 'hooping') {
+      this.selectedActivity.set(null);
+    } else {
+      this.selectedActivity.set(activity);
+      this.activityParticipantCount.set(this.guestCount());
+    }
   }
 
   onActivityParticipantCountInput(event: Event): void {

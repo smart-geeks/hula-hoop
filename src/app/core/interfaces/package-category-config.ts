@@ -24,6 +24,7 @@ export interface PackageCategoryConfig {
   glam_girls_min_count: number;
   glam_girls_description: string | null;
   glam_girls_inclusions: string[];
+  included_activity_groups: string[];
   created_at: string;
   updated_at: string;
 }

@@ -132,6 +132,7 @@ export class AdminExperiences {
       glam_girls_min_count: config.glam_girls_min_count,
       glam_girls_description: config.glam_girls_description,
       glam_girls_inclusions: config.glam_girls_inclusions || [],
+      included_activity_groups: config.included_activity_groups || [],
     });
     this.categoryConfigsSaving.set(false);
     if (result) {
@@ -256,6 +257,15 @@ export class AdminExperiences {
   updateGlamGirlsDescription(config: PackageCategoryConfig, desc: string): void {
     this.categoryConfigs.update(list =>
       list.map(c => c.id === config.id ? { ...config, glam_girls_description: desc } : c));
+  }
+
+  toggleGroupInclusion(config: PackageCategoryConfig, group: string): void {
+    const current = config.included_activity_groups || [];
+    const updatedGroups = current.includes(group)
+      ? current.filter(g => g !== group)
+      : [...current, group];
+    this.categoryConfigs.update(list =>
+      list.map(c => c.id === config.id ? { ...config, included_activity_groups: updatedGroups } : c));
   }
 
   // ── Decoration levels methods ──────────────────────────────────────────────

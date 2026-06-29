@@ -21,12 +21,14 @@ import { ContractService } from '../../../../core/services/contract.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { QuoteDetailComponent } from '../../../../shared/components/quote-detail/quote-detail';
+import { PackageCategoryConfigService } from '../../../../core/services/package-category-config.service';
 import type { Quote, QuoteStatus, CreateQuoteData } from '../../../../core/interfaces/quote';
 import type { Client } from '../../../../core/interfaces/client';
 import type { PartyPackage } from '../../../../core/interfaces/package';
 import type { Extra, ExtraCategory } from '../../../../core/interfaces/extra';
 import type { SnackOption } from '../../../../core/interfaces/snack-option';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+import type { PackageCategoryConfig } from '../../../../core/interfaces/package-category-config';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5;
 
@@ -54,6 +56,7 @@ export class AdminQuoteWizard {
   private readonly reservationService = inject(ReservationService);
   private readonly contractService    = inject(ContractService);
   private readonly venueService       = inject(VenueService);
+  private readonly categoryConfigService = inject(PackageCategoryConfigService);
   private readonly router             = inject(Router);
   private readonly route              = inject(ActivatedRoute);
 
@@ -127,24 +130,14 @@ export class AdminQuoteWizard {
   readonly activeActivityTab  = signal<'A' | 'B' | 'C'>('A');
   readonly activityParticipantCount = signal<number>(10);
 
-  readonly activitiesList = signal([
-    { id: 'act_a1', group: 'A', name: 'Decora tu galleta',     price_per_person: 0  },
-    { id: 'act_a2', group: 'A', name: 'Decora tu cupcake',     price_per_person: 0  },
-    { id: 'act_a3', group: 'A', name: 'Decora tu rice krispi', price_per_person: 0  },
-    { id: 'act_a4', group: 'A', name: 'Friendship bracelets +4 años',  price_per_person: 0  },
-    { id: 'act_a5', group: 'A', name: 'Botella sensorial',     price_per_person: 0  },
-    { id: 'act_a6', group: 'A', name: 'Decora tu capa superheróe',    price_per_person: 0  },
-    { id: 'act_a7', group: 'A', name: 'Decora tu máscara',     price_per_person: 0  },
-    { id: 'act_b1', group: 'B', name: 'Ice cream slab',        price_per_person: 60 },
-    { id: 'act_b2', group: 'B', name: 'Decora tu pastel',      price_per_person: 65 },
-    { id: 'act_b3', group: 'B', name: 'Pinta tu alcancía',     price_per_person: 90 },
-    { id: 'act_b4', group: 'B', name: 'Pinta tu canvas',       price_per_person: 80 },
-    { id: 'act_c1', group: 'C', name: 'Decora tu peine',       price_per_person: 65 },
-    { id: 'act_c2', group: 'C', name: 'Decora tu totebag',     price_per_person: 85 },
-    { id: 'act_c3', group: 'C', name: 'Decora tu bucket hat',  price_per_person: 90 },
-    { id: 'act_c4', group: 'C', name: 'Decora tu lapicera',    price_per_person: 65 },
-    { id: 'act_c5', group: 'C', name: 'Decora tu gorra',       price_per_person: 80 },
-  ]);
+  readonly categoryConfigs = signal<PackageCategoryConfig[]>([]);
+  readonly activeCategoryConfig = computed(() =>
+    this.categoryConfigs().find(cfg => cfg.category === this.selectedCategory()) ?? null
+  );
+
+  readonly activitiesList = computed(() => {
+    return this.activeCategoryConfig()?.activities ?? [];
+  });
 
   readonly extraQty     = signal<Map<string, number>>(new Map());
   readonly extraVariant = signal<Map<string, string>>(new Map());
@@ -216,8 +209,11 @@ export class AdminQuoteWizard {
   });
   readonly activityUpgradeCents = computed(() => {
     const act = this.selectedActivity();
-    return this.selectedCategory() === 'hooping' && act?.price_per_person
-      ? act.price_per_person * this.activityParticipantCount() * 100 : 0;
+    const config = this.activeCategoryConfig();
+    if (!act || !config) return 0;
+    const includedGroups = config.included_activity_groups || [];
+    if (includedGroups.includes(act.group)) return 0;
+    return (act.price_per_person || 0) * this.activityParticipantCount() * 100;
   });
   readonly glamGirlsCents   = computed(() => this.glamGirlsEnabled() ? this.glamGirlsCount() * 30000 : 0);
   readonly extrasTotalCents = computed(() =>
@@ -314,18 +310,21 @@ export class AdminQuoteWizard {
     const id = this.route.snapshot.params['id'];
     if (id) this.editMode.set(true);
 
-    const [clients, packages, extras, snacks, slots] = await Promise.all([
+    const venueId = this.venueService.currentVenueId();
+    const [clients, packages, extras, snacks, slots, configs] = await Promise.all([
       this.clientService.getAll(),
       this.packageService.getActivePackages(),
       this.extraService.getActiveExtras(),
       this.snackOptionService.getActiveSnackOptions(),
       this.timeSlotService.getActiveSlots(),
+      venueId ? this.categoryConfigService.getConfigsByVenue(venueId) : Promise.resolve([]),
     ]);
     this.allClients.set(clients);
     this.packages.set(packages);
     this.extras.set(extras);
     this.snackOptions.set(snacks);
     this.allSlots.set(slots);
+    this.categoryConfigs.set(configs);
 
     if (id) {
       const quote = await this.quoteService.getById(id);
@@ -522,8 +521,12 @@ export class AdminQuoteWizard {
   toggleGlamGirls(val: boolean): void { this.glamGirlsEnabled.set(val); if (!val) this.glamGirlsCount.set(5); }
   updateGlamGirlsCount(qty: number): void { this.glamGirlsCount.set(Math.max(5, qty)); }
   selectActivity(act: any): void {
-    this.selectedActivity.set(act);
-    this.activityParticipantCount.set(this.guestCount());
+    if (this.selectedActivity()?.id === act.id && this.selectedCategory() !== 'hooping') {
+      this.selectedActivity.set(null);
+    } else {
+      this.selectedActivity.set(act);
+      this.activityParticipantCount.set(this.guestCount());
+    }
   }
 
   onActivityParticipantCountInput(event: Event): void {
@@ -631,10 +634,16 @@ export class AdminQuoteWizard {
     if (snack && !this.skipSnack()) items.push({ descripcion: `Merienda: ${snack.name}`, cantidad: 1, precio_unitario: 0 });
     const decUp = this.decorationUpgradeCents();
     if (decUp > 0) items.push({ descripcion: `Upgrade de Decoración: ${this.selectedDecoration().toUpperCase()}`, cantidad: 1, precio_unitario: decUp / 100 });
-    const cat = this.selectedCategory(); const act = this.selectedActivity();
-    if (cat === 'hooping' && act) {
-      if (act.price_per_person > 0) items.push({ descripcion: `Actividad Premium: ${act.name}`, cantidad: this.activityParticipantCount(), precio_unitario: act.price_per_person });
-      else items.push({ descripcion: `Actividad Incluida: ${act.name}`, cantidad: 1, precio_unitario: 0 });
+    const act = this.selectedActivity();
+    if (act) {
+      const config = this.activeCategoryConfig();
+      const includedGroups = config?.included_activity_groups || [];
+      const isIncluded = includedGroups.includes(act.group);
+      if (isIncluded) {
+        items.push({ descripcion: `Actividad Incluida: ${act.name}`, cantidad: 1, precio_unitario: 0 });
+      } else {
+        items.push({ descripcion: `Actividad Premium: ${act.name}`, cantidad: this.activityParticipantCount(), precio_unitario: act.price_per_person || 0 });
+      }
     }
     if (this.glamGirlsEnabled()) items.push({ descripcion: 'Área Glam Girls (Glitter mani, make up, peinados)', cantidad: this.glamGirlsCount(), precio_unitario: 300 });
     for (const se of this.selectedExtras()) {

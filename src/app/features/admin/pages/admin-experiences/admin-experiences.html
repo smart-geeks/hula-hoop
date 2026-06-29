@@ -159,11 +159,29 @@
 
         <!-- Actividades -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4 lg:col-span-2">
-          <div class="flex items-center justify-between">
-            <h3 class="font-bold text-slate-800 flex items-center gap-2">
-              <i class="pi pi-check-square text-green-500"></i>
-              Catálogo de Actividades
-            </h3>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="pi pi-check-square text-green-500"></i>
+                Catálogo de Actividades
+              </h3>
+              <p class="text-xs text-slate-500 mt-1">Marca los grupos que se consideran "incluidos" ($0 en la cotización) para esta experiencia.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
+              <span class="text-xs font-semibold text-slate-600 uppercase">Grupos Incluidos:</span>
+              <div class="flex gap-1.5">
+                @for (g of ['A', 'B', 'C']; track g) {
+                  <button type="button"
+                          (click)="toggleGroupInclusion(config, g)"
+                          class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer"
+                          [class]="(config.included_activity_groups || []).includes(g)
+                            ? 'bg-green-500 text-white border-green-500 shadow-sm'
+                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'">
+                    Grupo {{ g }}
+                  </button>
+                }
+              </div>
+            </div>
             <p-button label="Agregar actividad" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="openAddActivity()" />
           </div>
           <p-table [value]="config.activities" styleClass="p-datatable-sm">
@@ -179,7 +197,12 @@
               <tr>
                 <td><p-tag [value]="'Grupo ' + act.group" [severity]="act.group === 'A' ? 'success' : (act.group === 'B' ? 'info' : 'warn')" /></td>
                 <td><span class="font-semibold text-slate-700">{{ act.name }}</span></td>
-                <td>{{ act.price_per_person | currencyMxn }}</td>
+                <td>
+                  {{ act.price_per_person | currencyMxn }}
+                  @if ((config.included_activity_groups || []).includes(act.group)) {
+                    <span class="text-xs text-green-600 font-semibold ml-2">(Incluido)</span>
+                  }
+                </td>
                 <td>
                   <div class="flex gap-1">
                     <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
