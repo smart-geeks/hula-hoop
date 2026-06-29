@@ -6,7 +6,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { CurrencyPipe, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -16,7 +16,6 @@ import { PosTicketPrintService } from '../../../../core/services/pos-ticket-prin
 import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import type { Quote, QuoteStatus } from '../../../../core/interfaces/quote';
 import type { PaymentSplit } from '../../../../core/interfaces/contract';
-import { CurrencyMxnPipe } from '../../../../core/pipes/currency-mxn.pipe';
 import { PaymentSplitsInputComponent } from '../../../../shared/components/payment-splits-input/payment-splits-input';
 
 export interface AvailableDate {
@@ -39,7 +38,7 @@ const STATUS_CONFIG: Record<QuoteStatus, { label: string; classes: string }> = {
   templateUrl: './admin-quotes.html',
   imports: [
     FormsModule,
-    CurrencyMxnPipe,
+    CurrencyPipe,
     PaymentSplitsInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
