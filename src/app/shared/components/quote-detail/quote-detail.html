@@ -6,7 +6,7 @@
       <div>
         <p class="text-xs text-slate-400 mb-0.5 uppercase tracking-wide">Cotización</p>
         <p class="text-2xl font-bold text-slate-800 font-mono">{{ quote().folio }}</p>
-        <p class="text-sm text-slate-400 mt-1">Emitida el {{ quote().fecha | date:'d MMM yyyy':'':'es-MX' }}</p>
+        <p class="text-sm text-slate-400 mt-1">Emitida el {{ quote().fecha | date:'d MMM yyyy' }}</p>
       </div>
       <span [class]="'px-3 py-1.5 rounded-full text-xs font-semibold ' + statusClass()">
         {{ statusLabel() }}
@@ -35,7 +35,7 @@
     <div>
       <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Evento</p>
       @if (quote().fecha_evento) {
-        <p class="font-semibold text-slate-800 text-sm">{{ quote().fecha_evento | date:"EEEE d 'de' MMMM yyyy":'':'es-MX' }}</p>
+        <p class="font-semibold text-slate-800 text-sm">{{ quote().fecha_evento | date:"EEEE d 'de' MMMM yyyy" }}</p>
       } @else {
         <p class="text-sm text-slate-400 italic">Sin fecha asignada</p>
       }
