@@ -61,5 +61,6 @@ export const INVENTORY_CATEGORIES = [
   'Limpieza',
   'Utilería',
   'Electrónicos',
+  'recepcion',
   'Otro',
 ] as const;

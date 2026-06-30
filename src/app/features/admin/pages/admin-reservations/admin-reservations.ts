@@ -23,8 +23,15 @@ import { TimeSlotService } from '../../../../core/services/time-slot.service';
 import { VenueService } from '../../../../core/services/venue.service';
 import { VenueConfigService } from '../../../../core/services/venue-config.service';
 import { PosTicketPrintService } from '../../../../core/services/pos-ticket-print.service';
+import { InventoryService } from '../../../../core/services/inventory.service';
+import type { InventoryItem } from '../../../../core/interfaces/inventory';
 import type { PlaydateReservation, ReservationStatus } from '../../../../core/interfaces/reservation';
 import type { TimeSlot } from '../../../../core/interfaces/time-slot';
+
+export interface NewResProductLine {
+  productId: string;
+  cantidad: number;
+}
 
 interface PlayDayRow {
   id: string;
@@ -76,6 +83,7 @@ export class AdminReservations {
   private readonly printService       = inject(PosTicketPrintService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService     = inject(MessageService);
+  private readonly inventoryService   = inject(InventoryService);
 
   readonly loading = signal(true);
   readonly allRows = signal<PlayDayRow[]>([]);
@@ -126,17 +134,21 @@ export class AdminReservations {
   readonly paymentSubmitting = signal(false);
 
   // ── New reservation modal (Quick Checkout) ──────────────────────────────────
-  readonly newResVisible      = signal(false);
-  readonly newResDate         = signal<Date | null>(null);
-  readonly newResSlots        = signal<AvailablePlaydateSlot[]>([]);
-  readonly newResSlot         = signal<AvailablePlaydateSlot | null>(null);
-  readonly newResSlotsLoading = signal(false);
-  readonly newResKids         = signal(1);
-  readonly newResAdults       = signal(1);
-  readonly newResExtraAdults  = signal(0);
-  readonly newResName         = signal('');
-  readonly newResSubmitting   = signal(false);
+  readonly newResVisible       = signal(false);
+  readonly newResDate          = signal<Date | null>(null);
+  readonly newResSlots         = signal<AvailablePlaydateSlot[]>([]);
+  readonly newResSlot          = signal<AvailablePlaydateSlot | null>(null);
+  readonly newResSlotsLoading  = signal(false);
+  readonly newResKids          = signal(1);
+  readonly newResAdults        = signal(1);
+  readonly newResExtraAdults   = signal(0);
+  readonly newResName          = signal('');
+  readonly newResSubmitting    = signal(false);
   readonly newResPaymentSplits = signal<PaymentSplit[]>([]);
+  
+  // Recepcion products management
+  readonly recepcionItems      = signal<InventoryItem[]>([]);
+  readonly newResProductLines  = signal<NewResProductLine[]>([]);
 
   private ticketPriceCents     = 20000; // default $200 MXN
   private extraAdultPriceCents = 7000;  // default $70 MXN
@@ -145,7 +157,20 @@ export class AdminReservations {
   readonly newResTotal = computed(() => {
     const kids  = this.newResKids();
     const extra = this.newResExtraAdults();
-    return kids * this.ticketPriceCents + extra * this.extraAdultPriceCents;
+    const baseTicketTotal = kids * this.ticketPriceCents + extra * this.extraAdultPriceCents;
+    
+    let productTotalCents = 0;
+    const lines = this.newResProductLines();
+    const items = this.recepcionItems();
+    for (const line of lines) {
+      const item = items.find(i => i.id === line.productId);
+      if (item && line.cantidad > 0) {
+        const priceCents = Math.round(Number(item.precio_venta) * 100);
+        productTotalCents += priceCents * line.cantidad;
+      }
+    }
+    
+    return baseTicketTotal + productTotalCents;
   });
 
   readonly newResTicketSummary = computed(() => {
@@ -344,8 +369,29 @@ export class AdminReservations {
     this.newResName.set('');
     this.newResVisible.set(true);
 
-    // Initial default split (total is 1 * ticketPriceCents / 100)
-    const initialTotalPesos = this.ticketPriceCents / 100;
+    // Load products of category 'recepcion'
+    try {
+      const items = await this.inventoryService.getAll(false);
+      const filtered = items.filter(i => i.categoria === 'recepcion');
+      this.recepcionItems.set(filtered);
+
+      // Default item is 'Calcetines' with quantity 0
+      const socks = filtered.find(i => i.nombre.toLowerCase().includes('calcetin') || i.nombre.toLowerCase().includes('calceta'));
+      if (socks) {
+        this.newResProductLines.set([{ productId: socks.id, cantidad: 0 }]);
+      } else if (filtered.length > 0) {
+        this.newResProductLines.set([{ productId: filtered[0].id, cantidad: 0 }]);
+      } else {
+        this.newResProductLines.set([]);
+      }
+    } catch (err) {
+      console.error('Error loading recepcion items:', err);
+      this.recepcionItems.set([]);
+      this.newResProductLines.set([]);
+    }
+
+    // Initial default split
+    const initialTotalPesos = this.newResTotal() / 100;
     this.newResPaymentSplits.set([{ metodo: 'efectivo', monto: initialTotalPesos }]);
 
     // Auto-detect slot and availability in background
@@ -391,6 +437,45 @@ export class AdminReservations {
     } finally {
       this.newResSlotsLoading.set(false);
     }
+  }
+
+  addNewResProductLine(): void {
+    const items = this.recepcionItems();
+    if (items.length === 0) return;
+    
+    const socks = items.find(i => i.nombre.toLowerCase().includes('calcetin') || i.nombre.toLowerCase().includes('calceta'));
+    const defaultId = socks?.id ?? items[0].id;
+
+    this.newResProductLines.update(lines => [...lines, { productId: defaultId, cantidad: 1 }]);
+    this.resetSplits();
+  }
+
+  updateNewResProductItem(idx: number, productId: string): void {
+    this.newResProductLines.update(lines => {
+      const copy = [...lines];
+      if (copy[idx]) {
+        copy[idx] = { ...copy[idx], productId };
+      }
+      return copy;
+    });
+    this.resetSplits();
+  }
+
+  updateNewResProductQty(idx: number, qty: number): void {
+    const validQty = Math.max(0, qty);
+    this.newResProductLines.update(lines => {
+      const copy = [...lines];
+      if (copy[idx]) {
+        copy[idx] = { ...copy[idx], cantidad: validQty };
+      }
+      return copy;
+    });
+    this.resetSplits();
+  }
+
+  removeNewResProductLine(idx: number): void {
+    this.newResProductLines.update(lines => lines.filter((_, i) => i !== idx));
+    this.resetSplits();
   }
 
   updateNewResKids(n: number): void {
@@ -469,6 +554,23 @@ export class AdminReservations {
 
         if (paymentOk) {
           this.messageService.add({ severity: 'success', summary: 'Reserva creada y pago registrado' });
+
+          // Register inventory movements for product lines with qty > 0
+          const lines = this.newResProductLines();
+          for (const line of lines) {
+            if (line.cantidad > 0) {
+              try {
+                await this.inventoryService.registerMovement({
+                  item_id: line.productId,
+                  tipo: 'salida',
+                  cantidad: line.cantidad,
+                  motivo: `Venta Play Day - Reserva: ${res.guest_name}`,
+                });
+              } catch (err) {
+                console.error('Error registering product movement:', err);
+              }
+            }
+          }
           
           // Print ticket if confirmed
           if (newStatus === 'confirmed') {
