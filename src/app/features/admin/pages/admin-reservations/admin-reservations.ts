@@ -125,9 +125,8 @@ export class AdminReservations {
   });
   readonly paymentSubmitting = signal(false);
 
-  // ── New reservation modal ──────────────────────────────────────────────────
+  // ── New reservation modal (Quick Checkout) ──────────────────────────────────
   readonly newResVisible      = signal(false);
-  readonly newResStep         = signal<1 | 2 | 3>(1);
   readonly newResDate         = signal<Date | null>(null);
   readonly newResSlots        = signal<AvailablePlaydateSlot[]>([]);
   readonly newResSlot         = signal<AvailablePlaydateSlot | null>(null);
@@ -136,12 +135,12 @@ export class AdminReservations {
   readonly newResAdults       = signal(1);
   readonly newResExtraAdults  = signal(0);
   readonly newResName         = signal('');
-  readonly newResEmail        = signal('');
-  readonly newResPhone        = signal('');
   readonly newResSubmitting   = signal(false);
+  readonly newResPaymentSplits = signal<PaymentSplit[]>([]);
 
-  private ticketPriceCents     = 19000;
-  private extraAdultPriceCents = 6000;
+  private ticketPriceCents     = 20000; // default $200 MXN
+  private extraAdultPriceCents = 7000;  // default $70 MXN
+  private maxCapacityPerSlot   = 50;    // default fallback
 
   readonly newResTotal = computed(() => {
     const kids  = this.newResKids();
@@ -149,11 +148,33 @@ export class AdminReservations {
     return kids * this.ticketPriceCents + extra * this.extraAdultPriceCents;
   });
 
-  readonly newResMaxExtra = computed(() => {
-    const slot = this.newResSlot();
-    if (!slot) return 0;
-    const used = this.newResKids() + this.newResAdults();
-    return Math.max(0, slot.remaining - used);
+  readonly newResTicketSummary = computed(() => {
+    const kids = this.newResKids();
+    const extra = this.newResExtraAdults();
+    const totalAdults = kids + extra;
+
+    const kidLabel = kids === 1 ? '1 niño' : `${kids} niños`;
+    const adultLabel = totalAdults === 1 ? '1 adulto' : `${totalAdults} adultos`;
+
+    if (extra > 0) {
+      const extraLabel = extra === 1 ? '1 adulto extra' : `${extra} adultos extras`;
+      return `Boleto válido por ${kidLabel} y ${adultLabel} (${kids} niños + ${kids} adultos más ${extraLabel})`;
+    }
+
+    return `Boleto válido por ${kidLabel} y ${adultLabel} (${kids} niños + ${kids} adultos)`;
+  });
+
+  readonly newResPaymentSplitsTotal = computed(() =>
+    this.newResPaymentSplits().reduce((sum, p) => sum + p.monto, 0)
+  );
+
+  readonly newResPaymentSplitsValid = computed(() => {
+    const totalPesos = this.newResTotal() / 100;
+    const sum = this.newResPaymentSplitsTotal();
+    const hasRemainder = Math.abs(totalPesos - sum) > 0.01;
+    
+    const s = this.newResPaymentSplits();
+    return s.length > 0 && s.every(p => p.monto > 0) && !hasRemainder;
   });
 
   // ── Computed ───────────────────────────────────────────────────────────────
@@ -204,8 +225,9 @@ export class AdminReservations {
     this.slotsMap = new Map(slots.map(s => [s.id, s]));
 
     if (config) {
-      this.ticketPriceCents     = config.playdate_ticket_price_cents ?? 19000;
-      this.extraAdultPriceCents = config.playdate_extra_adult_price_cents ?? 6000;
+      this.ticketPriceCents     = config.playdate_ticket_price_cents ?? 20000;
+      this.extraAdultPriceCents = config.playdate_extra_adult_price_cents ?? 7000;
+      this.maxCapacityPerSlot   = config.max_capacity_per_slot ?? 50;
     }
 
     const rows: PlayDayRow[] = playdates.map(r => this.mapPlaydate(r));
@@ -314,58 +336,84 @@ export class AdminReservations {
     });
   }
 
-  // ── New reservation modal ──────────────────────────────────────────────────
-  openNewReservation(): void {
-    this.newResStep.set(1);
-    this.newResDate.set(null);
-    this.newResSlots.set([]);
-    this.newResSlot.set(null);
+  // ── New reservation modal (Quick Checkout) ──────────────────────────────────
+  async openNewReservation(): Promise<void> {
     this.newResKids.set(1);
     this.newResAdults.set(1);
     this.newResExtraAdults.set(0);
     this.newResName.set('');
-    this.newResEmail.set('');
-    this.newResPhone.set('');
     this.newResVisible.set(true);
-  }
 
-  async onNewResDateChange(date: Date | null): Promise<void> {
-    this.newResDate.set(date);
-    this.newResSlot.set(null);
-    this.newResSlots.set([]);
-    if (!date) return;
+    // Initial default split (total is 1 * ticketPriceCents / 100)
+    const initialTotalPesos = this.ticketPriceCents / 100;
+    this.newResPaymentSplits.set([{ metodo: 'efectivo', monto: initialTotalPesos }]);
 
+    // Auto-detect slot and availability in background
+    const today = new Date();
+    this.newResDate.set(today);
+    
     this.newResSlotsLoading.set(true);
-    const maxCapacity = 50; // fallback; venue config loaded on init
-    const slots = await this.reservationService.getPlaydateSlotsForDate(
-      date, this.allActiveSlots, maxCapacity,
-    );
-    this.newResSlots.set(slots);
-    this.newResSlotsLoading.set(false);
-  }
+    const maxCapacity = this.maxCapacityPerSlot;
+    try {
+      const slots = await this.reservationService.getPlaydateSlotsForDate(
+        today, this.allActiveSlots, maxCapacity
+      );
+      this.newResSlots.set(slots);
 
-  selectNewResSlot(slot: AvailablePlaydateSlot): void {
-    this.newResSlot.set(slot);
-    this.newResKids.set(1);
-    this.newResAdults.set(1);
-    this.newResExtraAdults.set(0);
+      if (slots.length > 0) {
+        // Detect slot based on current time
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        const parseTimeToMinutes = (timeStr: string): number => {
+          const [h, m] = timeStr.split(':').map(Number);
+          return h * 60 + m;
+        };
+
+        let matchedSlot = slots.find(s => {
+          const start = parseTimeToMinutes(s.slot.start_time);
+          const end = parseTimeToMinutes(s.slot.end_time);
+          return currentMinutes >= start && currentMinutes <= end;
+        });
+
+        // Default to first slot if none match
+        if (!matchedSlot) {
+          matchedSlot = slots[0];
+        }
+
+        this.newResSlot.set(matchedSlot);
+      } else {
+        this.newResSlot.set(null);
+      }
+    } catch (err) {
+      console.error('Error auto-detecting slot:', err);
+      this.newResSlot.set(null);
+    } finally {
+      this.newResSlotsLoading.set(false);
+    }
   }
 
   updateNewResKids(n: number): void {
-    const max = this.newResSlot()?.remaining ?? 1;
-    const kids = Math.max(1, Math.min(n, max));
+    const kids = Math.max(1, n);
     this.newResKids.set(kids);
     this.newResAdults.set(kids);
-    const maxExtra = Math.max(0, (this.newResSlot()?.remaining ?? 0) - kids - kids);
-    if (this.newResExtraAdults() > maxExtra) this.newResExtraAdults.set(maxExtra);
+    this.resetSplits();
   }
 
   updateNewResExtraAdults(n: number): void {
-    this.newResExtraAdults.set(Math.max(0, Math.min(n, this.newResMaxExtra())));
+    this.newResExtraAdults.set(Math.max(0, n));
+    this.resetSplits();
   }
 
-  goToStep(step: 1 | 2 | 3): void {
-    this.newResStep.set(step);
+  private resetSplits(): void {
+    const totalPesos = this.newResTotal() / 100;
+    const current = this.newResPaymentSplits();
+    if (current.length <= 1) {
+      const method = current[0]?.metodo ?? 'efectivo';
+      this.newResPaymentSplits.set([{ metodo: method, monto: totalPesos }]);
+    } else {
+      this.newResPaymentSplits.set([{ metodo: 'efectivo', monto: totalPesos }]);
+    }
   }
 
   async submitNewReservation(): Promise<void> {
@@ -374,40 +422,78 @@ export class AdminReservations {
     if (!slot || !date) return;
 
     const name  = this.newResName().trim();
-    const phone = this.newResPhone().trim();
     if (!name) {
       this.messageService.add({ severity: 'warn', summary: 'El nombre es requerido' });
+      return;
+    }
+
+    // Verify splits are valid
+    const totalPesos = this.newResTotal() / 100;
+    const splits = this.newResPaymentSplits();
+    const sumSplits = splits.reduce((s, p) => s + (p.monto || 0), 0);
+    const hasRemainder = Math.abs(totalPesos - sumSplits) > 0.01;
+    const splitsValid = splits.length > 0 && splits.every(p => p.monto > 0) && !hasRemainder;
+
+    if (!splitsValid) {
+      this.messageService.add({ severity: 'warn', summary: 'El monto de pago debe coincidir exactamente con el total' });
       return;
     }
 
     this.newResSubmitting.set(true);
     const venueId = this.venueService.currentVenueId() ?? '00000000-0000-0000-0000-000000000001';
 
-    const res = await this.reservationService.createPlaydateReservation({
-      venue_id:           venueId,
-      profile_id:         null,
-      guest_name:         name,
-      guest_email:        this.newResEmail().trim(),
-      guest_phone:        phone,
-      reservation_date:   slot.date,
-      time_slot_id:       slot.slot.id,
-      kids_count:         this.newResKids(),
-      adults_count:       this.newResAdults(),
-      extra_adults_count: this.newResExtraAdults(),
-      total_cents:        this.newResTotal(),
-    });
+    try {
+      const res = await this.reservationService.createPlaydateReservation({
+        venue_id:           venueId,
+        profile_id:         null,
+        guest_name:         name,
+        guest_email:        "",
+        guest_phone:        "",
+        reservation_date:   slot.date,
+        time_slot_id:       slot.slot.id,
+        kids_count:         this.newResKids(),
+        adults_count:       this.newResAdults(),
+        extra_adults_count: this.newResExtraAdults(),
+        total_cents:        this.newResTotal(),
+      });
 
-    if (res) {
-      this.messageService.add({ severity: 'success', summary: 'Reserva creada — pendiente de pago' });
-      this.newResVisible.set(false);
-      await this.loadData();
-      // Auto-abrir dialogo de pago para la nueva reserva
-      const newRow = this.allRows().find(r => r.id === res.id);
-      if (newRow) this.openPayment(newRow);
-    } else {
-      this.messageService.add({ severity: 'error', summary: 'Error al crear la reserva' });
+      if (res) {
+        // Register payment
+        const addedCents = Math.round(sumSplits * 100);
+        const metodo = splits.length === 1 ? splits[0].metodo : 'combinado';
+        const newStatus: ReservationStatus = addedCents >= res.total_cents ? 'confirmed' : 'pending_payment';
+
+        const paymentOk = await this.reservationService.updatePlaydateReservationPaidAmount(
+          res.id, addedCents, newStatus, metodo, splits
+        );
+
+        if (paymentOk) {
+          this.messageService.add({ severity: 'success', summary: 'Reserva creada y pago registrado' });
+          
+          // Print ticket if confirmed
+          if (newStatus === 'confirmed') {
+            const mappedRow = this.mapPlaydate({
+              ...res,
+              status: newStatus,
+              paid_deposit_cents: addedCents
+            });
+            this.printTicket(mappedRow);
+          }
+        } else {
+          this.messageService.add({ severity: 'warn', summary: 'Reserva creada, pero hubo un problema al registrar el pago' });
+        }
+
+        this.newResVisible.set(false);
+        await this.loadData();
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error al crear la reserva' });
+      }
+    } catch (error: any) {
+      console.error(error);
+      this.messageService.add({ severity: 'error', summary: error.message || 'Error al procesar la reserva' });
+    } finally {
+      this.newResSubmitting.set(false);
     }
-    this.newResSubmitting.set(false);
   }
 
   // ── Filters ────────────────────────────────────────────────────────────────
