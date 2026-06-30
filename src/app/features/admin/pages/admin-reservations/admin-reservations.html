@@ -294,7 +294,7 @@
 
 <!-- ══ Nueva reserva modal (Quick Checkout) ════════════════════════════════════ -->
 <p-dialog header="Nueva reserva Play Day" [(visible)]="newResVisible" [modal]="true"
-          [style]="{ width: '38rem' }" [contentStyle]="{ overflow: 'visible' }"
+          [style]="{ width: '38rem', 'max-height': '90vh' }" [contentStyle]="{ 'max-height': '75vh', 'overflow-y': 'auto' }"
           [closable]="true" [draggable]="false">
   <div class="pt-2">
 
@@ -433,17 +433,21 @@
           <span class="text-2xl font-bold text-pink-500">{{ newResTotal() / 100 | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
         </div>
 
-        <!-- Actions -->
-        <div class="flex justify-end gap-2 mt-4 border-t border-slate-100 pt-4">
-          <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-                    (onClick)="newResVisible.set(false)" />
-          <p-button label="Confirmar y cobrar" icon="pi pi-credit-card" iconPos="right"
-                    [loading]="newResSubmitting()"
-                    [disabled]="!newResName().trim() || !newResPaymentSplitsValid()"
-                    (onClick)="submitNewReservation()" />
-        </div>
       </div>
     }
 
   </div>
+
+  <ng-template #footer>
+    @if (newResSlot() && !newResSlotsLoading()) {
+      <div class="flex justify-end gap-2">
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+                  (onClick)="newResVisible.set(false)" />
+        <p-button label="Confirmar y cobrar" icon="pi pi-credit-card" iconPos="right"
+                  [loading]="newResSubmitting()"
+                  [disabled]="!newResName().trim() || !newResPaymentSplitsValid()"
+                  (onClick)="submitNewReservation()" />
+      </div>
+    }
+  </ng-template>
 </p-dialog>
